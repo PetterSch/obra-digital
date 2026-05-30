@@ -26,6 +26,11 @@ async function findAvailablePort(startPort = 3000): Promise<number> {
 async function startServer() {
   console.log("[Startup] MYSQL_URL definida:", !!process.env.MYSQL_URL, "| DATABASE_URL:", !!process.env.DATABASE_URL);
   console.log("[Startup] NODE_ENV:", process.env.NODE_ENV);
+  // Diagnóstico: lista nomes de variáveis relevantes injetadas
+  const relevantes = Object.keys(process.env).filter(k =>
+    /MYSQL|DATABASE|DB_|JWT|RAILWAY|PG|NODE_ENV|PORT/i.test(k)
+  );
+  console.log("[Diag] Variáveis relevantes no ambiente:", relevantes.join(", ") || "NENHUMA");
 
   const app = express();
   const server = createServer(app);

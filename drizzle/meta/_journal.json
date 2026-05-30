@@ -1,0 +1,34 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1780016495052,
+      "tag": "0000_good_lady_bullseye",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1780016823111,
+      "tag": "0001_charming_the_captain",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1780019496902,
+      "tag": "0002_kind_fixer",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1780053156521,
+      "tag": "0003_tearful_infant_terrible",
+      "breakpoints": true
+    }
+  ]
+}

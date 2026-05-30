@@ -29,7 +29,12 @@ export default function DiarioEdit() {
 
   const acesso = acessos.find(a => a.usuarioId === user?.id);
 
-  const canEdit = acesso?.permissao === "editar" || acesso?.permissao === "admin";
+  // Admin e engenheiro podem editar; demais precisam de acesso "editar"/"admin" na obra
+  const canEdit =
+    user?.role === "admin" ||
+    user?.role === "engenheiro" ||
+    acesso?.permissao === "editar" ||
+    acesso?.permissao === "admin";
 
   if (isLoading) {
     return (

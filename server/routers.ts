@@ -707,9 +707,12 @@ export const appRouter = router({
 
   // ============= EQUIPES ROUTER =============
   equipes: router({
-    list: protectedProcedure.query(async () => {
-      return db.getEquipes();
-    }),
+    // Lista equipes de uma obra específica (ou todas, se obraId omitido)
+    list: protectedProcedure
+      .input(z.object({ obraId: z.number().optional() }).optional())
+      .query(async ({ input }) => {
+        return db.getEquipes(input?.obraId);
+      }),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -718,7 +721,8 @@ export const appRouter = router({
       }),
 
     create: engineerProcedure
-      .input(z.object({ 
+      .input(z.object({
+        obraId: z.number().optional(),
         nome: z.string().min(1),
         empresa: z.string().min(1),
         cnpj: z.string().optional(),

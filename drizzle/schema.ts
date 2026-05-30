@@ -201,6 +201,7 @@ export type InsertOcorrencia = typeof ocorrencias.$inferInsert;
  */
 export const equipes = mysqlTable("equipes", {
   id: int("id").autoincrement().primaryKey(),
+  obraId: int("obraId"),
   nome: varchar("nome", { length: 255 }).notNull(),
   empresa: varchar("empresa", { length: 255 }).notNull(),
   cnpj: varchar("cnpj", { length: 18 }).unique(),

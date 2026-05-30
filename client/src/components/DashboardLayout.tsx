@@ -30,7 +30,6 @@ import { Button } from "./ui/button";
 const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard",              path: "/" },
   { icon: Building2,       label: "Obras",                  path: "/obras" },
-  { icon: HardHat,         label: "Equipes & Colaboradores", path: "/colaboradores" },
   { icon: FileText,        label: "Resumos",                path: "/resumos" },
   { icon: Zap,             label: "Sugestões LLM",          path: "/sugestoes-llm" },
   { icon: UserCog,         label: "Usuários",               path: "/admin", adminOnly: true },

@@ -9,7 +9,7 @@ import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2 } from "luci
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { DiarioForm } from "@/components/DiarioForm";
-import { ColaboradoresForm } from "@/components/ColaboradoresForm";
+import EquipesColaboradores from "@/pages/Colaboradores";
 import { PendenciasForm } from "@/components/PendenciasForm";
 import { MateriaisForm } from "@/components/MateriaisForm";
 import { MaterialesList } from "@/components/MaterialesList";
@@ -40,10 +40,6 @@ export default function ObraDetail() {
     { obraId: obraId! },
     { enabled: !!obraId }
   );
-
-  // TODO: Update to use equipes instead of colaboradores
-  const colaboradores: any[] = [];
-  const refetchColaboradores = () => {};
 
   const { data: pendencias = [], refetch: refetchPendencias } = trpc.pendencias.listByObra.useQuery(
     { obraId: obraId! },
@@ -189,7 +185,7 @@ export default function ObraDetail() {
         <Tabs defaultValue="diarios" className="w-full">
           <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="diarios">Diários ({diarios.length})</TabsTrigger>
-            <TabsTrigger value="colaboradores">Colaboradores ({colaboradores.length})</TabsTrigger>
+            <TabsTrigger value="colaboradores">Equipes & Colaboradores</TabsTrigger>
             <TabsTrigger value="pendencias">Pendências ({pendencias.length})</TabsTrigger>
             <TabsTrigger value="materiais">Materiais</TabsTrigger>
             <TabsTrigger value="info">Informações</TabsTrigger>
@@ -248,38 +244,7 @@ export default function ObraDetail() {
           </TabsContent>
 
           <TabsContent value="colaboradores" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Colaboradores</h3>
-              <ColaboradoresForm obraId={obra.id} onSuccess={() => refetchColaboradores()} />
-            </div>
-            {colaboradores.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center py-8">
-                  <p className="text-muted-foreground">Nenhum colaborador cadastrado</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {colaboradores.map((colab: any) => (
-                  <Card key={colab.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">{colab.nome}</p>
-                            <p className="text-sm text-muted-foreground">{colab.funcao}</p>
-                          </div>
-                        </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${colab.ativo ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}>
-                          {colab.ativo ? "Ativo" : "Inativo"}
-                        </span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
+            <EquipesColaboradores obraId={obra.id} embedded />
           </TabsContent>
 
           <TabsContent value="pendencias" className="space-y-4">

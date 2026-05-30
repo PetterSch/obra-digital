@@ -116,6 +116,17 @@ export async function runMigrations() {
   } catch {
     // Já aplicado — ignora
   }
+
+  // Vincula equipes a obras
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`ALTER TABLE equipes ADD COLUMN obraId INT`);
+      console.log("[Migrate] Coluna obraId adicionada em equipes");
+    }
+  } catch {
+    // Já aplicado — ignora
+  }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -317,10 +328,13 @@ export async function getColaboradoresByEquipeId(equipeId: number) {
   return db.select().from(colaboradores).where(eq(colaboradores.equipeId, equipeId)).orderBy(asc(colaboradores.nome));
 }
 
-export async function getEquipes() {
+export async function getEquipes(obraId?: number) {
   const db = await getDb();
   if (!db) return demo.demo_getEquipes();
-  return db.select().from(equipes).where(eq(equipes.ativo, true)).orderBy(asc(equipes.nome));
+  const cond = obraId != null
+    ? and(eq(equipes.ativo, true), eq(equipes.obraId, obraId))
+    : eq(equipes.ativo, true);
+  return db.select().from(equipes).where(cond).orderBy(asc(equipes.nome));
 }
 
 export async function getEquipeById(id: number) {

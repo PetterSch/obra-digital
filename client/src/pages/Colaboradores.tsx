@@ -505,7 +505,7 @@ function EquipeCard({
 
 // ─── Página principal ─────────────────────────────────────────────────────
 
-export default function Colaboradores() {
+export default function Colaboradores({ obraId, embedded = false }: { obraId?: number; embedded?: boolean } = {}) {
   const [openCreate, setOpenCreate]   = useState(false);
   const [openEdit, setOpenEdit]       = useState(false);
   const [editingEquipe, setEditingEquipe] = useState<any | null>(null);
@@ -513,7 +513,9 @@ export default function Colaboradores() {
   const [editEquipeForm, setEditEquipeForm] = useState(EQUIPE_FORM_DEFAULT);
   const [search, setSearch]           = useState("");
 
-  const { data: equipes = [], refetch } = trpc.equipes.list.useQuery();
+  const { data: equipes = [], refetch } = trpc.equipes.list.useQuery(
+    obraId != null ? { obraId } : undefined
+  );
 
   const createMutation = trpc.equipes.create.useMutation({
     onSuccess: () => {
@@ -546,7 +548,7 @@ export default function Colaboradores() {
       toast.error("Nome e empresa são obrigatórios");
       return;
     }
-    createMutation.mutate(equipeForm);
+    createMutation.mutate({ ...equipeForm, ...(obraId != null && { obraId }) });
   };
 
   const handleUpdate = (ev: React.FormEvent) => {
@@ -576,16 +578,20 @@ export default function Colaboradores() {
     e.empresa?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const Wrapper = embedded
+    ? ({ children }: { children: React.ReactNode }) => <>{children}</>
+    : ({ children }: { children: React.ReactNode }) => <DashboardLayout>{children}</DashboardLayout>;
+
   return (
-    <DashboardLayout>
-      <div className="space-y-6 max-w-4xl">
+    <Wrapper>
+      <div className={embedded ? "space-y-6" : "space-y-6 max-w-4xl"}>
 
         {/* ── Header ── */}
         <div className="flex flex-col sm:flex-row sm:items-center gap-3">
           <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">Equipes & Colaboradores</h1>
+            {!embedded && <h1 className="text-3xl font-bold tracking-tight">Equipes & Colaboradores</h1>}
             <p className="text-muted-foreground mt-1">
-              Gerencie suas equipes e os colaboradores de cada uma
+              {embedded ? "Equipes e colaboradores desta obra" : "Gerencie suas equipes e os colaboradores de cada uma"}
             </p>
           </div>
           <Button className="gap-2 self-start sm:self-auto" onClick={() => setOpenCreate(true)}>
@@ -771,6 +777,6 @@ export default function Colaboradores() {
           </form>
         </DialogContent>
       </Dialog>
-    </DashboardLayout>
+    </Wrapper>
   );
 }

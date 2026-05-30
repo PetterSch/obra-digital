@@ -4,6 +4,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import { invokeLLM } from "./_core/llm";
+import { ENV } from "./_core/env";
 import { createSessionToken } from "./_core/auth";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
@@ -908,12 +909,12 @@ Total de Fotos: ${consolidacao.totalFotos}
 Clima Predominante: ${consolidacao.climaPredominate || "Não informado"}
 
 Principais Atividades Concluídas:
-${consolidacao.principaisAtividades.map((a, i) => `${i + 1}. ${a}`).join("\n")}
+${(consolidacao.principaisAtividades ?? []).map((a: string, i: number) => `${i + 1}. ${a}`).join("\n")}
 
 Ocorrências de Alta Criticidade:
-${consolidacao.principaisOcorrencias.map((o, i) => `${i + 1}. ${o}`).join("\n")}
+${(consolidacao.principaisOcorrencias ?? []).map((o: string, i: number) => `${i + 1}. ${o}`).join("\n")}
 
-Equipamentos Utilizados: ${consolidacao.equipamentosUtilizados.join(", ")}
+Equipamentos Utilizados: ${(consolidacao.equipamentosUtilizados ?? []).join(", ")}
 
 Gere um resumo executivo profissional em português que:
 1. Resuma o progresso geral da obra
@@ -922,16 +923,52 @@ Gere um resumo executivo profissional em português que:
 4. Forneça recomendações para o próximo período
 5. Mantenha tom profissional e objetivo`;
 
-        const response = await invokeLLM({
-          messages: [
-            { role: "system", content: "Você é um engenheiro civil experiente gerando relatórios de obra." },
-            { role: "user", content: prompt },
-          ],
-        });
+        // Gera resumo a partir dos dados (sem depender de IA)
+        const gerarResumoDosDados = (): string => {
+          const tipoLabel = { semanal: "semanal", quinzenal: "quinzenal", mensal: "mensal" }[input.tipo];
+          const clima = consolidacao.climaPredominate || "não informado";
+          const partes: string[] = [];
+          partes.push(
+            `Resumo ${tipoLabel} referente ao período de ${input.dataInicio} a ${input.dataFim}. ` +
+            `No período foram registrados ${consolidacao.totalDiarios} diário(s) de obra, ` +
+            `totalizando ${consolidacao.totalAtividades} atividade(s) e ${consolidacao.maoDeObraTotal ?? 0} registro(s) de mão de obra. ` +
+            `O clima predominante foi ${clima}.`
+          );
+          if (consolidacao.principaisAtividades?.length) {
+            partes.push("\n\nPrincipais atividades executadas:\n" +
+              consolidacao.principaisAtividades.map((a: string, i: number) => `${i + 1}. ${a}`).join("\n"));
+          }
+          if (consolidacao.totalOcorrencias > 0) {
+            partes.push(`\n\nForam registradas ${consolidacao.totalOcorrencias} ocorrência(s) no período.`);
+            if (consolidacao.principaisOcorrencias?.length) {
+              partes.push("\nOcorrências de maior criticidade:\n" +
+                consolidacao.principaisOcorrencias.map((o: string, i: number) => `${i + 1}. ${o}`).join("\n"));
+            }
+          } else {
+            partes.push("\n\nNenhuma ocorrência crítica foi registrada no período.");
+          }
+          if (consolidacao.totalFotos > 0) {
+            partes.push(`\n\nForam anexadas ${consolidacao.totalFotos} foto(s) ao longo do período.`);
+          }
+          return partes.join("");
+        };
 
-        const resumo = typeof response.choices[0]?.message?.content === 'string' 
-          ? response.choices[0].message.content 
-          : "Erro ao gerar resumo";
+        let resumo: string;
+        if (ENV.openaiApiKey) {
+          const response = await invokeLLM({
+            messages: [
+              { role: "system", content: "Você é um engenheiro civil experiente gerando relatórios de obra." },
+              { role: "user", content: prompt },
+            ],
+          });
+          const conteudo = response.choices[0]?.message?.content;
+          // Se a IA falhar ou retornar o stub, cai no resumo dos dados
+          resumo = (typeof conteudo === "string" && !conteudo.startsWith("⚠️"))
+            ? conteudo
+            : gerarResumoDosDados();
+        } else {
+          resumo = gerarResumoDosDados();
+        }
 
         return { resumo, consolidacao };
       }),

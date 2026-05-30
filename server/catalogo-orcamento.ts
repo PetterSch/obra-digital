@@ -33,6 +33,10 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   // ── Fundação ──
   { categoria: "Fundação", descricao: "Escavação manual de valas", unidade: "m³", precoReferencia: 75.00 },
   { categoria: "Fundação", descricao: "Lastro de concreto magro", unidade: "m³", precoReferencia: 480.00 },
+  { categoria: "Fundação", descricao: "Armação de aço para fundação (CA-50)", unidade: "kg", precoReferencia: 14.50 },
+  { categoria: "Fundação", descricao: "Estribos / aço CA-60 para fundação", unidade: "kg", precoReferencia: 15.50 },
+  { categoria: "Fundação", descricao: "Fôrma de madeira para fundação", unidade: "m²", precoReferencia: 85.00 },
+  { categoria: "Fundação", descricao: "Concreto para fundação fck 25 MPa", unidade: "m³", precoReferencia: 520.00 },
   { categoria: "Fundação", descricao: "Sapata de concreto armado", unidade: "m³", precoReferencia: 1650.00 },
   { categoria: "Fundação", descricao: "Bloco de coroamento", unidade: "m³", precoReferencia: 1700.00 },
   { categoria: "Fundação", descricao: "Viga baldrame de concreto armado", unidade: "m³", precoReferencia: 1750.00 },

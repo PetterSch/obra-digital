@@ -34,6 +34,19 @@ const CRITICIDADE_COLORS: Record<string, string> = {
   baixa: "bg-green-100 text-green-700 border-green-200",
 };
 
+// Parse robusto de data: extrai a parte YYYY-MM-DD e fixa meio-dia local
+// (evita deslocamento de fuso horário que muda o dia)
+function parseData(val: any): Date {
+  let s: string;
+  if (val instanceof Date) {
+    s = val.toISOString().split("T")[0];
+  } else {
+    s = String(val ?? "").split("T")[0];
+  }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return new Date(s + "T12:00:00");
+  return new Date(String(val));
+}
+
 export default function DiarioView() {
   const { user } = useAuth();
   const [pdfConfigOpen, setPdfConfigOpen] = useState(false);
@@ -70,7 +83,7 @@ export default function DiarioView() {
       },
       diario: {
         id: diario.id,
-        data: diario.data,
+        data: parseData(diario.data).toISOString().split("T")[0],
         horarioInicio: diario.horarioInicio ?? undefined,
         horarioFim: diario.horarioFim ?? undefined,
         clima: diario.clima ?? undefined,
@@ -129,9 +142,12 @@ export default function DiarioView() {
   }
 
   const climaConfig = diario.clima ? CLIMA_CONFIG[diario.clima] : null;
-  const dataFormatada = new Date(diario.data + "T12:00:00").toLocaleDateString("pt-BR", {
-    weekday: "long", year: "numeric", month: "long", day: "numeric",
-  });
+  const dataObj = parseData(diario.data);
+  const dataFormatada = isNaN(dataObj.getTime())
+    ? "Data não informada"
+    : dataObj.toLocaleDateString("pt-BR", {
+        weekday: "long", year: "numeric", month: "long", day: "numeric",
+      });
 
   return (
     <DashboardLayout>

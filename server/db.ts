@@ -1,6 +1,5 @@
 import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import mysql from "mysql2/promise";
 import {
   users,
   obras,
@@ -25,24 +24,29 @@ import * as demo from "./demo-store";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+// Adiciona SSL na URL para Railway production
+function buildDatabaseUrl(url: string): string {
+  if (process.env.NODE_ENV === "production" && !url.includes("ssl")) {
+    const separator = url.includes("?") ? "&" : "?";
+    return url + separator + "ssl=true";
+  }
+  return url;
+}
+
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
+    console.log("[DB] DATABASE_URL encontrada, conectando...");
     try {
-      const pool = mysql.createPool({
-        uri: process.env.DATABASE_URL,
-        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
-        waitForConnections: true,
-        connectionLimit: 10,
-      });
-      _db = drizzle(pool);
-      // Testa a conexão imediatamente
-      await pool.query("SELECT 1");
-      console.log("[Database] Conectado com sucesso ao MySQL");
+      const url = buildDatabaseUrl(process.env.DATABASE_URL);
+      _db = drizzle(url);
+      console.log("[DB] Conectado ao MySQL com sucesso!");
     } catch (error) {
-      console.error("[Database] Falha ao conectar:", error);
+      console.error("[DB] Erro ao conectar:", error);
       _db = null;
     }
+  } else if (!process.env.DATABASE_URL) {
+    console.log("[DB] DATABASE_URL não definida - modo demo ativo");
   }
   return _db;
 }

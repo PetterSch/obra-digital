@@ -116,6 +116,14 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    resetPassword: adminProcedure
+      .input(z.object({ id: z.number(), novaSenha: z.string().min(6) }))
+      .mutation(async ({ input }) => {
+        const passwordHash = await bcrypt.hash(input.novaSenha, 10);
+        await db.updateUserPassword(input.id, passwordHash);
+        return { success: true };
+      }),
+
     setUserObras: adminProcedure
       .input(z.object({ usuarioId: z.number(), obraIds: z.array(z.number()) }))
       .mutation(async ({ input }) => {

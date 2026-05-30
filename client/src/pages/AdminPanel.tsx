@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Plus, Trash2, ShieldCheck, HardHat, Eye, UserCog, Building2 } from "lucide-react";
+import { Plus, Trash2, ShieldCheck, HardHat, Eye, UserCog, Building2, KeyRound } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -30,6 +30,8 @@ export default function AdminPanel() {
   const { user } = useAuth();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState(FORM_DEFAULT);
+  const [resetUser, setResetUser] = useState<any | null>(null);
+  const [novaSenha, setNovaSenha] = useState("");
 
   // Gate de admin
   if (user?.role !== "admin") {
@@ -63,6 +65,15 @@ export default function AdminPanel() {
   const deleteMutation = trpc.admin.deleteUser.useMutation({
     onSuccess: () => { toast.success("Usuário removido!"); refetch(); },
     onError: (e) => toast.error(e.message || "Erro ao remover usuário"),
+  });
+
+  const resetMutation = trpc.admin.resetPassword.useMutation({
+    onSuccess: () => {
+      toast.success("Senha redefinida com sucesso!");
+      setResetUser(null);
+      setNovaSenha("");
+    },
+    onError: (e) => toast.error(e.message || "Erro ao redefinir senha"),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -133,6 +144,13 @@ export default function AdminPanel() {
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border ${info.color}`}>
                         {info.icon}{info.label}
                       </span>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8"
+                        title="Redefinir senha"
+                        onClick={() => { setResetUser(u); setNovaSenha(""); }}
+                      >
+                        <KeyRound className="w-4 h-4" />
+                      </Button>
                       {!isMe && (
                         <Button
                           variant="ghost" size="icon"
@@ -235,6 +253,48 @@ export default function AdminPanel() {
                 {createMutation.isPending ? "Criando..." : "Criar usuário"}
               </Button>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal redefinir senha */}
+      <Dialog open={!!resetUser} onOpenChange={v => { if (!v) { setResetUser(null); setNovaSenha(""); } }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Redefinir senha</DialogTitle>
+            <DialogDescription>
+              Defina uma nova senha para <strong>{resetUser?.name}</strong> (@{resetUser?.username})
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              if (novaSenha.length < 6) { toast.error("A senha deve ter ao menos 6 caracteres"); return; }
+              resetMutation.mutate({ id: resetUser.id, novaSenha });
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <Label>Nova senha</Label>
+              <Input
+                type="text"
+                value={novaSenha}
+                onChange={e => setNovaSenha(e.target.value)}
+                placeholder="Mínimo 6 caracteres"
+                autoFocus
+              />
+              <p className="text-xs text-muted-foreground">
+                Informe essa senha ao usuário. Ele poderá trocá-la depois.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1" disabled={resetMutation.isPending}>
+                {resetMutation.isPending ? "Salvando..." : "Redefinir senha"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => { setResetUser(null); setNovaSenha(""); }}>
+                Cancelar
+              </Button>
             </div>
           </form>
         </DialogContent>

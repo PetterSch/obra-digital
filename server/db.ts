@@ -680,6 +680,12 @@ export async function deleteUser(id: number) {
   await db.delete(users).where(eq(users.id, id));
 }
 
+export async function updateUserPassword(id: number, passwordHash: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set({ passwordHash }).where(eq(users.id, id));
+}
+
 export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return email === "pedroemilio" ? DEMO_USER : null;

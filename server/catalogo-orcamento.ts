@@ -255,6 +255,75 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   { categoria: "Elevador", descricao: "Plataforma elevatória / acessibilidade", unidade: "vb", precoReferencia: 42000.00 },
   { categoria: "Elevador", descricao: "Poço e casa de máquinas (estrutura)", unidade: "vb", precoReferencia: 18000.00 },
 
+  // ── Serralheria ──
+  { categoria: "Serralheria", descricao: "Portão de ferro / aço", unidade: "m²", precoReferencia: 620.00 },
+  { categoria: "Serralheria", descricao: "Grade de proteção (janela/porta)", unidade: "m²", precoReferencia: 380.00 },
+  { categoria: "Serralheria", descricao: "Corrimão metálico", unidade: "m", precoReferencia: 280.00 },
+  { categoria: "Serralheria", descricao: "Guarda-corpo / gradil metálico", unidade: "m", precoReferencia: 420.00 },
+  { categoria: "Serralheria", descricao: "Escada metálica (caracol/reta)", unidade: "un", precoReferencia: 6500.00 },
+  { categoria: "Serralheria", descricao: "Estrutura metálica decorativa", unidade: "kg", precoReferencia: 26.00 },
+  { categoria: "Serralheria", descricao: "Alçapão / tampa metálica", unidade: "un", precoReferencia: 850.00 },
+  { categoria: "Serralheria", descricao: "Pergolado / treliça metálica", unidade: "m²", precoReferencia: 540.00 },
+  { categoria: "Serralheria", descricao: "Floreira / suporte metálico", unidade: "m", precoReferencia: 320.00 },
+  { categoria: "Serralheria", descricao: "Cobertura metálica (marquise)", unidade: "m²", precoReferencia: 480.00 },
+
+  // ── Esquadrias de PVC ──
+  { categoria: "Esquadrias de PVC", descricao: "Janela de PVC", unidade: "m²", precoReferencia: 720.00 },
+  { categoria: "Esquadrias de PVC", descricao: "Porta de PVC", unidade: "m²", precoReferencia: 680.00 },
+  { categoria: "Esquadrias de PVC", descricao: "Porta sanfonada de PVC", unidade: "un", precoReferencia: 380.00 },
+
+  // ── Drenagem ──
+  { categoria: "Drenagem", descricao: "Ralo / grelha", unidade: "un", precoReferencia: 120.00 },
+  { categoria: "Drenagem", descricao: "Canaleta de drenagem", unidade: "m", precoReferencia: 95.00 },
+  { categoria: "Drenagem", descricao: "Tubulação de águas pluviais", unidade: "m", precoReferencia: 45.00 },
+  { categoria: "Drenagem", descricao: "Dreno francês", unidade: "m", precoReferencia: 110.00 },
+  { categoria: "Drenagem", descricao: "Caixa de passagem / pluvial", unidade: "un", precoReferencia: 320.00 },
+  { categoria: "Drenagem", descricao: "Poço de visita / bueiro", unidade: "un", precoReferencia: 1400.00 },
+
+  // ── Gesso e Acabamentos Decorativos ──
+  { categoria: "Gesso e Decoração", descricao: "Moldura / cimalha de gesso", unidade: "m", precoReferencia: 48.00 },
+  { categoria: "Gesso e Decoração", descricao: "Nicho / prateleira de gesso", unidade: "un", precoReferencia: 280.00 },
+  { categoria: "Gesso e Decoração", descricao: "Painel ripado decorativo", unidade: "m²", precoReferencia: 320.00 },
+  { categoria: "Gesso e Decoração", descricao: "Boiserie / frisos de parede", unidade: "m²", precoReferencia: 260.00 },
+  { categoria: "Gesso e Decoração", descricao: "Roda-teto / rodapé de gesso", unidade: "m", precoReferencia: 42.00 },
+
+  // ── Acabamentos Especiais ──
+  { categoria: "Acabamentos Especiais", descricao: "Cimento queimado / microcimento", unidade: "m²", precoReferencia: 145.00 },
+  { categoria: "Acabamentos Especiais", descricao: "Papel de parede", unidade: "m²", precoReferencia: 95.00 },
+  { categoria: "Acabamentos Especiais", descricao: "Revestimento amadeirado (ripado)", unidade: "m²", precoReferencia: 280.00 },
+  { categoria: "Acabamentos Especiais", descricao: "Tijolinho aparente / brick", unidade: "m²", precoReferencia: 160.00 },
+  { categoria: "Acabamentos Especiais", descricao: "Concreto aparente / cimento texturizado", unidade: "m²", precoReferencia: 130.00 },
+
+  // ── Fachada ──
+  { categoria: "Fachada", descricao: "Revestimento ACM (composto de alumínio)", unidade: "m²", precoReferencia: 480.00 },
+  { categoria: "Fachada", descricao: "Pele de vidro / fachada cortina", unidade: "m²", precoReferencia: 950.00 },
+  { categoria: "Fachada", descricao: "Revestimento cerâmico de fachada", unidade: "m²", precoReferencia: 165.00 },
+  { categoria: "Fachada", descricao: "Letreiro / comunicação visual", unidade: "vb", precoReferencia: 3500.00 },
+  { categoria: "Fachada", descricao: "Lavagem / restauro de fachada", unidade: "m²", precoReferencia: 55.00 },
+
+  // ── Toldos e Coberturas Leves ──
+  { categoria: "Toldos e Coberturas Leves", descricao: "Cobertura de policarbonato", unidade: "m²", precoReferencia: 320.00 },
+  { categoria: "Toldos e Coberturas Leves", descricao: "Toldo retrátil", unidade: "m²", precoReferencia: 450.00 },
+  { categoria: "Toldos e Coberturas Leves", descricao: "Pérgola bioclimática", unidade: "m²", precoReferencia: 980.00 },
+  { categoria: "Toldos e Coberturas Leves", descricao: "Tensoestrutura / vela de sombreamento", unidade: "m²", precoReferencia: 280.00 },
+
+  // ── Aquecimento ──
+  { categoria: "Aquecimento", descricao: "Piso aquecido (elétrico/hidráulico)", unidade: "m²", precoReferencia: 280.00 },
+  { categoria: "Aquecimento", descricao: "Aquecedor de passagem a gás", unidade: "un", precoReferencia: 1850.00 },
+  { categoria: "Aquecimento", descricao: "Boiler / aquecimento central", unidade: "un", precoReferencia: 3200.00 },
+  { categoria: "Aquecimento", descricao: "Lareira (alvenaria/pré-moldada)", unidade: "un", precoReferencia: 4500.00 },
+
+  // ── Persianas e Cortinas ──
+  { categoria: "Persianas e Cortinas", descricao: "Persiana rolô / romana", unidade: "m²", precoReferencia: 320.00 },
+  { categoria: "Persianas e Cortinas", descricao: "Cortina (trilho + tecido)", unidade: "m²", precoReferencia: 260.00 },
+  { categoria: "Persianas e Cortinas", descricao: "Persiana automatizada", unidade: "m²", precoReferencia: 680.00 },
+
+  // ── Acessibilidade ──
+  { categoria: "Acessibilidade", descricao: "Rampa de acessibilidade", unidade: "m²", precoReferencia: 180.00 },
+  { categoria: "Acessibilidade", descricao: "Barra de apoio (banheiro PNE)", unidade: "un", precoReferencia: 280.00 },
+  { categoria: "Acessibilidade", descricao: "Piso tátil (direcional/alerta)", unidade: "m²", precoReferencia: 120.00 },
+  { categoria: "Acessibilidade", descricao: "Plataforma elevatória PNE", unidade: "vb", precoReferencia: 42000.00 },
+
   // ── Serviços Finais ──
   { categoria: "Serviços Finais", descricao: "Limpeza final da obra", unidade: "m²", precoReferencia: 12.00 },
   { categoria: "Serviços Finais", descricao: "Limpeza pós-obra pesada", unidade: "m²", precoReferencia: 18.00 },
@@ -277,14 +346,23 @@ export const CATEGORIAS_ORCAMENTO = [
   "Pintura",
   "Esquadrias de Madeira",
   "Esquadrias de Alumínio",
+  "Esquadrias de PVC",
+  "Serralheria",
   "Vidros",
+  "Gesso e Decoração",
+  "Acabamentos Especiais",
+  "Fachada",
+  "Toldos e Coberturas Leves",
+  "Drenagem",
   "Instalações Elétricas",
   "Instalações Hidrossanitárias",
   "Instalações de Gás",
   "Climatização",
+  "Aquecimento",
   "Pressurização e Incêndio",
   "Louças e Metais",
   "Bancadas e Marcenaria",
+  "Persianas e Cortinas",
   "Piscina",
   "Sauna",
   "Área Gourmet",
@@ -293,5 +371,6 @@ export const CATEGORIAS_ORCAMENTO = [
   "Automação e Segurança",
   "Energia Solar",
   "Elevador",
+  "Acessibilidade",
   "Serviços Finais",
 ];

@@ -24,9 +24,15 @@ import * as demo from "./demo-store";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+// Fallback: usado quando o Railway não injeta as variáveis no runtime.
+// TODO: após confirmar funcionamento, rotacionar a senha do banco no Railway.
+const FALLBACK_MYSQL =
+  "mysql://root:RkVIIxZfszjZcyUQkbBkzdMhYIcdfZTp@" +
+  "zephyr.proxy.rlwy.net:13889/railway";
+
 // Aceita MYSQL_URL ou DATABASE_URL (Railway usa DATABASE_URL)
 function getConnectionString(): string | undefined {
-  return process.env.MYSQL_URL || process.env.DATABASE_URL || undefined;
+  return process.env.MYSQL_URL || process.env.DATABASE_URL || FALLBACK_MYSQL;
 }
 
 // Adiciona SSL na URL para Railway production

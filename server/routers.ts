@@ -50,15 +50,12 @@ export const appRouter = router({
         password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
         role: z.enum(["admin", "engenheiro", "cliente"]).default("engenheiro"),
       }))
-      .mutation(async ({ input, ctx }) => {
-        const existing = await db.getUserByEmailOrUsername(input.email, input.username);
-        if (existing) throw new TRPCError({ code: "CONFLICT", message: "E-mail ou usuário já cadastrado" });
-        const passwordHash = await bcrypt.hash(input.password, 10);
-        const user = await db.createUser({ name: input.name, email: input.email, username: input.username, passwordHash, role: input.role });
-        if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erro ao criar usuário" });
-        const token = await createSessionToken(user.id, user.role, user.name ?? "");
-        ctx.res.cookie(COOKIE_NAME, token, { httpOnly: true, sameSite: "lax", secure: false, maxAge: ONE_YEAR_MS, path: "/" });
-        return { success: true, user };
+      .mutation(async () => {
+        // Registro público desabilitado — somente administradores criam contas
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "O cadastro é feito apenas por administradores. Entre em contato com o responsável.",
+        });
       }),
 
     logout: publicProcedure.mutation(({ ctx }) => {
@@ -67,10 +64,79 @@ export const appRouter = router({
     }),
   }),
 
+  // ============= ADMIN: GESTÃO DE USUÁRIOS =============
+  admin: router({
+    listUsers: adminProcedure.query(async () => {
+      const users = await db.getAllUsers();
+      // Não expõe o hash de senha
+      return users.map((u: any) => ({
+        id: u.id, name: u.name, username: u.username,
+        email: u.email, role: u.role, lastSignedIn: u.lastSignedIn,
+      }));
+    }),
+
+    createUser: adminProcedure
+      .input(z.object({
+        name: z.string().min(2),
+        username: z.string().min(3),
+        email: z.string().email(),
+        password: z.string().min(6),
+        role: z.enum(["admin", "engenheiro", "cliente"]),
+        obraIds: z.array(z.number()).default([]),
+      }))
+      .mutation(async ({ input }) => {
+        const existing = await db.getUserByEmailOrUsername(input.email, input.username);
+        if (existing) throw new TRPCError({ code: "CONFLICT", message: "E-mail ou usuário já cadastrado" });
+        const passwordHash = await bcrypt.hash(input.password, 10);
+        const user = await db.createUser({
+          name: input.name, email: input.email, username: input.username,
+          passwordHash, role: input.role,
+        });
+        if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erro ao criar usuário" });
+        // Concede acesso às obras selecionadas (admins veem tudo, não precisa)
+        if (input.role !== "admin") {
+          for (const obraId of input.obraIds) {
+            await db.createAcessoObra({
+              obraId, usuarioId: user.id,
+              permissao: input.role === "cliente" ? "visualizar" : "editar",
+              ativo: true,
+            });
+          }
+        }
+        return { success: true, user: { id: user.id, name: user.name } };
+      }),
+
+    deleteUser: adminProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input, ctx }) => {
+        if (input.id === ctx.user.id) {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Você não pode excluir a si mesmo" });
+        }
+        await db.deleteUser(input.id);
+        return { success: true };
+      }),
+
+    setUserObras: adminProcedure
+      .input(z.object({ usuarioId: z.number(), obraIds: z.array(z.number()) }))
+      .mutation(async ({ input }) => {
+        // Remove acessos antigos e recria
+        const atuais = await db.getUserObras(input.usuarioId);
+        for (const a of atuais as any[]) {
+          await db.deleteAcessoObra(a.id);
+        }
+        for (const obraId of input.obraIds) {
+          await db.createAcessoObra({ obraId, usuarioId: input.usuarioId, permissao: "visualizar", ativo: true });
+        }
+        return { success: true };
+      }),
+  }),
+
   // ============= OBRAS ROUTER =============
   obras: router({
     list: protectedProcedure.query(async ({ ctx }) => {
-      return db.getObrasByUserId(ctx.user.id);
+      // Admin vê todas; demais veem apenas as obras com acesso concedido
+      if (ctx.user.role === "admin") return db.getAllObras();
+      return db.getObrasVisiveis(ctx.user.id);
     }),
 
     getById: protectedProcedure

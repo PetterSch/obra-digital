@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings, UserCog } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -33,6 +33,7 @@ const menuItems = [
   { icon: HardHat,         label: "Equipes & Colaboradores", path: "/colaboradores" },
   { icon: FileText,        label: "Resumos",                path: "/resumos" },
   { icon: Zap,             label: "Sugestões LLM",          path: "/sugestoes-llm" },
+  { icon: UserCog,         label: "Usuários",               path: "/admin", adminOnly: true },
   { icon: Settings,        label: "Minha Empresa",          path: "/configuracoes/empresa" },
 ];
 
@@ -116,7 +117,8 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const activeMenuItem = menuItems.find(item => item.path === location);
+  const visibleMenuItems = menuItems.filter(item => !item.adminOnly || user?.role === "admin");
+  const activeMenuItem = visibleMenuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
 
   useEffect(() => {
@@ -184,7 +186,7 @@ function DashboardLayoutContent({
 
           <SidebarContent className="gap-0">
             <SidebarMenu className="px-2 py-1">
-              {menuItems.map(item => {
+              {visibleMenuItems.map(item => {
                 const isActive = location === item.path;
                 return (
                   <SidebarMenuItem key={item.path}>

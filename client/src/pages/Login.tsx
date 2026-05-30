@@ -10,8 +10,7 @@ import { Building2, Loader2 } from "lucide-react";
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", role: "engenheiro" as const });
+  const [form, setForm] = useState({ email: "", password: "" });
   const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
@@ -23,24 +22,11 @@ export default function Login() {
     onError: (e) => toast.error(e.message),
   });
 
-  const registerMutation = trpc.auth.register.useMutation({
-    onSuccess: async () => {
-      toast.success("Conta criada!");
-      await utils.auth.me.invalidate();
-      navigate("/dashboard");
-    },
-    onError: (e) => toast.error(e.message),
-  });
-
-  const isPending = loginMutation.isPending || registerMutation.isPending;
+  const isPending = loginMutation.isPending;
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (mode === "login") {
-      loginMutation.mutate({ email: form.email, password: form.password });
-    } else {
-      registerMutation.mutate({ name: form.name, username: form.username, email: form.email, password: form.password, role: form.role });
-    }
+    loginMutation.mutate({ email: form.email, password: form.password });
   };
 
   return (
@@ -51,53 +37,25 @@ export default function Login() {
             <Building2 className="w-10 h-10 text-blue-600" />
           </div>
           <CardTitle className="text-2xl">Obra Digital</CardTitle>
-          <CardDescription>
-            {mode === "login" ? "Entre na sua conta" : "Crie sua conta"}
-          </CardDescription>
+          <CardDescription>Entre na sua conta</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === "register" && (
-              <>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Nome completo</Label>
-                  <Input id="name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Seu nome" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="username">Usuário</Label>
-                  <Input id="username" type="text" value={form.username} onChange={e => setForm({...form, username: e.target.value})} placeholder="Ex: pedroemilio" required />
-                </div>
-              </>
-            )}
             <div className="space-y-2">
-              <Label htmlFor="email">{mode === "register" ? "E-mail" : "E-mail ou usuário"}</Label>
-              <Input id="email" type={mode === "register" ? "email" : "text"} value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder={mode === "register" ? "seu@email.com" : "e-mail ou usuário"} required />
+              <Label htmlFor="email">E-mail ou usuário</Label>
+              <Input id="email" type="text" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="e-mail ou usuário" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>
-              <Input id="password" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder={mode === "register" ? "Mínimo 6 caracteres" : "Sua senha"} required />
+              <Input id="password" type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} placeholder="Sua senha" required />
             </div>
-            {mode === "register" && (
-              <div className="space-y-2">
-                <Label htmlFor="role">Perfil</Label>
-                <select id="role" className="w-full px-3 py-2 border border-input rounded-md bg-background text-sm" value={form.role} onChange={e => setForm({...form, role: e.target.value as any})}>
-                  <option value="engenheiro">Engenheiro</option>
-                  <option value="admin">Administrador</option>
-                  <option value="cliente">Cliente</option>
-                </select>
-              </div>
-            )}
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-              {mode === "login" ? "Entrar" : "Criar conta"}
+              Entrar
             </Button>
           </form>
-          <div className="mt-4 text-center text-sm text-muted-foreground">
-            {mode === "login" ? (
-              <>Não tem conta?{" "}<button className="text-primary underline" onClick={() => setMode("register")}>Criar agora</button></>
-            ) : (
-              <>Já tem conta?{" "}<button className="text-primary underline" onClick={() => setMode("login")}>Entrar</button></>
-            )}
+          <div className="mt-4 text-center text-xs text-muted-foreground">
+            O acesso é criado pelo administrador da sua empresa.
           </div>
         </CardContent>
       </Card>

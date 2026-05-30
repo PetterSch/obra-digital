@@ -108,6 +108,26 @@ export async function getObrasByUserId(userId: number) {
   return db.select().from(obras).where(eq(obras.criadoPor, userId));
 }
 
+// Todas as obras (uso de admin)
+export async function getAllObras() {
+  const db = await getDb();
+  if (!db) return demo.demo_getObrasByUserId(1);
+  return db.select().from(obras);
+}
+
+// Obras visíveis para um usuário comum: as que ele criou + as com acesso concedido
+export async function getObrasVisiveis(userId: number) {
+  const db = await getDb();
+  if (!db) return demo.demo_getObrasByUserId(userId);
+  const acessos = await db
+    .select()
+    .from(acessoObra)
+    .where(and(eq(acessoObra.usuarioId, userId), eq(acessoObra.ativo, true)));
+  const idsComAcesso = acessos.map(a => a.obraId);
+  const todas = await db.select().from(obras);
+  return todas.filter(o => o.criadoPor === userId || idsComAcesso.includes(o.id));
+}
+
 export async function getObraById(obraId: number) {
   const db = await getDb();
   if (!db) return demo.demo_getObraById(obraId) ?? undefined;
@@ -645,6 +665,19 @@ export async function getUserById(id: number) {
   if (!db) return id === 1 ? DEMO_USER : null;
   const result = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return result[0] ?? null;
+}
+
+export async function getAllUsers() {
+  const db = await getDb();
+  if (!db) return [DEMO_USER];
+  return db.select().from(users);
+}
+
+export async function deleteUser(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(acessoObra).where(eq(acessoObra.usuarioId, id));
+  await db.delete(users).where(eq(users.id, id));
 }
 
 export async function getUserByEmail(email: string) {

@@ -11,5 +11,6 @@ export default defineConfig({
   dialect: "mysql",
   dbCredentials: {
     url: connectionString,
-  },
+    ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+  } as any,
 });

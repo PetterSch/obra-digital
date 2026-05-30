@@ -1,6 +1,7 @@
 import { eq, and, desc, asc, gte, lte, sql, inArray } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { 
+import mysql from "mysql2/promise";
+import {
   users,
   obras,
   diarios,
@@ -28,9 +29,18 @@ let _db: ReturnType<typeof drizzle> | null = null;
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle(process.env.DATABASE_URL);
+      const pool = mysql.createPool({
+        uri: process.env.DATABASE_URL,
+        ssl: process.env.NODE_ENV === "production" ? { rejectUnauthorized: false } : undefined,
+        waitForConnections: true,
+        connectionLimit: 10,
+      });
+      _db = drizzle(pool);
+      // Testa a conexão imediatamente
+      await pool.query("SELECT 1");
+      console.log("[Database] Conectado com sucesso ao MySQL");
     } catch (error) {
-      console.warn("[Database] Failed to connect:", error);
+      console.error("[Database] Falha ao conectar:", error);
       _db = null;
     }
   }

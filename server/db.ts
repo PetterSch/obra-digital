@@ -286,6 +286,13 @@ export async function updateMaterial(materialId: number, data: Partial<typeof ma
   return db.update(materiais).set(data).where(eq(materiais.id, materialId));
 }
 
+export async function deleteMaterial(materialId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(movimentacaoMateriais).where(eq(movimentacaoMateriais.materialId, materialId));
+  await db.delete(materiais).where(eq(materiais.id, materialId));
+}
+
 // ============= MOVIMENTAÇÃO DE MATERIAIS =============
 
 export async function getMovimentacoesByMaterialId(materialId: number) {

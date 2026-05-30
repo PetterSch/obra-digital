@@ -376,6 +376,26 @@ export const appRouter = router({
         return db.createMaterial(input);
       }),
 
+    update: engineerProcedure
+      .input(z.object({
+        id: z.number(),
+        nome: z.string().min(1).optional(),
+        unidade: z.string().min(1).optional(),
+        quantidade: z.string().optional(),
+        fornecedor: z.string().optional(),
+        observacoes: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return db.updateMaterial(id, data);
+      }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteMaterial(input.id);
+      }),
+
     addMovimentacao: engineerProcedure
       .input(z.object({
         materialId: z.number(),

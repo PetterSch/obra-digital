@@ -458,15 +458,19 @@ export const appRouter = router({
     update: engineerProcedure
       .input(z.object({
         id: z.number(),
+        nome: z.string().min(1).optional(),
+        cpf: z.string().optional(),
         funcao: z.string().min(1).optional(),
         ativo: z.boolean().optional(),
+        dataAdmissao: z.string().optional(),
         dataDemissao: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, dataDemissao, ...data } = input;
+        const { id, dataAdmissao, dataDemissao, ...data } = input;
         const updateData = {
           ...data,
-          ...(dataDemissao && { dataDemissao: new Date(dataDemissao) as unknown as Date }),
+          ...(dataAdmissao !== undefined && { dataAdmissao: dataAdmissao ? new Date(dataAdmissao) as unknown as Date : null }),
+          ...(dataDemissao !== undefined && { dataDemissao: dataDemissao ? new Date(dataDemissao) as unknown as Date : null }),
         };
         return db.updateColaborador(id, updateData);
       }),

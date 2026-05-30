@@ -112,7 +112,7 @@ function EquipeCard({
   const [openEditColab, setOpenEditColab] = useState(false);
   const [editingColab, setEditingColab]   = useState<any | null>(null);
   const [colabForm, setColabForm]   = useState(COLAB_FORM_DEFAULT);
-  const [editColabForm, setEditColabForm] = useState<{ funcao: string; ativo: boolean }>({ funcao: "", ativo: true });
+  const [editColabForm, setEditColabForm] = useState<{ nome: string; cpf: string; funcao: string; dataAdmissao: string; ativo: boolean }>({ nome: "", cpf: "", funcao: "", dataAdmissao: "", ativo: true });
 
   const utils = trpc.useUtils();
 
@@ -166,18 +166,41 @@ function EquipeCard({
 
   const handleEditColab = (ev: React.FormEvent) => {
     ev.preventDefault();
-    if (!editingColab || !editColabForm.funcao) return;
+    if (!editingColab || !editColabForm.nome || !editColabForm.funcao) {
+      toast.error("Nome e função são obrigatórios");
+      return;
+    }
     updateColabMutation.mutate({
       id: editingColab.id,
-      funcao: editColabForm.funcao || undefined,
+      nome: editColabForm.nome,
+      cpf: editColabForm.cpf || undefined,
+      funcao: editColabForm.funcao,
+      dataAdmissao: editColabForm.dataAdmissao || undefined,
       ativo: editColabForm.ativo,
     });
   };
 
+  // Converte Date/string do banco para o formato yyyy-mm-dd do input
+  const toDateInput = (val: any): string => {
+    if (!val) return "";
+    try { return new Date(val).toISOString().split("T")[0]; } catch { return ""; }
+  };
+
   const openEditColaModal = (c: any) => {
     setEditingColab(c);
-    setEditColabForm({ funcao: c.funcao ?? "", ativo: c.ativo ?? true });
+    setEditColabForm({
+      nome: c.nome ?? "",
+      cpf: c.cpf ?? "",
+      funcao: c.funcao ?? "",
+      dataAdmissao: toDateInput(c.dataAdmissao),
+      ativo: c.ativo ?? true,
+    });
     setOpenEditColab(true);
+  };
+
+  const fmtData = (val: any): string => {
+    if (!val) return "";
+    try { return new Date(val).toLocaleDateString("pt-BR"); } catch { return ""; }
   };
 
   const ativos   = colaboradores.filter((c: any) => c.ativo !== false);
@@ -282,11 +305,12 @@ function EquipeCard({
                   >
                     <div className="min-w-0">
                       <p className="font-medium text-sm leading-tight">{c.nome}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
+                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                         <Badge variant="secondary" className="text-xs px-1.5 py-0">
                           {c.funcao}
                         </Badge>
-                        {c.cpf && <span className="text-xs text-muted-foreground">{c.cpf}</span>}
+                        {c.cpf && <span className="text-xs text-muted-foreground">CPF: {c.cpf}</span>}
+                        {c.dataAdmissao && <span className="text-xs text-muted-foreground">Admissão: {fmtData(c.dataAdmissao)}</span>}
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-2">
@@ -419,10 +443,34 @@ function EquipeCard({
           </DialogHeader>
           <form onSubmit={handleEditColab} className="space-y-3">
             <div className="space-y-1">
-              <Label>Função</Label>
+              <Label>Nome *</Label>
+              <Input
+                value={editColabForm.nome}
+                onChange={e => setEditColabForm({ ...editColabForm, nome: e.target.value })}
+                placeholder="Nome completo"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Função *</Label>
               <FuncaoInput
                 value={editColabForm.funcao}
                 onChange={v => setEditColabForm({ ...editColabForm, funcao: v })}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>CPF</Label>
+              <Input
+                value={editColabForm.cpf}
+                onChange={e => setEditColabForm({ ...editColabForm, cpf: e.target.value })}
+                placeholder="000.000.000-00"
+              />
+            </div>
+            <div className="space-y-1">
+              <Label>Data de admissão</Label>
+              <Input
+                type="date"
+                value={editColabForm.dataAdmissao}
+                onChange={e => setEditColabForm({ ...editColabForm, dataAdmissao: e.target.value })}
               />
             </div>
             <div className="space-y-1">

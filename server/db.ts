@@ -24,29 +24,35 @@ import * as demo from "./demo-store";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
+// Aceita MYSQL_URL ou DATABASE_URL (Railway usa DATABASE_URL)
+function getConnectionString(): string | undefined {
+  return process.env.MYSQL_URL || process.env.DATABASE_URL || undefined;
+}
+
 // Adiciona SSL na URL para Railway production
 function buildDatabaseUrl(url: string): string {
   if (process.env.NODE_ENV === "production" && !url.includes("ssl")) {
     const separator = url.includes("?") ? "&" : "?";
-    return url + separator + "ssl=true";
+    return url + separator + "ssl={\"rejectUnauthorized\":false}";
   }
   return url;
 }
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.MYSQL_URL) {
-    console.log("[DB] DATABASE_URL encontrada, conectando...");
+  const conn = getConnectionString();
+  if (!_db && conn) {
+    console.log("[DB] String de conexão encontrada, conectando ao MySQL...");
     try {
-      const url = buildDatabaseUrl(process.env.MYSQL_URL);
+      const url = buildDatabaseUrl(conn);
       _db = drizzle(url);
       console.log("[DB] Conectado ao MySQL com sucesso!");
     } catch (error) {
       console.error("[DB] Erro ao conectar:", error);
       _db = null;
     }
-  } else if (!process.env.MYSQL_URL) {
-    console.log("[DB] DATABASE_URL não definida - modo demo ativo");
+  } else if (!conn) {
+    console.log("[DB] Nenhuma string de conexão definida - modo demo ativo");
   }
   return _db;
 }

@@ -160,6 +160,17 @@ export async function runMigrations() {
   } catch {
     // Já existem — ignora
   }
+
+  // Campos de cliente/obra no orçamento (módulo independente)
+  for (const col of [
+    "clienteNome VARCHAR(255)", "clienteTelefone VARCHAR(50)", "clienteEmail VARCHAR(255)",
+    "obraNomeRef VARCHAR(255)", "obraEndereco VARCHAR(500)", "responsavel VARCHAR(255)",
+  ]) {
+    try {
+      const db = await getDb();
+      if (db) await db.execute(sql.raw(`ALTER TABLE orcamentos ADD COLUMN ${col}`));
+    } catch { /* já existe */ }
+  }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -821,6 +832,12 @@ export async function getOrcamentosByObra(obraId: number) {
   const db = await getDb();
   if (!db) return [];
   return db.select().from(orcamentos).where(eq(orcamentos.obraId, obraId)).orderBy(desc(orcamentos.criadoEm));
+}
+
+export async function getAllOrcamentos() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orcamentos).orderBy(desc(orcamentos.criadoEm));
 }
 
 export async function getOrcamentoById(id: number) {

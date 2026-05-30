@@ -385,8 +385,14 @@ export type InsertSugestaoLLM = typeof sugestoesLLM.$inferInsert;
  */
 export const orcamentos = mysqlTable("orcamentos", {
   id: int("id").autoincrement().primaryKey(),
-  obraId: int("obraId").notNull(),
+  obraId: int("obraId"),
   nome: varchar("nome", { length: 255 }).notNull(),
+  clienteNome: varchar("clienteNome", { length: 255 }),
+  clienteTelefone: varchar("clienteTelefone", { length: 50 }),
+  clienteEmail: varchar("clienteEmail", { length: 255 }),
+  obraNomeRef: varchar("obraNomeRef", { length: 255 }),
+  obraEndereco: varchar("obraEndereco", { length: 500 }),
+  responsavel: varchar("responsavel", { length: 255 }),
   areaM2: decimal("areaM2", { precision: 10, scale: 2 }).default("0"),
   bdiPercent: decimal("bdiPercent", { precision: 5, scale: 2 }).default("0"),
   administracaoPercent: decimal("administracaoPercent", { precision: 5, scale: 2 }).default("0"),

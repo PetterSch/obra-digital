@@ -16,6 +16,7 @@ import DiarioObra from "./pages/DiarioObra";
 import DiarioView from "./pages/DiarioView";
 import ResumosPeriodicos from "./pages/ResumosPeriodicos";
 import ResumosHub from "./pages/ResumosHub";
+import Orcamentos from "./pages/Orcamentos";
 import DiarioEdit from "./pages/DiarioEdit";
 import ClientObras from "./pages/ClientObras";
 import ClientPanel from "./pages/ClientPanel";
@@ -58,6 +59,7 @@ function Router() {
       <Route path={"/obras/:obraId/diario/:diarioId"} component={DiarioView} />
       <Route path={"/obras/:obraId/diario/:diarioId/edit"} component={DiarioEdit} />
       <Route path={"/resumos"} component={ResumosHub} />
+      <Route path={"/orcamentos"} component={Orcamentos} />
       <Route path={"/obras/:obraId/resumos"} component={ResumosPeriodicos} />
       <Route path={"/relatorios/:obraId"} component={Relatorios} />
       <Route path={"/admin"} component={AdminPanel} />

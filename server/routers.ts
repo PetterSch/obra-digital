@@ -986,6 +986,9 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({ obraId: z.number() }))
       .query(async ({ input }) => db.getOrcamentosByObra(input.obraId)),
 
+    // Lista todos os orçamentos (módulo independente)
+    list: protectedProcedure.query(async () => db.getAllOrcamentos()),
+
     // Retorna orçamento + itens + totais calculados
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -1024,10 +1027,15 @@ Gere um resumo executivo profissional em português que:
 
     create: engineerProcedure
       .input(z.object({
-        obraId: z.number(),
+        obraId: z.number().optional(),
         nome: z.string().min(1),
+        clienteNome: z.string().optional(),
+        clienteTelefone: z.string().optional(),
+        clienteEmail: z.string().optional(),
+        obraNomeRef: z.string().optional(),
+        obraEndereco: z.string().optional(),
+        responsavel: z.string().optional(),
         areaM2: z.number().optional(),
-        // itens selecionados do catálogo
         itens: z.array(z.object({
           categoria: z.string().optional(),
           descricao: z.string(),
@@ -1038,12 +1046,18 @@ Gere um resumo executivo profissional em português que:
       }))
       .mutation(async ({ input }) => {
         const orcamento = await db.createOrcamento({
-          obraId: input.obraId,
+          obraId: input.obraId ?? null,
           nome: input.nome,
+          clienteNome: input.clienteNome ?? null,
+          clienteTelefone: input.clienteTelefone ?? null,
+          clienteEmail: input.clienteEmail ?? null,
+          obraNomeRef: input.obraNomeRef ?? null,
+          obraEndereco: input.obraEndereco ?? null,
+          responsavel: input.responsavel ?? null,
           areaM2: (input.areaM2 ?? 0).toString(),
           bdiPercent: "0",
           administracaoPercent: "0",
-        });
+        } as any);
         if (input.itens.length > 0) {
           await db.createOrcamentoItensBatch(input.itens.map((it, idx) => ({
             orcamentoId: orcamento.id,
@@ -1062,6 +1076,12 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({
         id: z.number(),
         nome: z.string().optional(),
+        clienteNome: z.string().optional(),
+        clienteTelefone: z.string().optional(),
+        clienteEmail: z.string().optional(),
+        obraNomeRef: z.string().optional(),
+        obraEndereco: z.string().optional(),
+        responsavel: z.string().optional(),
         areaM2: z.number().optional(),
         bdiPercent: z.number().optional(),
         administracaoPercent: z.number().optional(),
@@ -1070,10 +1090,16 @@ Gere um resumo executivo profissional em português que:
         const { id, ...d } = input;
         await db.updateOrcamento(id, {
           ...(d.nome !== undefined && { nome: d.nome }),
+          ...(d.clienteNome !== undefined && { clienteNome: d.clienteNome }),
+          ...(d.clienteTelefone !== undefined && { clienteTelefone: d.clienteTelefone }),
+          ...(d.clienteEmail !== undefined && { clienteEmail: d.clienteEmail }),
+          ...(d.obraNomeRef !== undefined && { obraNomeRef: d.obraNomeRef }),
+          ...(d.obraEndereco !== undefined && { obraEndereco: d.obraEndereco }),
+          ...(d.responsavel !== undefined && { responsavel: d.responsavel }),
           ...(d.areaM2 !== undefined && { areaM2: d.areaM2.toString() }),
           ...(d.bdiPercent !== undefined && { bdiPercent: d.bdiPercent.toString() }),
           ...(d.administracaoPercent !== undefined && { administracaoPercent: d.administracaoPercent.toString() }),
-        });
+        } as any);
         return { success: true };
       }),
 

@@ -161,6 +161,12 @@ export async function runMigrations() {
     // Já existem — ignora
   }
 
+  // orcamentos.obraId aceita NULL (orçamento independente de obra)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE orcamentos MODIFY obraId INT NULL`);
+  } catch { /* já aplicado */ }
+
   // Adiciona perfil "auxiliar" ao enum de role
   try {
     const db = await getDb();
@@ -862,8 +868,14 @@ export async function getOrcamentoById(id: number) {
 export async function createOrcamento(data: typeof orcamentos.$inferInsert) {
   const db = await getDb();
   if (!db) throw new Error("Banco indisponível");
-  await db.insert(orcamentos).values(data);
-  const r = await db.select().from(orcamentos).where(eq(orcamentos.obraId, data.obraId)).orderBy(desc(orcamentos.id)).limit(1);
+  const [res]: any = await db.insert(orcamentos).values(data);
+  const id = res?.insertId;
+  if (id) {
+    const r = await db.select().from(orcamentos).where(eq(orcamentos.id, id)).limit(1);
+    if (r[0]) return r[0];
+  }
+  // Fallback: pega o último criado
+  const r = await db.select().from(orcamentos).orderBy(desc(orcamentos.id)).limit(1);
   return r[0];
 }
 

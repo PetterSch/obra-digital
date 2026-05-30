@@ -30,13 +30,22 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden"
+      style={{ background: "linear-gradient(150deg, oklch(0.22 0.018 250) 0%, oklch(0.28 0.025 250) 55%, oklch(0.2 0.015 250) 100%)" }}>
+      {/* textura sutil de pontos (papel de projeto) */}
+      <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+        style={{ backgroundImage: "radial-gradient(oklch(1 0 0) 1px, transparent 1px)", backgroundSize: "22px 22px" }} />
+      {/* brilho âmbar de canto */}
+      <div className="absolute -top-32 -right-32 w-96 h-96 rounded-full pointer-events-none"
+        style={{ background: "radial-gradient(circle, oklch(0.605 0.135 55 / 0.25), transparent 70%)" }} />
+      <Card className="w-full max-w-md relative shadow-2xl border-border/60">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-2">
-            <Building2 className="w-10 h-10 text-blue-600" />
+          <div className="flex justify-center mb-3">
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+              <Building2 className="w-7 h-7 text-primary" />
+            </div>
           </div>
-          <CardTitle className="text-2xl">Obra Digital</CardTitle>
+          <CardTitle className="text-3xl">Obra Digital</CardTitle>
           <CardDescription>Entre na sua conta</CardDescription>
         </CardHeader>
         <CardContent>

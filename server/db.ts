@@ -92,6 +92,19 @@ export async function runMigrations() {
   } catch {
     // Coluna já existe — ok, ignora
   }
+
+  // Converte funcao de ENUM para VARCHAR (permite funções personalizadas)
+  for (const tabela of ["colaboradores", "mao_de_obra"]) {
+    try {
+      const db = await getDb();
+      if (db) {
+        await db.execute(sql.raw(`ALTER TABLE ${tabela} MODIFY funcao VARCHAR(100) NOT NULL`));
+        console.log(`[Migrate] Coluna funcao de ${tabela} convertida para VARCHAR`);
+      }
+    } catch (e) {
+      // Já convertido ou tabela não tem a coluna — ignora
+    }
+  }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {

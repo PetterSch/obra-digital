@@ -31,10 +31,11 @@ export const appRouter = router({
     login: publicProcedure
       .input(z.object({ email: z.string().min(1), password: z.string().min(1) }))
       .mutation(async ({ input, ctx }) => {
-        const user = await db.getUserByEmail(input.email);
-        if (!user || !user.passwordHash) throw new TRPCError({ code: "UNAUTHORIZED", message: "E-mail ou senha inválidos" });
+        // input.email pode ser e-mail OU usuário
+        const user = await db.getUserByLogin(input.email);
+        if (!user || !user.passwordHash) throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário/e-mail ou senha inválidos" });
         const ok = await bcrypt.compare(input.password, user.passwordHash);
-        if (!ok) throw new TRPCError({ code: "UNAUTHORIZED", message: "E-mail ou senha inválidos" });
+        if (!ok) throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário/e-mail ou senha inválidos" });
         const token = await createSessionToken(user.id, user.role, user.name ?? "");
         ctx.res.cookie(COOKIE_NAME, token, { httpOnly: true, sameSite: "lax", secure: false, maxAge: ONE_YEAR_MS, path: "/" });
         await db.updateLastSignedIn(user.id);
@@ -44,15 +45,16 @@ export const appRouter = router({
     register: publicProcedure
       .input(z.object({
         name: z.string().min(2, "Nome deve ter ao menos 2 caracteres"),
-        email: z.string().min(3, "E-mail ou usuário deve ter ao menos 3 caracteres"),
+        username: z.string().min(3, "Usuário deve ter ao menos 3 caracteres"),
+        email: z.string().email("E-mail inválido"),
         password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
         role: z.enum(["admin", "engenheiro", "cliente"]).default("engenheiro"),
       }))
       .mutation(async ({ input, ctx }) => {
-        const existing = await db.getUserByEmail(input.email);
-        if (existing) throw new TRPCError({ code: "CONFLICT", message: "E-mail já cadastrado" });
+        const existing = await db.getUserByEmailOrUsername(input.email, input.username);
+        if (existing) throw new TRPCError({ code: "CONFLICT", message: "E-mail ou usuário já cadastrado" });
         const passwordHash = await bcrypt.hash(input.password, 10);
-        const user = await db.createUser({ name: input.name, email: input.email, passwordHash, role: input.role });
+        const user = await db.createUser({ name: input.name, email: input.email, username: input.username, passwordHash, role: input.role });
         if (!user) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Erro ao criar usuário" });
         const token = await createSessionToken(user.id, user.role, user.name ?? "");
         ctx.res.cookie(COOKIE_NAME, token, { httpOnly: true, sameSite: "lax", secure: false, maxAge: ONE_YEAR_MS, path: "/" });

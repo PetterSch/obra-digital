@@ -20,7 +20,9 @@ import {
 export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   name: text("name"),
-  email: varchar("email", { length: 320 }),  role: mysqlEnum("role", ["admin", "engenheiro", "cliente"]).default("engenheiro").notNull(),
+  username: varchar("username", { length: 100 }),
+  email: varchar("email", { length: 320 }),
+  role: mysqlEnum("role", ["admin", "engenheiro", "cliente"]).default("engenheiro").notNull(),
   passwordHash: varchar("passwordHash", { length: 255 }),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),

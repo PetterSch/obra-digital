@@ -81,6 +81,17 @@ export async function runMigrations() {
   } catch (error) {
     console.error("[Migrate] Erro ao aplicar migrations (pode já estar aplicado):", error);
   }
+
+  // Garante a coluna username (adiciona se ainda não existir)
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN username VARCHAR(100)`);
+      console.log("[Migrate] Coluna username adicionada");
+    }
+  } catch {
+    // Coluna já existe — ok, ignora
+  }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -643,15 +654,40 @@ export async function getUserByEmail(email: string) {
   return result[0] ?? null;
 }
 
-export async function createUser(data: { name: string; email: string; passwordHash: string; role?: "user" | "admin" | "engenheiro" | "cliente" }) {
+// Busca por e-mail OU usuário (login flexível)
+export async function getUserByLogin(login: string) {
+  const db = await getDb();
+  if (!db) return login === "pedroemilio" ? DEMO_USER : null;
+  const result = await db
+    .select()
+    .from(users)
+    .where(sql`${users.email} = ${login} OR ${users.username} = ${login}`)
+    .limit(1);
+  return result[0] ?? null;
+}
+
+// Verifica se já existe usuário com aquele e-mail ou username
+export async function getUserByEmailOrUsername(email: string, username: string) {
+  const db = await getDb();
+  if (!db) return null;
+  const result = await db
+    .select()
+    .from(users)
+    .where(sql`${users.email} = ${email} OR ${users.username} = ${username}`)
+    .limit(1);
+  return result[0] ?? null;
+}
+
+export async function createUser(data: { name: string; email: string; username?: string; passwordHash: string; role?: "user" | "admin" | "engenheiro" | "cliente" }) {
   const db = await getDb();
   if (!db) throw new Error("Banco de dados indisponível");
   await db.insert(users).values({
     name: data.name,
     email: data.email,
+    username: data.username ?? null,
     passwordHash: data.passwordHash,
     role: (data.role as any) ?? "engenheiro",
     lastSignedIn: new Date(),
-  });
+  } as any);
   return getUserByEmail(data.email);
 }

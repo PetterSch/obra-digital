@@ -11,7 +11,7 @@ import { Building2, Loader2 } from "lucide-react";
 export default function Login() {
   const [, navigate] = useLocation();
   const [mode, setMode] = useState<"login" | "register">("login");
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "engenheiro" as const });
+  const [form, setForm] = useState({ name: "", username: "", email: "", password: "", role: "engenheiro" as const });
   const utils = trpc.useUtils();
 
   const loginMutation = trpc.auth.login.useMutation({
@@ -39,7 +39,7 @@ export default function Login() {
     if (mode === "login") {
       loginMutation.mutate({ email: form.email, password: form.password });
     } else {
-      registerMutation.mutate({ name: form.name, email: form.email, password: form.password, role: form.role });
+      registerMutation.mutate({ name: form.name, username: form.username, email: form.email, password: form.password, role: form.role });
     }
   };
 
@@ -58,14 +58,20 @@ export default function Login() {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {mode === "register" && (
-              <div className="space-y-2">
-                <Label htmlFor="name">Nome completo</Label>
-                <Input id="name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Seu nome" required />
-              </div>
+              <>
+                <div className="space-y-2">
+                  <Label htmlFor="name">Nome completo</Label>
+                  <Input id="name" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Seu nome" required />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="username">Usuário</Label>
+                  <Input id="username" type="text" value={form.username} onChange={e => setForm({...form, username: e.target.value})} placeholder="Ex: pedroemilio" required />
+                </div>
+              </>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail ou usuário</Label>
-              <Input id="email" type="text" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="seu@email.com ou usuário" required />
+              <Label htmlFor="email">{mode === "register" ? "E-mail" : "E-mail ou usuário"}</Label>
+              <Input id="email" type={mode === "register" ? "email" : "text"} value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder={mode === "register" ? "seu@email.com" : "e-mail ou usuário"} required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>

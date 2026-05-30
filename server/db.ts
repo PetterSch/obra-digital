@@ -57,6 +57,26 @@ export async function getDb() {
   return _db;
 }
 
+// Aplica as migrations existentes em drizzle/*.sql automaticamente no boot.
+// Não trava (não é interativo) e é seguro rodar várias vezes.
+export async function runMigrations() {
+  const conn = getConnectionString();
+  if (!conn) {
+    console.log("[Migrate] Sem banco - pulando migrations");
+    return;
+  }
+  try {
+    const { migrate } = await import("drizzle-orm/mysql2/migrator");
+    const db = await getDb();
+    if (!db) return;
+    console.log("[Migrate] Aplicando migrations...");
+    await migrate(db as any, { migrationsFolder: "./drizzle" });
+    console.log("[Migrate] Migrations aplicadas com sucesso!");
+  } catch (error) {
+    console.error("[Migrate] Erro ao aplicar migrations (pode já estar aplicado):", error);
+  }
+}
+
 export async function updateLastSignedIn(userId: number): Promise<void> {
   const db = await getDb();
   if (!db) return;

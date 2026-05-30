@@ -6,7 +6,7 @@ import { createExpressMiddleware } from "@trpc/server/adapters/express";
 import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
-import { getDb } from "../db";
+import { getDb, runMigrations } from "../db";
 
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
@@ -47,8 +47,9 @@ async function startServer() {
     serveStatic(app);
   }
 
-  // Testa conexão com banco na inicialização
+  // Conecta ao banco e aplica migrations na inicialização
   await getDb();
+  await runMigrations();
 
   const preferredPort = parseInt(process.env.PORT || "3000");
   const port = await findAvailablePort(preferredPort);

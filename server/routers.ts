@@ -201,12 +201,20 @@ export const appRouter = router({
         descricao: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, dataInicio, dataPrevistTermino, ...data } = input;
+        const { id, dataInicio, dataPrevistTermino, valorContrato, ...data } = input;
+        // Converte "R$ 250.000,00" -> "250000.00"; vazio/ inválido -> null
+        const parseValor = (v?: string): string | null => {
+          if (v == null || v.trim() === "") return null;
+          const limpo = v.replace(/[^\d,.-]/g, "").replace(/\./g, "").replace(",", ".");
+          const num = parseFloat(limpo);
+          return isNaN(num) ? null : num.toString();
+        };
         return db.updateObra(id, {
           ...data,
+          ...(valorContrato !== undefined && { valorContrato: parseValor(valorContrato) }),
           ...(dataInicio && { dataInicio: new Date(dataInicio) }),
           ...(dataPrevistTermino && { dataPrevistTermino: new Date(dataPrevistTermino) }),
-        });
+        } as any);
       }),
 
     delete: engineerProcedure

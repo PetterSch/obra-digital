@@ -45,7 +45,11 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   { categoria: "Estrutura", descricao: "Concreto estrutural fck 25 MPa", unidade: "m³", precoReferencia: 520.00 },
   { categoria: "Estrutura", descricao: "Concreto usinado bombeado", unidade: "m³", precoReferencia: 560.00 },
   { categoria: "Estrutura", descricao: "Fôrma de madeira para estrutura", unidade: "m²", precoReferencia: 95.00 },
-  { categoria: "Estrutura", descricao: "Armação de aço CA-50", unidade: "kg", precoReferencia: 14.50 },
+  { categoria: "Estrutura", descricao: "Armação de aço CA-50 (vergalhão)", unidade: "kg", precoReferencia: 14.50 },
+  { categoria: "Estrutura", descricao: "Armação de aço CA-60 (fino/estribo)", unidade: "kg", precoReferencia: 15.50 },
+  { categoria: "Estrutura", descricao: "Corte e dobra de aço (mão de obra)", unidade: "kg", precoReferencia: 4.50 },
+  { categoria: "Estrutura", descricao: "Tela soldada / malha de aço", unidade: "m²", precoReferencia: 28.00 },
+  { categoria: "Estrutura", descricao: "Armadura pronta (treliça/coluna)", unidade: "m", precoReferencia: 32.00 },
   { categoria: "Estrutura", descricao: "Pilar de concreto armado", unidade: "m³", precoReferencia: 1850.00 },
   { categoria: "Estrutura", descricao: "Viga de concreto armado", unidade: "m³", precoReferencia: 1800.00 },
   { categoria: "Estrutura", descricao: "Laje pré-moldada (com enchimento)", unidade: "m²", precoReferencia: 145.00 },
@@ -92,6 +96,9 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
 
   // ── Revestimentos de Piso ──
   { categoria: "Revestimentos de Piso", descricao: "Contrapiso", unidade: "m²", precoReferencia: 48.00 },
+  { categoria: "Revestimentos de Piso", descricao: "Piso de concreto armado (com tela)", unidade: "m²", precoReferencia: 95.00 },
+  { categoria: "Revestimentos de Piso", descricao: "Piso de concreto desempenado", unidade: "m²", precoReferencia: 65.00 },
+  { categoria: "Revestimentos de Piso", descricao: "Piso de concreto liso / polido", unidade: "m²", precoReferencia: 85.00 },
   { categoria: "Revestimentos de Piso", descricao: "Piso cerâmico", unidade: "m²", precoReferencia: 95.00 },
   { categoria: "Revestimentos de Piso", descricao: "Porcelanato", unidade: "m²", precoReferencia: 135.00 },
   { categoria: "Revestimentos de Piso", descricao: "Piso vinílico / laminado", unidade: "m²", precoReferencia: 110.00 },
@@ -136,8 +143,18 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
 
   // ── Vidros ──
   { categoria: "Vidros", descricao: "Vidro temperado 8mm", unidade: "m²", precoReferencia: 320.00 },
+  { categoria: "Vidros", descricao: "Vidro temperado 10mm", unidade: "m²", precoReferencia: 390.00 },
+  { categoria: "Vidros", descricao: "Vidro laminado de segurança", unidade: "m²", precoReferencia: 420.00 },
+  { categoria: "Vidros", descricao: "Vidro laminado acústico", unidade: "m²", precoReferencia: 560.00 },
+  { categoria: "Vidros", descricao: "Vidro refletivo / controle solar", unidade: "m²", precoReferencia: 480.00 },
+  { categoria: "Vidros", descricao: "Vidro insulado / duplo (térmico)", unidade: "m²", precoReferencia: 680.00 },
+  { categoria: "Vidros", descricao: "Vidro jateado / fosco", unidade: "m²", precoReferencia: 360.00 },
+  { categoria: "Vidros", descricao: "Vidro canelado / texturizado", unidade: "m²", precoReferencia: 340.00 },
+  { categoria: "Vidros", descricao: "Vidro aramado", unidade: "m²", precoReferencia: 300.00 },
+  { categoria: "Vidros", descricao: "Película de controle solar / insulfilm", unidade: "m²", precoReferencia: 95.00 },
   { categoria: "Vidros", descricao: "Box de banheiro (vidro)", unidade: "un", precoReferencia: 650.00 },
   { categoria: "Vidros", descricao: "Espelho", unidade: "m²", precoReferencia: 280.00 },
+  { categoria: "Vidros", descricao: "Espelho bisotado / lapidado", unidade: "m²", precoReferencia: 360.00 },
   { categoria: "Vidros", descricao: "Guarda-corpo de vidro", unidade: "m", precoReferencia: 620.00 },
   { categoria: "Vidros", descricao: "Fechamento de varanda (vidro)", unidade: "m²", precoReferencia: 580.00 },
 
@@ -285,6 +302,11 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   { categoria: "Serralheria", descricao: "Pergolado / treliça metálica", unidade: "m²", precoReferencia: 540.00 },
   { categoria: "Serralheria", descricao: "Floreira / suporte metálico", unidade: "m", precoReferencia: 320.00 },
   { categoria: "Serralheria", descricao: "Cobertura metálica (marquise)", unidade: "m²", precoReferencia: 480.00 },
+  { categoria: "Serralheria", descricao: "Tampa metálica para piso (inspeção)", unidade: "un", precoReferencia: 420.00 },
+  { categoria: "Serralheria", descricao: "Tampa de ferro fundido", unidade: "un", precoReferencia: 280.00 },
+  { categoria: "Serralheria", descricao: "Grelha de piso (ferro/galvanizada)", unidade: "m", precoReferencia: 220.00 },
+  { categoria: "Serralheria", descricao: "Grelha para canaleta de drenagem", unidade: "m", precoReferencia: 180.00 },
+  { categoria: "Serralheria", descricao: "Tampa de caixa / poço de visita", unidade: "un", precoReferencia: 350.00 },
 
   // ── Esquadrias de PVC ──
   { categoria: "Esquadrias de PVC", descricao: "Janela de PVC", unidade: "m²", precoReferencia: 720.00 },

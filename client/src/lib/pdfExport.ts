@@ -936,3 +936,115 @@ ${cover}
 
   openPrint(html);
 }
+
+// ─── exportOrcamentoPDF ─────────────────────────────────────────────────────
+
+export interface OrcamentoPDFData {
+  obraNome: string;
+  obraCodigo: string;
+  cliente: string;
+  responsavelTecnico: string;
+  endereco: string;
+  nome: string;
+  itens: Array<{ categoria?: string; descricao: string; unidade?: string; quantidade: number; precoUnitario: number }>;
+  totais: {
+    custoDirecto: number; bdi: number; valorBdi: number; valorComBdi: number;
+    adm: number; valorAdministracao: number; valorTotal: number;
+    area: number; custoM2SemAdm: number; custoM2ComAdm: number;
+  };
+}
+
+export function exportOrcamentoPDF(data: OrcamentoPDFData): void {
+  const config = getPDFConfig();
+  const docId = "Orçamento";
+  const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+
+  const cover = buildCoverPage({
+    docType: "Orçamento de Obra",
+    docTitle: "Orçamento de Obra",
+    docId,
+    obraNome: data.obraNome,
+    obraCliente: data.cliente,
+    obraCodigo: data.obraCodigo,
+    obraResponsavel: data.responsavelTecnico,
+    obraEndereco: data.endereco,
+    dataReferencia: data.nome,
+    config,
+  });
+
+  const header = buildPageHeader({
+    obraNome: data.obraNome, obraCodigo: data.obraCodigo, docId,
+    dataRef: data.nome, config,
+  });
+  const footer = buildPageFooter(docId, data.obraNome);
+
+  // Agrupa itens por categoria
+  const porCat: Record<string, typeof data.itens> = {};
+  data.itens.forEach(it => { (porCat[it.categoria || "Outros"] ??= []).push(it); });
+
+  let linhas = "";
+  for (const [cat, lista] of Object.entries(porCat)) {
+    linhas += `<tr><td colspan="5" style="background:#f0f4f8;font-weight:700;color:#1e3a5f;font-size:10px;text-transform:uppercase;padding:6px 8px">${cat}</td></tr>`;
+    for (const it of lista) {
+      const total = it.quantidade * it.precoUnitario;
+      linhas += `<tr>
+        <td>${it.descricao}</td>
+        <td style="text-align:center">${it.unidade ?? "—"}</td>
+        <td style="text-align:right">${it.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+        <td style="text-align:right">${brl(it.precoUnitario)}</td>
+        <td style="text-align:right;font-weight:600">${brl(total)}</td>
+      </tr>`;
+    }
+  }
+
+  const t = data.totais;
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>Orçamento — ${data.obraNome}</title><style>${BASE_CSS}
+  .orc-resumo { width: 60%; margin-left: auto; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+  .orc-resumo div { display: flex; justify-content: space-between; padding: 7px 12px; font-size: 12px; border-bottom: 1px solid #f0f0f0; }
+  .orc-resumo .total { background: #1e3a5f; color: #fff; font-weight: 700; font-size: 14px; }
+  .orc-m2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 14px; }
+  .orc-m2 .box { border: 1px solid #e5e7eb; border-radius: 6px; padding: 12px; text-align: center; }
+  .orc-m2 .box.dest { background: #f0f4f8; border-color: #1e3a5f; }
+  .orc-m2 .lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; }
+  .orc-m2 .val { font-size: 18px; font-weight: 700; color: #1e3a5f; margin-top: 3px; }
+</style></head><body>
+${cover}
+<div class="page">
+  ${header}
+  <div class="section">
+    <div class="section-title">Composição do Orçamento</div>
+    <table>
+      <thead><tr>
+        <th>Descrição</th><th style="text-align:center">Un.</th>
+        <th style="text-align:right">Qtd.</th><th style="text-align:right">Preço Unit.</th><th style="text-align:right">Total</th>
+      </tr></thead>
+      <tbody>${linhas || `<tr><td colspan="5" style="color:#666;font-style:italic;padding:10px">Nenhum item</td></tr>`}</tbody>
+    </table>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Fechamento</div>
+    <div class="orc-resumo">
+      <div><span>Custo direto (itens)</span><span>${brl(t.custoDirecto)}</span></div>
+      <div><span>BDI (${t.bdi}%)</span><span>${brl(t.valorBdi)}</span></div>
+      <div><span style="font-weight:600">Subtotal com BDI</span><span style="font-weight:600">${brl(t.valorComBdi)}</span></div>
+      <div><span>Administração da obra (${t.adm}%)</span><span>${brl(t.valorAdministracao)}</span></div>
+      <div class="total"><span>VALOR TOTAL DA OBRA</span><span>${brl(t.valorTotal)}</span></div>
+    </div>
+    ${t.area > 0 ? `
+    <div class="orc-m2">
+      <div class="box"><div class="lbl">Área total</div><div class="val">${t.area.toLocaleString("pt-BR")} m²</div></div>
+      <div class="box"><div class="lbl">Custo por m² (sem adm.)</div><div class="val">${brl(t.custoM2SemAdm)}</div></div>
+    </div>
+    <div class="orc-m2" style="margin-top:12px">
+      <div class="box dest" style="grid-column:1/-1"><div class="lbl">Custo por m² (com administração)</div><div class="val">${brl(t.custoM2ComAdm)}</div></div>
+    </div>` : ""}
+  </div>
+  ${footer}
+</div>
+<script>window.onload=()=>window.print();window.onafterprint=()=>window.close();</script>
+</body></html>`;
+
+  openPrint(html);
+}

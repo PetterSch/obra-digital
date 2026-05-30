@@ -9,14 +9,17 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Plus, Trash2, ArrowLeft, Calculator, FileText, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Calculator, FileText, FileDown, FileSpreadsheet, ChevronDown, ChevronRight } from "lucide-react";
+import { exportOrcamentoPDF } from "@/lib/pdfExport";
+import { exportOrcamentoToExcel } from "@/lib/exportUtils";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // ─── Editor de um orçamento ───────────────────────────────────────────────
-function OrcamentoEditor({ orcamentoId, onBack }: { orcamentoId: number; onBack: () => void }) {
+function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number; obraId: number; onBack: () => void }) {
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.orcamentos.getById.useQuery({ id: orcamentoId });
+  const { data: obra } = trpc.obras.getById.useQuery({ id: obraId });
 
   const updateOrc = trpc.orcamentos.update.useMutation({
     onSuccess: () => utils.orcamentos.getById.invalidate({ id: orcamentoId }),
@@ -48,11 +51,37 @@ function OrcamentoEditor({ orcamentoId, onBack }: { orcamentoId: number; onBack:
   return (
     <div className="space-y-5">
       {/* Cabeçalho */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 flex-wrap">
         <Button variant="ghost" size="icon" onClick={onBack}><ArrowLeft className="w-4 h-4" /></Button>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <h3 className="text-lg font-semibold">{orcamento.nome}</h3>
           <p className="text-sm text-muted-foreground">{itens.length} item(ns) no orçamento</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+            if (!obra) { toast.error("Aguarde carregar a obra"); return; }
+            exportOrcamentoPDF({
+              obraNome: obra.nome, obraCodigo: obra.codigo, cliente: obra.cliente,
+              responsavelTecnico: obra.responsavelTecnico,
+              endereco: `${obra.endereco ?? ""}${obra.cidade ? ", " + obra.cidade : ""}${obra.estado ? " - " + obra.estado : ""}`,
+              nome: orcamento.nome,
+              itens: itens.map((i: any) => ({ categoria: i.categoria, descricao: i.descricao, unidade: i.unidade, quantidade: Number(i.quantidade), precoUnitario: Number(i.precoUnitario) })),
+              totais,
+            });
+          }}>
+            <FileDown className="w-4 h-4" /> PDF
+          </Button>
+          <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+            exportOrcamentoToExcel({
+              obraNome: obra?.nome ?? "Obra", obraCodigo: obra?.codigo, cliente: obra?.cliente,
+              nome: orcamento.nome,
+              itens: itens.map((i: any) => ({ categoria: i.categoria, descricao: i.descricao, unidade: i.unidade, quantidade: Number(i.quantidade), precoUnitario: Number(i.precoUnitario) })),
+              totais,
+            });
+            toast.success("Excel gerado!");
+          }}>
+            <FileSpreadsheet className="w-4 h-4" /> Excel
+          </Button>
         </div>
       </div>
 
@@ -330,7 +359,7 @@ export function Orcamento({ obraId }: { obraId: number }) {
   });
 
   if (selecionado) {
-    return <OrcamentoEditor orcamentoId={selecionado} onBack={() => { setSelecionado(null); refetch(); }} />;
+    return <OrcamentoEditor orcamentoId={selecionado} obraId={obraId} onBack={() => { setSelecionado(null); refetch(); }} />;
   }
 
   return (

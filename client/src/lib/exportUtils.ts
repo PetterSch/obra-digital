@@ -356,3 +356,60 @@ export function exportDiariosToExcel(
   const filename = `diarios-${obraNome.replace(/\s+/g, "-").toLowerCase()}-${timestamp}.xlsx`;
   XLSX.writeFile(workbook, filename);
 }
+
+// ─── Exportação de Orçamento para Excel ────────────────────────────────────
+
+export interface OrcamentoExcelData {
+  obraNome: string;
+  obraCodigo?: string;
+  cliente?: string;
+  nome: string;
+  itens: Array<{ categoria?: string; descricao: string; unidade?: string; quantidade: number; precoUnitario: number }>;
+  totais: {
+    custoDirecto: number; bdi: number; valorBdi: number; valorComBdi: number;
+    adm: number; valorAdministracao: number; valorTotal: number;
+    area: number; custoM2SemAdm: number; custoM2ComAdm: number;
+  };
+}
+
+export function exportOrcamentoToExcel(data: OrcamentoExcelData) {
+  const wb = XLSX.utils.book_new();
+  const moeda = (n: number) => Number(n.toFixed(2));
+
+  // Cabeçalho + itens
+  const rows: any[][] = [
+    ["ORÇAMENTO DE OBRA"],
+    [],
+    ["Obra:", data.obraNome, "", "Código:", data.obraCodigo ?? ""],
+    ["Cliente:", data.cliente ?? "", "", "Orçamento:", data.nome],
+    [],
+    ["Categoria", "Descrição", "Un.", "Quantidade", "Preço Unit. (R$)", "Total (R$)"],
+  ];
+
+  let catAtual = "";
+  data.itens.forEach(it => {
+    const total = it.quantidade * it.precoUnitario;
+    rows.push([
+      it.categoria !== catAtual ? (catAtual = it.categoria || "", it.categoria || "") : "",
+      it.descricao, it.unidade ?? "", moeda(it.quantidade), moeda(it.precoUnitario), moeda(total),
+    ]);
+  });
+
+  rows.push([]);
+  rows.push(["", "", "", "", "Custo direto:", moeda(data.totais.custoDirecto)]);
+  rows.push(["", "", "", "", `BDI (${data.totais.bdi}%):`, moeda(data.totais.valorBdi)]);
+  rows.push(["", "", "", "", "Subtotal com BDI:", moeda(data.totais.valorComBdi)]);
+  rows.push(["", "", "", "", `Administração (${data.totais.adm}%):`, moeda(data.totais.valorAdministracao)]);
+  rows.push(["", "", "", "", "VALOR TOTAL DA OBRA:", moeda(data.totais.valorTotal)]);
+  rows.push([]);
+  rows.push(["", "", "", "", "Área total (m²):", moeda(data.totais.area)]);
+  rows.push(["", "", "", "", "Custo por m² (sem adm.):", moeda(data.totais.custoM2SemAdm)]);
+  rows.push(["", "", "", "", "Custo por m² (com adm.):", moeda(data.totais.custoM2ComAdm)]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{ wch: 22 }, { wch: 40 }, { wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 16 }];
+  XLSX.utils.book_append_sheet(wb, ws, "Orçamento");
+
+  const nomeArq = `Orcamento_${data.obraNome.replace(/[^a-z0-9]/gi, "_")}_${data.nome.replace(/[^a-z0-9]/gi, "_")}.xlsx`;
+  XLSX.writeFile(wb, nomeArq);
+}

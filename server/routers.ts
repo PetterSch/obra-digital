@@ -44,7 +44,7 @@ export const appRouter = router({
     register: publicProcedure
       .input(z.object({
         name: z.string().min(2, "Nome deve ter ao menos 2 caracteres"),
-        email: z.string().email("E-mail inválido"),
+        email: z.string().min(3, "E-mail ou usuário deve ter ao menos 3 caracteres"),
         password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
         role: z.enum(["admin", "engenheiro", "cliente"]).default("engenheiro"),
       }))

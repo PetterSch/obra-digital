@@ -65,7 +65,7 @@ export default function Login() {
             )}
             <div className="space-y-2">
               <Label htmlFor="email">E-mail ou usuário</Label>
-              <Input id="email" type="text" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="seu@email.com" required />
+              <Input id="email" type="text" value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="seu@email.com ou usuário" required />
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>

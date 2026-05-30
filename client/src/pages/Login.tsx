@@ -54,8 +54,9 @@ export default function Login() {
               Entrar
             </Button>
           </form>
-          <div className="mt-4 text-center text-xs text-muted-foreground">
-            O acesso é criado pelo administrador da sua empresa.
+          <div className="mt-4 text-center text-xs text-muted-foreground space-y-1">
+            <p>O acesso é criado pelo administrador da sua empresa.</p>
+            <p>Esqueceu a senha? Fale com o administrador para redefini-la.</p>
           </div>
         </CardContent>
       </Card>

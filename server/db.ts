@@ -35,17 +35,17 @@ function buildDatabaseUrl(url: string): string {
 
 // Lazily create the drizzle instance so local tooling can run without a DB.
 export async function getDb() {
-  if (!_db && process.env.DATABASE_URL) {
+  if (!_db && process.env.MYSQL_URL) {
     console.log("[DB] DATABASE_URL encontrada, conectando...");
     try {
-      const url = buildDatabaseUrl(process.env.DATABASE_URL);
+      const url = buildDatabaseUrl(process.env.MYSQL_URL);
       _db = drizzle(url);
       console.log("[DB] Conectado ao MySQL com sucesso!");
     } catch (error) {
       console.error("[DB] Erro ao conectar:", error);
       _db = null;
     }
-  } else if (!process.env.DATABASE_URL) {
+  } else if (!process.env.MYSQL_URL) {
     console.log("[DB] DATABASE_URL não definida - modo demo ativo");
   }
   return _db;

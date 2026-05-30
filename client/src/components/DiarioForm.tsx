@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, X } from "lucide-react";
+import { Plus, X, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { MaoDeObraSelector } from "./MaoDeObraSelector";
@@ -30,9 +30,34 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
   const [maoDeObra, setMaoDeObra] = useState<Array<{ equipeId: number; operariosPresentes: number[] }>>([]);
   const [equipamentos, setEquipamentos] = useState<Array<{ nome: string; quantidade: string; horasUso: string }>>([]);
   const [ocorrencias, setOcorrencias] = useState<Array<{ tipo: string; descricao: string; criticidade: string }>>([]);
+  // Fotos coletadas antes de criar o diário (enviadas após a criação)
+  const [fotos, setFotos] = useState<Array<{ base64: string; nome: string; mimeType: string; descricao: string }>>([]);
+  const [enviando, setEnviando] = useState(false);
+
+  const uploadMutation = trpc.midia.upload.useMutation();
 
   const createMutation = trpc.diarios.create.useMutation({
-    onSuccess: () => {
+    onSuccess: async (diarioCriado: any) => {
+      // Faz upload das fotos pendentes, se houver
+      if (fotos.length > 0 && diarioCriado?.id) {
+        setEnviando(true);
+        try {
+          for (const f of fotos) {
+            await uploadMutation.mutateAsync({
+              diarioId: diarioCriado.id,
+              obraId,
+              tipo: "foto",
+              descricao: f.descricao || undefined,
+              arquivo: f.base64,
+              nomeOriginal: f.nome,
+              mimeType: f.mimeType,
+            });
+          }
+        } catch {
+          toast.error("Diário criado, mas houve erro ao enviar algumas fotos.");
+        }
+        setEnviando(false);
+      }
       toast.success("Diário criado com sucesso!");
       setOpen(false);
       setFormData({
@@ -46,12 +71,31 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
       setMaoDeObra([]);
       setEquipamentos([]);
       setOcorrencias([]);
+      setFotos([]);
       onSuccess?.();
     },
     onError: (error) => {
       toast.error(error.message || "Erro ao criar diário");
     },
   });
+
+  const handleAddFotos = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []);
+    files.forEach(file => {
+      if (file.size > 5_000_000) { toast.error(`${file.name}: máximo 5 MB`); return; }
+      const reader = new FileReader();
+      reader.onload = ev => {
+        setFotos(prev => [...prev, {
+          base64: ev.target?.result as string,
+          nome: file.name,
+          mimeType: file.type,
+          descricao: "",
+        }]);
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -402,12 +446,45 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
             ))}
           </div>
 
+          {/* Fotos */}
+          <div className="space-y-3">
+            <h3 className="font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" /> Fotos</h3>
+            <label className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/40 transition-colors text-center">
+              <ImagePlus className="w-7 h-7 text-muted-foreground/50 mb-1" />
+              <span className="text-sm font-medium">Clique para adicionar fotos</span>
+              <span className="text-xs text-muted-foreground">Pode selecionar várias · máx. 5 MB cada</span>
+              <input type="file" accept="image/*" multiple className="hidden" onChange={handleAddFotos} />
+            </label>
+            {fotos.length > 0 && (
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {fotos.map((f, i) => (
+                  <div key={i} className="relative group border rounded-lg overflow-hidden">
+                    <img src={f.base64} alt={f.nome} className="w-full h-24 object-cover" />
+                    <button
+                      type="button"
+                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setFotos(prev => prev.filter((_, idx) => idx !== i))}
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                    <Input
+                      placeholder="Descrição"
+                      value={f.descricao}
+                      onChange={e => setFotos(prev => prev.map((x, idx) => idx === i ? { ...x, descricao: e.target.value } : x))}
+                      className="text-xs border-0 rounded-none h-7"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div className="flex gap-3 justify-end">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
-            <Button type="submit" disabled={createMutation.isPending}>
-              {createMutation.isPending ? "Criando..." : "Criar Diário"}
+            <Button type="submit" disabled={createMutation.isPending || enviando}>
+              {createMutation.isPending || enviando ? "Criando..." : "Criar Diário"}
             </Button>
           </div>
         </form>

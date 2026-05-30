@@ -11,6 +11,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { exportDiarioPDF } from "@/lib/pdfExport";
 import { PDFConfigModal } from "@/components/PDFConfigModal";
+import { PhotoUpload } from "@/components/PhotoUpload";
 import { useState } from "react";
 
 const CLIMA_CONFIG: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
@@ -249,6 +250,7 @@ export default function DiarioView() {
             <TabsTrigger value="mao-obra" className="flex-1 text-xs sm:text-sm">Mão de Obra {maoDeObra.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{maoDeObra.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="equipamentos" className="flex-1 text-xs sm:text-sm">Equipamentos {equipamentos.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{equipamentos.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="ocorrencias" className="flex-1 text-xs sm:text-sm">Ocorrências {ocorrencias.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{ocorrencias.length}</Badge>}</TabsTrigger>
+            <TabsTrigger value="fotos" className="flex-1 text-xs sm:text-sm">Fotos</TabsTrigger>
           </TabsList>
 
           <TabsContent value="atividades" className="space-y-3 mt-4">
@@ -362,6 +364,10 @@ export default function DiarioView() {
                 </CardContent>
               </Card>
             ))}
+          </TabsContent>
+
+          <TabsContent value="fotos" className="mt-4">
+            {obraId && diarioId && <PhotoUpload diarioId={diarioId} obraId={obraId} />}
           </TabsContent>
         </Tabs>
       </div>

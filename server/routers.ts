@@ -572,23 +572,26 @@ export const appRouter = router({
         diarioId: z.number().optional(),
         tipo: z.enum(["foto", "documento"]),
         descricao: z.string().optional(),
-        arquivo: z.instanceof(Buffer),
+        arquivo: z.string(), // data URL base64 (ex: "data:image/jpeg;base64,...")
         nomeOriginal: z.string(),
         mimeType: z.string(),
       }))
       .mutation(async ({ input }) => {
-        const { arquivo, nomeOriginal, mimeType, ...data } = input;
-        const key = `midia/${nanoid()}_${input.nomeOriginal}`;
-        // Upload local: salvar em /uploads ou usar serviço de storage configurado
-        const url = `/uploads/${key}`;
-        
+        const { arquivo, ...data } = input;
+        // Armazena a imagem como data URL direto no banco (sem S3)
         return db.createMidia({
           ...data,
-          caminhoArmazenamento: url,
+          caminhoArmazenamento: arquivo,
           nomeOriginal: input.nomeOriginal,
-          tamanhoBytes: input.arquivo.length,
+          tamanhoBytes: arquivo.length,
           mimeType: input.mimeType,
         });
+      }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteMidia(input.id);
       }),
   }),
 

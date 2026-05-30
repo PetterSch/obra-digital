@@ -39,9 +39,13 @@ export function PhotoUpload({ diarioId, obraId }: PhotoUploadProps) {
     },
   });
 
+  const deleteMutation = trpc.midia.delete.useMutation({
+    onSuccess: () => { toast.success("Foto removida!"); refetch(); },
+    onError: (e) => toast.error(e.message || "Erro ao remover foto"),
+  });
+
   const handleDelete = (midiaId: number) => {
-    // For now, just show a toast - delete functionality would need backend implementation
-    toast.info("Funcionalidade de exclusão em desenvolvimento");
+    if (confirm("Remover esta foto?")) deleteMutation.mutate({ id: midiaId });
   };
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {

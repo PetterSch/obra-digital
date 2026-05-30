@@ -105,6 +105,17 @@ export async function runMigrations() {
       // Já convertido ou tabela não tem a coluna — ignora
     }
   }
+
+  // Amplia caminhoArmazenamento para guardar imagens base64
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`ALTER TABLE midia MODIFY caminhoArmazenamento LONGTEXT NOT NULL`);
+      console.log("[Migrate] midia.caminhoArmazenamento ampliado para LONGTEXT");
+    }
+  } catch {
+    // Já aplicado — ignora
+  }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -387,6 +398,12 @@ export async function createMidia(data: typeof midia.$inferInsert) {
   const db = await getDb();
   if (!db) return demo.demo_createMidia(data);
   return db.insert(midia).values(data);
+}
+
+export async function deleteMidia(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(midia).where(eq(midia.id, id));
 }
 
 // ============= PENDÊNCIAS =============

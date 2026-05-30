@@ -17,12 +17,13 @@ import { useAuth } from "@/_core/hooks/useAuth";
 const ROLE_INFO: Record<string, { label: string; icon: React.ReactNode; color: string; desc: string }> = {
   admin:      { label: "Administrador", icon: <ShieldCheck className="w-3.5 h-3.5" />, color: "bg-red-100 text-red-700 border-red-200", desc: "Vê e gerencia tudo" },
   engenheiro: { label: "Engenheiro",    icon: <HardHat className="w-3.5 h-3.5" />,    color: "bg-blue-100 text-blue-700 border-blue-200", desc: "Edita obras liberadas" },
+  auxiliar:   { label: "Auxiliar",      icon: <HardHat className="w-3.5 h-3.5" />,    color: "bg-teal-100 text-teal-700 border-teal-200", desc: "Mesmas permissões do engenheiro" },
   cliente:    { label: "Cliente",       icon: <Eye className="w-3.5 h-3.5" />,        color: "bg-gray-100 text-gray-700 border-gray-200", desc: "Visualiza obras liberadas" },
 };
 
 const FORM_DEFAULT = {
   name: "", username: "", email: "", password: "",
-  role: "engenheiro" as "admin" | "engenheiro" | "cliente",
+  role: "engenheiro" as "admin" | "engenheiro" | "cliente" | "auxiliar",
   obraIds: [] as number[],
 };
 
@@ -33,7 +34,7 @@ export default function AdminPanel() {
   const [resetUser, setResetUser] = useState<any | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
   const [editUser, setEditUser] = useState<any | null>(null);
-  const [editForm, setEditForm] = useState({ name: "", username: "", email: "", role: "engenheiro" as "admin" | "engenheiro" | "cliente" });
+  const [editForm, setEditForm] = useState({ name: "", username: "", email: "", role: "engenheiro" as "admin" | "engenheiro" | "cliente" | "auxiliar" });
 
   // Gate de admin
   if (user?.role !== "admin") {
@@ -219,6 +220,7 @@ export default function AdminPanel() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="engenheiro">🏗️ Engenheiro — edita obras liberadas</SelectItem>
+                  <SelectItem value="auxiliar">🧰 Auxiliar — mesmas permissões do engenheiro</SelectItem>
                   <SelectItem value="cliente">👁️ Cliente — só visualiza obras liberadas</SelectItem>
                   <SelectItem value="admin">🛡️ Administrador — vê e gerencia tudo</SelectItem>
                 </SelectContent>
@@ -347,6 +349,7 @@ export default function AdminPanel() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="engenheiro">🏗️ Engenheiro</SelectItem>
+                  <SelectItem value="auxiliar">🧰 Auxiliar</SelectItem>
                   <SelectItem value="cliente">👁️ Cliente</SelectItem>
                   <SelectItem value="admin">🛡️ Administrador</SelectItem>
                 </SelectContent>

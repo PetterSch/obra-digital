@@ -33,6 +33,7 @@ export default function DiarioEdit() {
   const canEdit =
     user?.role === "admin" ||
     user?.role === "engenheiro" ||
+    user?.role === "auxiliar" ||
     acesso?.permissao === "editar" ||
     acesso?.permissao === "admin";
 

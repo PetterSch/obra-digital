@@ -20,7 +20,7 @@ const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
 
 // ============= ENGINEERS & ADMINS PROCEDURE =============
 const engineerProcedure = protectedProcedure.use(({ ctx, next }) => {
-  if (ctx.user.role !== "engenheiro" && ctx.user.role !== "admin") {
+  if (ctx.user.role !== "engenheiro" && ctx.user.role !== "admin" && ctx.user.role !== "auxiliar") {
     throw new TRPCError({ code: "FORBIDDEN", message: "Acesso restrito a engenheiros" });
   }
   return next({ ctx });
@@ -50,7 +50,7 @@ export const appRouter = router({
         username: z.string().min(3, "Usuário deve ter ao menos 3 caracteres"),
         email: z.string().email("E-mail inválido"),
         password: z.string().min(6, "Senha deve ter ao menos 6 caracteres"),
-        role: z.enum(["admin", "engenheiro", "cliente"]).default("engenheiro"),
+        role: z.enum(["admin", "engenheiro", "cliente", "auxiliar"]).default("engenheiro"),
       }))
       .mutation(async () => {
         // Registro público desabilitado — somente administradores criam contas
@@ -83,7 +83,7 @@ export const appRouter = router({
         username: z.string().min(3),
         email: z.string().email(),
         password: z.string().min(6),
-        role: z.enum(["admin", "engenheiro", "cliente"]),
+        role: z.enum(["admin", "engenheiro", "cliente", "auxiliar"]),
         obraIds: z.array(z.number()).default([]),
       }))
       .mutation(async ({ input }) => {
@@ -132,7 +132,7 @@ export const appRouter = router({
         name: z.string().min(2).optional(),
         username: z.string().min(3).optional(),
         email: z.string().email().optional(),
-        role: z.enum(["admin", "engenheiro", "cliente"]).optional(),
+        role: z.enum(["admin", "engenheiro", "cliente", "auxiliar"]).optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, ...data } = input;

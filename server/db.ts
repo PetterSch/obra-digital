@@ -161,6 +161,12 @@ export async function runMigrations() {
     // Já existem — ignora
   }
 
+  // Adiciona perfil "auxiliar" ao enum de role
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE users MODIFY COLUMN role ENUM('admin','engenheiro','cliente','auxiliar') NOT NULL DEFAULT 'engenheiro'`);
+  } catch { /* já aplicado */ }
+
   // Campos de cliente/obra no orçamento (módulo independente)
   for (const col of [
     "clienteNome VARCHAR(255)", "clienteTelefone VARCHAR(50)", "clienteEmail VARCHAR(255)",

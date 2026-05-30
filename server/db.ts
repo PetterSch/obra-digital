@@ -781,6 +781,12 @@ export async function updateUserPassword(id: number, passwordHash: string) {
   await db.update(users).set({ passwordHash }).where(eq(users.id, id));
 }
 
+export async function updateUserData(id: number, data: { name?: string; username?: string; email?: string; role?: string }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(users).set(data as any).where(eq(users.id, id));
+}
+
 export async function getUserByEmail(email: string) {
   const db = await getDb();
   if (!db) return email === "pedroemilio" ? DEMO_USER : null;

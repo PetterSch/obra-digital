@@ -126,6 +126,20 @@ export const appRouter = router({
         return { success: true };
       }),
 
+    updateUser: adminProcedure
+      .input(z.object({
+        id: z.number(),
+        name: z.string().min(2).optional(),
+        username: z.string().min(3).optional(),
+        email: z.string().email().optional(),
+        role: z.enum(["admin", "engenheiro", "cliente"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        await db.updateUserData(id, data);
+        return { success: true };
+      }),
+
     setUserObras: adminProcedure
       .input(z.object({ usuarioId: z.number(), obraIds: z.array(z.number()) }))
       .mutation(async ({ input }) => {

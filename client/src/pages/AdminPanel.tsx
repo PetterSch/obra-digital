@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
-import { Plus, Trash2, ShieldCheck, HardHat, Eye, UserCog, Building2, KeyRound } from "lucide-react";
+import { Plus, Trash2, ShieldCheck, HardHat, Eye, UserCog, Building2, KeyRound, Pencil } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -32,6 +32,8 @@ export default function AdminPanel() {
   const [form, setForm] = useState(FORM_DEFAULT);
   const [resetUser, setResetUser] = useState<any | null>(null);
   const [novaSenha, setNovaSenha] = useState("");
+  const [editUser, setEditUser] = useState<any | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", username: "", email: "", role: "engenheiro" as "admin" | "engenheiro" | "cliente" });
 
   // Gate de admin
   if (user?.role !== "admin") {
@@ -74,6 +76,11 @@ export default function AdminPanel() {
       setNovaSenha("");
     },
     onError: (e) => toast.error(e.message || "Erro ao redefinir senha"),
+  });
+
+  const updateMutation = trpc.admin.updateUser.useMutation({
+    onSuccess: () => { toast.success("Usuário atualizado!"); setEditUser(null); refetch(); },
+    onError: (e) => toast.error(e.message || "Erro ao atualizar usuário"),
   });
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -144,6 +151,13 @@ export default function AdminPanel() {
                       <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-1 rounded-full border ${info.color}`}>
                         {info.icon}{info.label}
                       </span>
+                      <Button
+                        variant="ghost" size="icon" className="h-8 w-8"
+                        title="Editar usuário"
+                        onClick={() => { setEditUser(u); setEditForm({ name: u.name ?? "", username: u.username ?? "", email: u.email ?? "", role: u.role ?? "engenheiro" }); }}
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <Button
                         variant="ghost" size="icon" className="h-8 w-8"
                         title="Redefinir senha"
@@ -295,6 +309,54 @@ export default function AdminPanel() {
               <Button type="button" variant="outline" onClick={() => { setResetUser(null); setNovaSenha(""); }}>
                 Cancelar
               </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal editar usuário */}
+      <Dialog open={!!editUser} onOpenChange={v => { if (!v) setEditUser(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Editar Usuário</DialogTitle>
+            <DialogDescription>Altere os dados de {editUser?.name}</DialogDescription>
+          </DialogHeader>
+          <form
+            onSubmit={e => {
+              e.preventDefault();
+              if (!editForm.name || !editForm.username || !editForm.email) { toast.error("Preencha todos os campos"); return; }
+              updateMutation.mutate({ id: editUser.id, ...editForm });
+            }}
+            className="space-y-3"
+          >
+            <div className="space-y-1.5">
+              <Label>Nome completo</Label>
+              <Input value={editForm.name} onChange={e => setEditForm({ ...editForm, name: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Usuário</Label>
+              <Input value={editForm.username} onChange={e => setEditForm({ ...editForm, username: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>E-mail</Label>
+              <Input type="email" value={editForm.email} onChange={e => setEditForm({ ...editForm, email: e.target.value })} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Perfil</Label>
+              <Select value={editForm.role} onValueChange={v => setEditForm({ ...editForm, role: v as any })}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="engenheiro">🏗️ Engenheiro</SelectItem>
+                  <SelectItem value="cliente">👁️ Cliente</SelectItem>
+                  <SelectItem value="admin">🛡️ Administrador</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex gap-2 pt-1">
+              <Button type="submit" className="flex-1" disabled={updateMutation.isPending}>
+                {updateMutation.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setEditUser(null)}>Cancelar</Button>
             </div>
           </form>
         </DialogContent>

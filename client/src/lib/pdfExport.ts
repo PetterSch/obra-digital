@@ -982,16 +982,20 @@ export function exportOrcamentoPDF(data: OrcamentoPDFData): void {
   const porCat: Record<string, typeof data.itens> = {};
   data.itens.forEach(it => { (porCat[it.categoria || "Outros"] ??= []).push(it); });
 
+  // BDI é EMBUTIDO (diluído) nos preços unitários — não aparece como linha no PDF.
+  const fatorBdi = 1 + (data.totais.bdi || 0) / 100;
+
   let linhas = "";
   for (const [cat, lista] of Object.entries(porCat)) {
     linhas += `<tr><td colspan="5" style="background:#f0f4f8;font-weight:700;color:#1e3a5f;font-size:10px;text-transform:uppercase;padding:6px 8px">${cat}</td></tr>`;
     for (const it of lista) {
-      const total = it.quantidade * it.precoUnitario;
+      const precoComBdi = it.precoUnitario * fatorBdi;
+      const total = it.quantidade * precoComBdi;
       linhas += `<tr>
         <td>${it.descricao}</td>
         <td style="text-align:center">${it.unidade ?? "—"}</td>
         <td style="text-align:right">${it.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-        <td style="text-align:right">${brl(it.precoUnitario)}</td>
+        <td style="text-align:right">${brl(precoComBdi)}</td>
         <td style="text-align:right;font-weight:600">${brl(total)}</td>
       </tr>`;
     }
@@ -1026,9 +1030,7 @@ ${cover}
   <div class="section">
     <div class="section-title">Fechamento</div>
     <div class="orc-resumo">
-      <div><span>Custo direto (itens)</span><span>${brl(t.custoDirecto)}</span></div>
-      <div><span>BDI (${t.bdi}%)</span><span>${brl(t.valorBdi)}</span></div>
-      <div><span style="font-weight:600">Subtotal com BDI</span><span style="font-weight:600">${brl(t.valorComBdi)}</span></div>
+      <div><span style="font-weight:600">Subtotal dos serviços</span><span style="font-weight:600">${brl(t.valorComBdi)}</span></div>
       <div><span>Administração da obra (${t.adm}%)</span><span>${brl(t.valorAdministracao)}</span></div>
       <div class="total"><span>VALOR TOTAL DA OBRA</span><span>${brl(t.valorTotal)}</span></div>
     </div>

@@ -386,19 +386,20 @@ export function exportOrcamentoToExcel(data: OrcamentoExcelData) {
     ["Categoria", "Descrição", "Un.", "Quantidade", "Preço Unit. (R$)", "Total (R$)"],
   ];
 
+  // BDI EMBUTIDO (diluído) nos preços — não aparece como linha separada.
+  const fatorBdi = 1 + (data.totais.bdi || 0) / 100;
   let catAtual = "";
   data.itens.forEach(it => {
-    const total = it.quantidade * it.precoUnitario;
+    const precoComBdi = it.precoUnitario * fatorBdi;
+    const total = it.quantidade * precoComBdi;
     rows.push([
       it.categoria !== catAtual ? (catAtual = it.categoria || "", it.categoria || "") : "",
-      it.descricao, it.unidade ?? "", moeda(it.quantidade), moeda(it.precoUnitario), moeda(total),
+      it.descricao, it.unidade ?? "", moeda(it.quantidade), moeda(precoComBdi), moeda(total),
     ]);
   });
 
   rows.push([]);
-  rows.push(["", "", "", "", "Custo direto:", moeda(data.totais.custoDirecto)]);
-  rows.push(["", "", "", "", `BDI (${data.totais.bdi}%):`, moeda(data.totais.valorBdi)]);
-  rows.push(["", "", "", "", "Subtotal com BDI:", moeda(data.totais.valorComBdi)]);
+  rows.push(["", "", "", "", "Subtotal dos serviços:", moeda(data.totais.valorComBdi)]);
   rows.push(["", "", "", "", `Administração (${data.totais.adm}%):`, moeda(data.totais.valorAdministracao)]);
   rows.push(["", "", "", "", "VALOR TOTAL DA OBRA:", moeda(data.totais.valorTotal)]);
   rows.push([]);

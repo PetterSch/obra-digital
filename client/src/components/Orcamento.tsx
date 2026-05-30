@@ -9,14 +9,14 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Plus, Trash2, ArrowLeft, Calculator, FileText, FileDown, FileSpreadsheet, ChevronDown, ChevronRight } from "lucide-react";
+import { Plus, Trash2, ArrowLeft, Calculator, FileText, FileDown, FileSpreadsheet, ChevronDown, ChevronRight, Eye, Pencil } from "lucide-react";
 import { exportOrcamentoPDF } from "@/lib/pdfExport";
 import { exportOrcamentoToExcel } from "@/lib/exportUtils";
 
 const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
 // ─── Editor de um orçamento ───────────────────────────────────────────────
-function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number; obraId: number; onBack: () => void }) {
+function OrcamentoEditor({ orcamentoId, obraId, onBack, readOnly = false }: { orcamentoId: number; obraId: number; onBack: () => void; readOnly?: boolean }) {
   const utils = trpc.useUtils();
   const { data, isLoading } = trpc.orcamentos.getById.useQuery({ id: orcamentoId });
   const { data: obra } = trpc.obras.getById.useQuery({ id: obraId });
@@ -114,6 +114,7 @@ function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number;
                         <td className="p-1">
                           <Input
                             type="number" step="0.001" defaultValue={it.quantidade}
+                            disabled={readOnly}
                             className="h-8 text-right text-sm"
                             onBlur={e => {
                               const v = parseFloat(e.target.value) || 0;
@@ -124,6 +125,7 @@ function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number;
                         <td className="p-1">
                           <Input
                             type="number" step="0.01" defaultValue={it.precoUnitario}
+                            disabled={readOnly}
                             className="h-8 text-right text-sm"
                             onBlur={e => {
                               const v = parseFloat(e.target.value) || 0;
@@ -133,10 +135,12 @@ function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number;
                         </td>
                         <td className="text-right p-2 font-medium whitespace-nowrap">{brl(total)}</td>
                         <td className="p-1 text-center">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
-                            onClick={() => deleteItem.mutate({ id: it.id })}>
-                            <Trash2 className="w-3.5 h-3.5" />
-                          </Button>
+                          {!readOnly && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive"
+                              onClick={() => deleteItem.mutate({ id: it.id })}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -152,6 +156,7 @@ function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number;
       </Card>
 
       {/* Adicionar item avulso */}
+      {!readOnly && (
       <Card>
         <CardContent className="py-4">
           <p className="text-sm font-medium mb-2">Adicionar item avulso</p>
@@ -180,6 +185,7 @@ function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number;
           </Button>
         </CardContent>
       </Card>
+      )}
 
       {/* Painel de fechamento: área, BDI, administração e totais */}
       <Card className="border-primary/30">
@@ -189,20 +195,25 @@ function OrcamentoEditor({ orcamentoId, obraId, onBack }: { orcamentoId: number;
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div className="space-y-1">
               <Label className="text-xs">Área total da obra (m²)</Label>
-              <Input type="number" step="0.01" defaultValue={orcamento.areaM2}
+              <Input type="number" step="0.01" defaultValue={orcamento.areaM2} disabled={readOnly}
                 onBlur={e => updateOrc.mutate({ id: orcamentoId, areaM2: parseFloat(e.target.value) || 0 })} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs">BDI (%)</Label>
-              <Input type="number" step="0.01" defaultValue={orcamento.bdiPercent}
+              <Label className="text-xs flex items-center gap-1">BDI (%) <span className="text-[10px] text-muted-foreground">(interno)</span></Label>
+              <Input type="number" step="0.01" defaultValue={orcamento.bdiPercent} disabled={readOnly}
                 onBlur={e => updateOrc.mutate({ id: orcamentoId, bdiPercent: parseFloat(e.target.value) || 0 })} />
             </div>
             <div className="space-y-1">
               <Label className="text-xs">Administração da obra (%)</Label>
-              <Input type="number" step="0.01" defaultValue={orcamento.administracaoPercent}
+              <Input type="number" step="0.01" defaultValue={orcamento.administracaoPercent} disabled={readOnly}
                 onBlur={e => updateOrc.mutate({ id: orcamentoId, administracaoPercent: parseFloat(e.target.value) || 0 })} />
             </div>
           </div>
+          {!readOnly && (
+            <p className="text-xs text-muted-foreground -mt-1">
+              ℹ️ O BDI é uso interno: no PDF/Excel exportado ele fica embutido nos preços (não aparece como linha). A administração aparece normalmente.
+            </p>
+          )}
 
           {/* Resumo de valores */}
           <div className="rounded-lg border divide-y text-sm">
@@ -350,6 +361,7 @@ function NovoOrcamentoModal({ obraId, open, onClose, onCreated }: {
 // ─── Componente principal (lista + roteamento interno) ────────────────────
 export function Orcamento({ obraId }: { obraId: number }) {
   const [selecionado, setSelecionado] = useState<number | null>(null);
+  const [modo, setModo] = useState<"ver" | "editar">("editar");
   const [modalOpen, setModalOpen] = useState(false);
   const utils = trpc.useUtils();
 
@@ -359,7 +371,8 @@ export function Orcamento({ obraId }: { obraId: number }) {
   });
 
   if (selecionado) {
-    return <OrcamentoEditor orcamentoId={selecionado} obraId={obraId} onBack={() => { setSelecionado(null); refetch(); }} />;
+    return <OrcamentoEditor orcamentoId={selecionado} obraId={obraId} readOnly={modo === "ver"}
+      onBack={() => { setSelecionado(null); refetch(); }} />;
   }
 
   return (
@@ -384,19 +397,29 @@ export function Orcamento({ obraId }: { obraId: number }) {
       ) : (
         <div className="grid gap-3">
           {orcamentos.map((o: any) => (
-            <Card key={o.id} className="cursor-pointer hover:border-primary/40 transition-colors" onClick={() => setSelecionado(o.id)}>
-              <CardContent className="flex items-center justify-between py-4">
-                <div>
-                  <div className="font-medium">{o.nome}</div>
+            <Card key={o.id} className="hover:border-primary/40 transition-colors">
+              <CardContent className="flex items-center justify-between py-4 gap-2">
+                <div className="min-w-0">
+                  <div className="font-medium truncate">{o.nome}</div>
                   <div className="text-sm text-muted-foreground">
                     {Number(o.areaM2) > 0 ? `${Number(o.areaM2).toLocaleString("pt-BR")} m² · ` : ""}
                     BDI {Number(o.bdiPercent)}% · Adm {Number(o.administracaoPercent)}%
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"
-                  onClick={e => { e.stopPropagation(); if (confirm(`Excluir o orçamento "${o.nome}"?`)) deleteMut.mutate({ id: o.id }); }}>
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button variant="outline" size="sm" className="gap-1.5"
+                    onClick={() => { setModo("ver"); setSelecionado(o.id); }}>
+                    <Eye className="w-4 h-4" /> Ver
+                  </Button>
+                  <Button variant="default" size="sm" className="gap-1.5"
+                    onClick={() => { setModo("editar"); setSelecionado(o.id); }}>
+                    <Pencil className="w-4 h-4" /> Editar
+                  </Button>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive"
+                    onClick={() => { if (confirm(`Excluir o orçamento "${o.nome}"?`)) deleteMut.mutate({ id: o.id }); }}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -404,7 +427,7 @@ export function Orcamento({ obraId }: { obraId: number }) {
       )}
 
       <NovoOrcamentoModal obraId={obraId} open={modalOpen} onClose={() => setModalOpen(false)}
-        onCreated={(id) => { setModalOpen(false); refetch(); setSelecionado(id); }} />
+        onCreated={(id) => { setModalOpen(false); refetch(); setModo("editar"); setSelecionado(id); }} />
     </div>
   );
 }

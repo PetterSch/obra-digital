@@ -5,6 +5,7 @@ import * as db from "./db";
 import { TRPCError } from "@trpc/server";
 import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
+import { CATALOGO_ORCAMENTO, CATEGORIAS_ORCAMENTO } from "./catalogo-orcamento";
 import { createSessionToken } from "./_core/auth";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
@@ -972,6 +973,158 @@ Gere um resumo executivo profissional em português que:
 
         return { resumo, consolidacao };
       }),
+  }),
+
+  // ============= ORÇAMENTOS ROUTER =============
+  orcamentos: router({
+    // Catálogo base de serviços
+    catalogo: protectedProcedure.query(() => {
+      return { itens: CATALOGO_ORCAMENTO, categorias: CATEGORIAS_ORCAMENTO };
+    }),
+
+    listByObra: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getOrcamentosByObra(input.obraId)),
+
+    // Retorna orçamento + itens + totais calculados
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => {
+        const orcamento = await db.getOrcamentoById(input.id);
+        if (!orcamento) return null;
+        const itens = await db.getItensByOrcamento(input.id);
+
+        const custoDirecto = itens.reduce(
+          (s: number, i: any) => s + Number(i.quantidade || 0) * Number(i.precoUnitario || 0), 0);
+        const bdi = Number(orcamento.bdiPercent || 0);
+        const adm = Number(orcamento.administracaoPercent || 0);
+        const area = Number(orcamento.areaM2 || 0);
+
+        const valorComBdi = custoDirecto * (1 + bdi / 100);
+        const valorAdministracao = valorComBdi * (adm / 100);
+        const valorTotal = valorComBdi + valorAdministracao;
+
+        const custoM2SemAdm = area > 0 ? valorComBdi / area : 0;
+        const custoM2ComAdm = area > 0 ? valorTotal / area : 0;
+
+        return {
+          orcamento,
+          itens,
+          totais: {
+            custoDirecto,
+            bdi, valorBdi: valorComBdi - custoDirecto, valorComBdi,
+            adm, valorAdministracao,
+            valorTotal,
+            area,
+            custoM2SemAdm,
+            custoM2ComAdm,
+          },
+        };
+      }),
+
+    create: engineerProcedure
+      .input(z.object({
+        obraId: z.number(),
+        nome: z.string().min(1),
+        areaM2: z.number().optional(),
+        // itens selecionados do catálogo
+        itens: z.array(z.object({
+          categoria: z.string().optional(),
+          descricao: z.string(),
+          unidade: z.string().optional(),
+          quantidade: z.number().optional(),
+          precoUnitario: z.number().optional(),
+        })).default([]),
+      }))
+      .mutation(async ({ input }) => {
+        const orcamento = await db.createOrcamento({
+          obraId: input.obraId,
+          nome: input.nome,
+          areaM2: (input.areaM2 ?? 0).toString(),
+          bdiPercent: "0",
+          administracaoPercent: "0",
+        });
+        if (input.itens.length > 0) {
+          await db.createOrcamentoItensBatch(input.itens.map((it, idx) => ({
+            orcamentoId: orcamento.id,
+            categoria: it.categoria ?? null,
+            descricao: it.descricao,
+            unidade: it.unidade ?? null,
+            quantidade: (it.quantidade ?? 0).toString(),
+            precoUnitario: (it.precoUnitario ?? 0).toString(),
+            ordem: idx,
+          })) as any);
+        }
+        return orcamento;
+      }),
+
+    update: engineerProcedure
+      .input(z.object({
+        id: z.number(),
+        nome: z.string().optional(),
+        areaM2: z.number().optional(),
+        bdiPercent: z.number().optional(),
+        administracaoPercent: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...d } = input;
+        await db.updateOrcamento(id, {
+          ...(d.nome !== undefined && { nome: d.nome }),
+          ...(d.areaM2 !== undefined && { areaM2: d.areaM2.toString() }),
+          ...(d.bdiPercent !== undefined && { bdiPercent: d.bdiPercent.toString() }),
+          ...(d.administracaoPercent !== undefined && { administracaoPercent: d.administracaoPercent.toString() }),
+        });
+        return { success: true };
+      }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deleteOrcamento(input.id); return { success: true }; }),
+
+    addItem: engineerProcedure
+      .input(z.object({
+        orcamentoId: z.number(),
+        categoria: z.string().optional(),
+        descricao: z.string().min(1),
+        unidade: z.string().optional(),
+        quantidade: z.number().optional(),
+        precoUnitario: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.createOrcamentoItem({
+          orcamentoId: input.orcamentoId,
+          categoria: input.categoria ?? null,
+          descricao: input.descricao,
+          unidade: input.unidade ?? null,
+          quantidade: (input.quantidade ?? 0).toString(),
+          precoUnitario: (input.precoUnitario ?? 0).toString(),
+          ordem: 999,
+        } as any);
+        return { success: true };
+      }),
+
+    updateItem: engineerProcedure
+      .input(z.object({
+        id: z.number(),
+        descricao: z.string().optional(),
+        unidade: z.string().optional(),
+        quantidade: z.number().optional(),
+        precoUnitario: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...d } = input;
+        await db.updateOrcamentoItem(id, {
+          ...(d.descricao !== undefined && { descricao: d.descricao }),
+          ...(d.unidade !== undefined && { unidade: d.unidade }),
+          ...(d.quantidade !== undefined && { quantidade: d.quantidade.toString() }),
+          ...(d.precoUnitario !== undefined && { precoUnitario: d.precoUnitario.toString() }),
+        });
+        return { success: true };
+      }),
+
+    deleteItem: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deleteOrcamentoItem(input.id); return { success: true }; }),
   }),
 });
 

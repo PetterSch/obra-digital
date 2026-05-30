@@ -379,3 +379,35 @@ export const sugestoesLLM = mysqlTable("sugestoes_llm", {
 
 export type SugestaoLLM = typeof sugestoesLLM.$inferSelect;
 export type InsertSugestaoLLM = typeof sugestoesLLM.$inferInsert;
+
+/**
+ * Orçamentos de Obra
+ */
+export const orcamentos = mysqlTable("orcamentos", {
+  id: int("id").autoincrement().primaryKey(),
+  obraId: int("obraId").notNull(),
+  nome: varchar("nome", { length: 255 }).notNull(),
+  areaM2: decimal("areaM2", { precision: 10, scale: 2 }).default("0"),
+  bdiPercent: decimal("bdiPercent", { precision: 5, scale: 2 }).default("0"),
+  administracaoPercent: decimal("administracaoPercent", { precision: 5, scale: 2 }).default("0"),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+  atualizadoEm: timestamp("atualizadoEm").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Orcamento = typeof orcamentos.$inferSelect;
+export type InsertOrcamento = typeof orcamentos.$inferInsert;
+
+export const orcamentoItens = mysqlTable("orcamento_itens", {
+  id: int("id").autoincrement().primaryKey(),
+  orcamentoId: int("orcamentoId").notNull(),
+  categoria: varchar("categoria", { length: 100 }),
+  descricao: varchar("descricao", { length: 500 }).notNull(),
+  unidade: varchar("unidade", { length: 20 }),
+  quantidade: decimal("quantidade", { precision: 12, scale: 3 }).default("0"),
+  precoUnitario: decimal("precoUnitario", { precision: 12, scale: 2 }).default("0"),
+  ordem: int("ordem").default(0),
+  criadoEm: timestamp("criadoEm").defaultNow().notNull(),
+});
+
+export type OrcamentoItem = typeof orcamentoItens.$inferSelect;
+export type InsertOrcamentoItem = typeof orcamentoItens.$inferInsert;

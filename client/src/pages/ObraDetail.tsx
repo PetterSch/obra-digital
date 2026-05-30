@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { DiarioForm } from "@/components/DiarioForm";
 import EquipesColaboradores from "@/pages/Colaboradores";
+import { Orcamento } from "@/components/Orcamento";
 import { PendenciasForm } from "@/components/PendenciasForm";
 import { MateriaisForm } from "@/components/MateriaisForm";
 import { MaterialesList } from "@/components/MaterialesList";
@@ -183,12 +184,13 @@ export default function ObraDetail() {
 
         {/* Tabs */}
         <Tabs defaultValue="diarios" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
-            <TabsTrigger value="diarios">Diários ({diarios.length})</TabsTrigger>
-            <TabsTrigger value="colaboradores">Equipes & Colaboradores</TabsTrigger>
-            <TabsTrigger value="pendencias">Pendências ({pendencias.length})</TabsTrigger>
-            <TabsTrigger value="materiais">Materiais</TabsTrigger>
-            <TabsTrigger value="info">Informações</TabsTrigger>
+          <TabsList className="flex w-full overflow-x-auto">
+            <TabsTrigger value="diarios" className="flex-1">Diários ({diarios.length})</TabsTrigger>
+            <TabsTrigger value="colaboradores" className="flex-1">Equipes & Colaboradores</TabsTrigger>
+            <TabsTrigger value="orcamento" className="flex-1">Orçamento</TabsTrigger>
+            <TabsTrigger value="pendencias" className="flex-1">Pendências ({pendencias.length})</TabsTrigger>
+            <TabsTrigger value="materiais" className="flex-1">Materiais</TabsTrigger>
+            <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
           </TabsList>
 
           <TabsContent value="diarios" className="space-y-4">
@@ -245,6 +247,10 @@ export default function ObraDetail() {
 
           <TabsContent value="colaboradores" className="space-y-4">
             <EquipesColaboradores obraId={obra.id} embedded />
+          </TabsContent>
+
+          <TabsContent value="orcamento" className="space-y-4">
+            <Orcamento obraId={obra.id} />
           </TabsContent>
 
           <TabsContent value="pendencias" className="space-y-4">

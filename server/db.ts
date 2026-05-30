@@ -18,7 +18,9 @@ import {
   relatorios,
   acessoCliente,
   acessoObra,
-  sugestoesLLM
+  sugestoesLLM,
+  orcamentos,
+  orcamentoItens
 } from "../drizzle/schema";
 import * as demo from "./demo-store";
 
@@ -126,6 +128,37 @@ export async function runMigrations() {
     }
   } catch {
     // Já aplicado — ignora
+  }
+
+  // Tabelas de orçamento
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS orcamentos (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        obraId INT NOT NULL,
+        nome VARCHAR(255) NOT NULL,
+        areaM2 DECIMAL(10,2) DEFAULT 0,
+        bdiPercent DECIMAL(5,2) DEFAULT 0,
+        administracaoPercent DECIMAL(5,2) DEFAULT 0,
+        criadoEm TIMESTAMP DEFAULT NOW(),
+        atualizadoEm TIMESTAMP DEFAULT NOW() ON UPDATE NOW()
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS orcamento_itens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        orcamentoId INT NOT NULL,
+        categoria VARCHAR(100),
+        descricao VARCHAR(500) NOT NULL,
+        unidade VARCHAR(20),
+        quantidade DECIMAL(12,3) DEFAULT 0,
+        precoUnitario DECIMAL(12,2) DEFAULT 0,
+        ordem INT DEFAULT 0,
+        criadoEm TIMESTAMP DEFAULT NOW()
+      )`);
+      console.log("[Migrate] Tabelas de orçamento garantidas");
+    }
+  } catch {
+    // Já existem — ignora
   }
 }
 
@@ -780,4 +813,70 @@ export async function createUser(data: { name: string; email: string; username?:
     lastSignedIn: new Date(),
   } as any);
   return getUserByEmail(data.email);
+}
+
+// ============= ORÇAMENTOS =============
+
+export async function getOrcamentosByObra(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orcamentos).where(eq(orcamentos.obraId, obraId)).orderBy(desc(orcamentos.criadoEm));
+}
+
+export async function getOrcamentoById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const r = await db.select().from(orcamentos).where(eq(orcamentos.id, id)).limit(1);
+  return r[0] ?? null;
+}
+
+export async function createOrcamento(data: typeof orcamentos.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Banco indisponível");
+  await db.insert(orcamentos).values(data);
+  const r = await db.select().from(orcamentos).where(eq(orcamentos.obraId, data.obraId)).orderBy(desc(orcamentos.id)).limit(1);
+  return r[0];
+}
+
+export async function updateOrcamento(id: number, data: Partial<typeof orcamentos.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(orcamentos).set(data).where(eq(orcamentos.id, id));
+}
+
+export async function deleteOrcamento(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(orcamentoItens).where(eq(orcamentoItens.orcamentoId, id));
+  await db.delete(orcamentos).where(eq(orcamentos.id, id));
+}
+
+export async function getItensByOrcamento(orcamentoId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(orcamentoItens).where(eq(orcamentoItens.orcamentoId, orcamentoId)).orderBy(asc(orcamentoItens.ordem));
+}
+
+export async function createOrcamentoItem(data: typeof orcamentoItens.$inferInsert) {
+  const db = await getDb();
+  if (!db) throw new Error("Banco indisponível");
+  await db.insert(orcamentoItens).values(data);
+}
+
+export async function createOrcamentoItensBatch(itens: typeof orcamentoItens.$inferInsert[]) {
+  const db = await getDb();
+  if (!db || itens.length === 0) return;
+  await db.insert(orcamentoItens).values(itens);
+}
+
+export async function updateOrcamentoItem(id: number, data: Partial<typeof orcamentoItens.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(orcamentoItens).set(data).where(eq(orcamentoItens.id, id));
+}
+
+export async function deleteOrcamentoItem(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(orcamentoItens).where(eq(orcamentoItens.id, id));
 }

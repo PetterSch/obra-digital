@@ -83,12 +83,12 @@ const BASE_CSS = `
     background: white; clip-path: ellipse(55% 100% at 50% 100%);
   }
   .cover-logo-wrap {
-    background: white; border-radius: 16px;
-    padding: 18px 32px; margin-bottom: 28px;
+    background: white; border-radius: 20px;
+    padding: 24px 40px; margin-bottom: 28px;
     box-shadow: 0 8px 32px rgba(0,0,0,0.25);
     display: flex; align-items: center; gap: 14px;
   }
-  .cover-logo-wrap img { height: 56px; max-width: 200px; object-fit: contain; }
+  .cover-logo-wrap img { height: 110px; max-width: 340px; object-fit: contain; }
   .cover-logo-default { font-size: 26px; font-weight: 800; color: #1e3a5f; letter-spacing: -0.5px; }
   .cover-logo-default span { color: #2563eb; }
   .cover-doc-badge {
@@ -294,9 +294,8 @@ function buildCoverPage(opts: {
       <div>
         <!-- Empresa emissora -->
         <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e5e7eb">
-          <div class="cover-empresa" style="font-size:11px;margin-bottom:2px">EMPRESA EMISSORA</div>
-          <div style="font-size:20px;font-weight:800;color:#1e3a5f;line-height:1.2">${empresaNome}</div>
-          ${empresaSub ? `<div style="font-size:12px;color:#6b7280;margin-top:2px">${empresaSub}</div>` : ""}
+          <div style="font-size:26px;font-weight:800;color:#B45309;line-height:1.15;letter-spacing:-0.3px">${empresaNome}</div>
+          ${empresaSub ? `<div style="font-size:12px;color:#6b7280;margin-top:3px">${empresaSub}</div>` : ""}
           ${contatoLine ? `<div style="font-size:11px;color:#6b7280;margin-top:6px">${contatoLine}</div>` : ""}
         </div>
 
@@ -963,14 +962,14 @@ export function exportOrcamentoPDF(data: OrcamentoPDFData): void {
 
   const cover = buildCoverPage({
     docType: "Orçamento de Obra",
-    docTitle: "Orçamento de Obra",
+    docTitle: data.nome,
     docId,
     obraNome: data.obraNome,
     obraCliente: data.cliente,
     obraCodigo: data.obraCodigo,
     obraResponsavel: data.responsavelTecnico,
     obraEndereco: data.endereco,
-    dataReferencia: data.nome,
+    dataReferencia: data.cliente && data.cliente !== "—" ? `Cliente: ${data.cliente}` : "",
     config,
   });
 

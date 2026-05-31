@@ -22,6 +22,44 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   { categoria: "Serviços Preliminares", descricao: "Placa de obra", unidade: "m²", precoReferencia: 320.00 },
   { categoria: "Serviços Preliminares", descricao: "Aluguel de container/escritório", unidade: "mês", precoReferencia: 950.00 },
 
+  // ── Demolição e Remoção (Reforma) ──
+  { categoria: "Demolição e Remoção", descricao: "Demolição de parede de alvenaria", unidade: "m²", precoReferencia: 55.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de piso / cerâmica", unidade: "m²", precoReferencia: 28.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de azulejo / revestimento de parede", unidade: "m²", precoReferencia: 26.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de contrapiso", unidade: "m²", precoReferencia: 35.00 },
+  { categoria: "Demolição e Remoção", descricao: "Picotamento / remoção de reboco", unidade: "m²", precoReferencia: 22.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de forro (gesso/PVC)", unidade: "m²", precoReferencia: 24.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de telhado / cobertura", unidade: "m²", precoReferencia: 38.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de esquadrias (porta/janela)", unidade: "un", precoReferencia: 65.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de louças e metais", unidade: "un", precoReferencia: 55.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de bancada / armário", unidade: "un", precoReferencia: 120.00 },
+  { categoria: "Demolição e Remoção", descricao: "Raspagem de pintura / papel de parede", unidade: "m²", precoReferencia: 18.00 },
+  { categoria: "Demolição e Remoção", descricao: "Abertura de vão em parede", unidade: "un", precoReferencia: 480.00 },
+  { categoria: "Demolição e Remoção", descricao: "Fechamento de vão / passagem", unidade: "m²", precoReferencia: 110.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de fiação / tubulação antiga", unidade: "m", precoReferencia: 12.00 },
+  { categoria: "Demolição e Remoção", descricao: "Remoção de entulho (ensacado)", unidade: "m³", precoReferencia: 75.00 },
+  { categoria: "Demolição e Remoção", descricao: "Caçamba de entulho (locação + retirada)", unidade: "un", precoReferencia: 380.00 },
+
+  // ── Recuperação e Tratamento (Reforma) ──
+  { categoria: "Recuperação e Tratamento", descricao: "Recuperação estrutural de concreto", unidade: "m²", precoReferencia: 280.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Tratamento de ferragem exposta (oxidada)", unidade: "m", precoReferencia: 95.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Reforço estrutural (fibra/perfil)", unidade: "m", precoReferencia: 320.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Tratamento de trincas e fissuras", unidade: "m", precoReferencia: 45.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Tratamento de umidade / infiltração", unidade: "m²", precoReferencia: 120.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Tratamento de mofo / bolor", unidade: "m²", precoReferencia: 32.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Tratamento de cupim / pragas", unidade: "m²", precoReferencia: 28.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Regularização de piso (após demolição)", unidade: "m²", precoReferencia: 42.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Regularização de parede (após demolição)", unidade: "m²", precoReferencia: 38.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Encunhamento / amarração de alvenaria", unidade: "m", precoReferencia: 35.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Reparo / remendo de reboco", unidade: "m²", precoReferencia: 48.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Lixamento e preparo de superfície", unidade: "m²", precoReferencia: 16.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Reparo pontual de telhado / goteira", unidade: "un", precoReferencia: 280.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Reparo de vazamento hidráulico", unidade: "un", precoReferencia: 220.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Reparo / revisão elétrica pontual", unidade: "un", precoReferencia: 180.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Recolocação de peça reaproveitada", unidade: "un", precoReferencia: 95.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Restauro de esquadria de madeira", unidade: "un", precoReferencia: 380.00 },
+  { categoria: "Recuperação e Tratamento", descricao: "Repintura (raspagem + nova pintura)", unidade: "m²", precoReferencia: 42.00 },
+
   // ── Terraplenagem / Movimentação de Terra ──
   { categoria: "Terraplenagem", descricao: "Escavação mecanizada", unidade: "m³", precoReferencia: 28.00 },
   { categoria: "Terraplenagem", descricao: "Aterro compactado", unidade: "m³", precoReferencia: 45.00 },
@@ -379,6 +417,8 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
 // Lista de categorias na ordem de exibição
 export const CATEGORIAS_ORCAMENTO = [
   "Serviços Preliminares",
+  "Demolição e Remoção",
+  "Recuperação e Tratamento",
   "Terraplenagem",
   "Fundação",
   "Estrutura",

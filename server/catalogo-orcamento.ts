@@ -453,6 +453,28 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   { categoria: "Custos Indiretos", descricao: "Mobilização e desmobilização", unidade: "vb", precoReferencia: 4000.00 },
   { categoria: "Custos Indiretos", descricao: "Exames e treinamentos (NRs)", unidade: "vb", precoReferencia: 1200.00 },
 
+  // ── Ensaios e Controle Tecnológico ──
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Controle tecnológico do concreto (corpos de prova)", unidade: "cp", precoReferencia: 65.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Rompimento de corpo de prova (compressão)", unidade: "cp", precoReferencia: 55.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de slump test (abatimento)", unidade: "un", precoReferencia: 45.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de argamassa (resistência)", unidade: "cp", precoReferencia: 60.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de aço (tração/dobramento)", unidade: "cp", precoReferencia: 120.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de compactação de solo (Proctor)", unidade: "un", precoReferencia: 280.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de densidade in situ (frasco de areia)", unidade: "un", precoReferencia: 180.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de capacidade de carga (prova de carga)", unidade: "un", precoReferencia: 4500.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de estanqueidade (impermeabilização)", unidade: "m²", precoReferencia: 28.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Teste de estanqueidade hidráulica", unidade: "un", precoReferencia: 350.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de desempenho acústico (NBR 15575)", unidade: "un", precoReferencia: 1800.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de desempenho térmico (NBR 15575)", unidade: "un", precoReferencia: 1600.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de desempenho lumínico (NBR 15575)", unidade: "un", precoReferencia: 1400.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de resistência ao fogo", unidade: "un", precoReferencia: 2200.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de aderência de revestimento", unidade: "un", precoReferencia: 320.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de estanqueidade de fachada", unidade: "m²", precoReferencia: 35.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Esclerometria (resistência superficial)", unidade: "un", precoReferencia: 380.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Ensaio de potabilidade da água", unidade: "un", precoReferencia: 450.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Laudo técnico / relatório de ensaios", unidade: "vb", precoReferencia: 1200.00 },
+  { categoria: "Ensaios e Controle Tecnológico", descricao: "Acompanhamento tecnológico (mensal)", unidade: "mês", precoReferencia: 2800.00 },
+
   // ── Serviços Finais ──
   { categoria: "Serviços Finais", descricao: "Limpeza final da obra", unidade: "m²", precoReferencia: 12.00 },
   { categoria: "Serviços Finais", descricao: "Limpeza pós-obra pesada", unidade: "m²", precoReferencia: 18.00 },
@@ -463,6 +485,7 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
 // Lista de categorias na ordem de exibição
 export const CATEGORIAS_ORCAMENTO = [
   "Projetos e Serviços Iniciais",
+  "Ensaios e Controle Tecnológico",
   "Serviços Preliminares",
   "Demolição e Remoção",
   "Recuperação e Tratamento",

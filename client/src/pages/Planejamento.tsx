@@ -9,7 +9,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { ClipboardList, Plus, Trash2, ArrowLeft, FileDown, FileSpreadsheet, CalendarRange } from "lucide-react";
@@ -113,6 +112,113 @@ function exportarPDF(nome: string, d: any) {
   w.document.write(html); w.document.close();
 }
 
+// ─── Agendamento automático (CPM) ───────────────────────────────────────────
+const diasEntre = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 86400000);
+const addDias = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const toDate = (s: string) => new Date((s || "") + "T12:00:00");
+const fmtISO = (d: Date) => d.toISOString().split("T")[0];
+
+function calcularCronograma(ativs: any[], projStartISO: string) {
+  if (!ativs.length) return ativs;
+  const start = toDate(projStartISO || new Date().toISOString().split("T")[0]);
+  const byId: Record<string, any> = {};
+  ativs.forEach(a => { byId[String(a.id)] = a; });
+  const preds = (a: any) => String(a.predecessoras || "").split(/[,;\s]+/).map(s => s.trim())
+    .filter(Boolean).filter(pid => byId[pid] && pid !== String(a.id));
+  // ordenação topológica (com proteção contra ciclos)
+  const order: any[] = []; const vis: Record<string, number> = {}; const tmp: Record<string, number> = {};
+  const visit = (a: any) => {
+    const k = String(a.id);
+    if (vis[k] || tmp[k]) return;
+    tmp[k] = 1; preds(a).forEach(pid => visit(byId[pid])); tmp[k] = 0; vis[k] = 1; order.push(a);
+  };
+  ativs.forEach(visit);
+  // passada para frente
+  const ES: Record<string, number> = {}, EF: Record<string, number> = {};
+  for (const a of order) {
+    const k = String(a.id); const dur = Math.max(1, a.duracaoDias || 1); const ps = preds(a);
+    let es: number;
+    if (a.travado && a.inicio) es = diasEntre(start, toDate(a.inicio));
+    else if (ps.length === 0) es = 0;
+    else es = Math.max(...ps.map(pid => (EF[pid] ?? 0) + 1));
+    if (es < 0) es = 0;
+    ES[k] = es; EF[k] = es + dur - 1;
+  }
+  const projEF = Math.max(0, ...order.map(a => EF[String(a.id)] ?? 0));
+  // passada para trás (folga / caminho crítico)
+  const LS: Record<string, number> = {};
+  const succs: Record<string, string[]> = {};
+  order.forEach(a => preds(a).forEach(pid => { (succs[pid] = succs[pid] || []).push(String(a.id)); }));
+  for (let i = order.length - 1; i >= 0; i--) {
+    const a = order[i]; const k = String(a.id); const dur = Math.max(1, a.duracaoDias || 1);
+    const ss = succs[k] || [];
+    const lf = ss.length ? Math.min(...ss.map(sid => (LS[sid] ?? projEF) - 1)) : projEF;
+    LS[k] = lf - dur + 1;
+  }
+  return ativs.map(a => {
+    const k = String(a.id); const folga = Math.max(0, (LS[k] ?? ES[k] ?? 0) - (ES[k] ?? 0));
+    return { ...a, inicio: fmtISO(addDias(start, ES[k] || 0)), fim: fmtISO(addDias(start, EF[k] || 0)), folgaDias: folga, critico: folga <= 0 };
+  });
+}
+
+// ─── Gráfico de Gantt ────────────────────────────────────────────────────────
+function Gantt({ ativs }: { ativs: any[] }) {
+  const validas = (ativs || []).filter(a => a.inicio && a.fim);
+  if (!validas.length) return <p className="p-4 text-sm text-muted-foreground">Sem atividades com datas. Adicione atividades e clique em <b>Recalcular datas</b>.</p>;
+  const min = new Date(Math.min(...validas.map(a => toDate(a.inicio).getTime())));
+  const max = new Date(Math.max(...validas.map(a => toDate(a.fim).getTime())));
+  const total = Math.max(1, diasEntre(min, max) + 1);
+  const DAY = total > 365 ? 3 : total > 120 ? 5 : 9; // px por dia
+  const chartW = total * DAY;
+  const LABEL = 220;
+  // marcas de mês
+  const ticks: { left: number; label: string }[] = [];
+  const m = new Date(min.getFullYear(), min.getMonth(), 1);
+  while (m <= max) {
+    ticks.push({ left: Math.max(0, diasEntre(min, m)) * DAY, label: `${String(m.getMonth() + 1).padStart(2, "0")}/${String(m.getFullYear()).slice(2)}` });
+    m.setMonth(m.getMonth() + 1);
+  }
+  return (
+    <div className="overflow-x-auto">
+      <div style={{ minWidth: LABEL + chartW + 16 }} className="text-xs">
+        {/* cabeçalho de meses */}
+        <div className="flex border-b sticky top-0 bg-background">
+          <div style={{ width: LABEL }} className="shrink-0 p-2 font-medium text-muted-foreground">Atividade</div>
+          <div className="relative" style={{ width: chartW, height: 28 }}>
+            {ticks.map((t, i) => (
+              <div key={i} className="absolute top-0 h-full border-l border-border/60 pl-1 text-[10px] text-muted-foreground" style={{ left: t.left }}>{t.label}</div>
+            ))}
+          </div>
+        </div>
+        {/* linhas */}
+        {validas.map((a, i) => {
+          const ini = toDate(a.inicio), fim = toDate(a.fim);
+          const left = diasEntre(min, ini) * DAY;
+          const w = Math.max(DAY, (diasEntre(ini, fim) + 1) * DAY);
+          return (
+            <div key={i} className="flex items-center border-b last:border-0 hover:bg-muted/20" style={{ height: 30 }}>
+              <div style={{ width: LABEL }} className="shrink-0 px-2 truncate" title={a.descricao}>
+                <span className="text-muted-foreground mr-1">{a.id}</span>{a.descricao}
+              </div>
+              <div className="relative" style={{ width: chartW, height: "100%" }}>
+                {ticks.map((t, j) => (<div key={j} className="absolute top-0 h-full border-l border-border/30" style={{ left: t.left }} />))}
+                <div className="absolute rounded shadow-sm flex items-center" title={`${a.descricao} · ${fmtData(a.inicio)} → ${fmtData(a.fim)} · ${a.duracaoDias}d${a.critico ? " · CRÍTICA" : ` · folga ${a.folgaDias}d`}`}
+                  style={{ left, width: w, top: 6, height: 18, background: a.critico ? "#dc2626" : "#B45309", opacity: 0.92 }}>
+                  <span className="text-[10px] text-white px-1 truncate">{a.duracaoDias}d</span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+        <div className="flex gap-4 p-2 text-[11px] text-muted-foreground">
+          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{ background: "#dc2626" }} /> Caminho crítico (folga zero)</span>
+          <span className="flex items-center gap-1"><span className="inline-block w-3 h-3 rounded" style={{ background: "#B45309" }} /> Atividade com folga</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Editor ──────────────────────────────────────────────────────────────
 function Editor({ id, onBack }: { id: number; onBack: () => void }) {
   const utils = trpc.useUtils();
@@ -126,7 +232,20 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
 
   if (isLoading || !dados) return <div className="flex justify-center py-10"><Spinner /></div>;
   const nome = data?.nome || "Planejamento";
+  const projInicio = (data as any)?.dataInicio ? String((data as any).dataInicio).split("T")[0] : new Date().toISOString().split("T")[0];
   const setTexto = (campo: string, v: string) => setDados((p: any) => ({ ...p, [campo]: v }));
+  const recalcular = () => setAtiv(arr => calcularCronograma(arr, projInicio));
+
+  // ── Helpers de edição das tabelas ──
+  const cellCls = "h-8 border-0 shadow-none px-2 focus-visible:ring-1 focus-visible:ring-primary/40 rounded";
+  const setEap = (fn: (a: any[]) => any[]) => setDados((p: any) => ({ ...p, eap: fn(p.eap || []) }));
+  const setAtiv = (fn: (a: any[]) => any[]) => setDados((p: any) => ({ ...p, cronograma: { ...(p.cronograma || {}), atividades: fn(p.cronograma?.atividades || []) } }));
+  const setMarcos = (fn: (a: any[]) => any[]) => setDados((p: any) => ({ ...p, cronograma: { ...(p.cronograma || {}), marcos: fn(p.cronograma?.marcos || []) } }));
+  const setMO = (fn: (a: any[]) => any[]) => setDados((p: any) => ({ ...p, recursos: { ...(p.recursos || {}), maoDeObra: fn(p.recursos?.maoDeObra || []) } }));
+  const setEq = (fn: (a: any[]) => any[]) => setDados((p: any) => ({ ...p, recursos: { ...(p.recursos || {}), equipamentos: fn(p.recursos?.equipamentos || []) } }));
+  const setCurva = (fn: (a: any[]) => any[]) => setDados((p: any) => ({ ...p, recursos: { ...(p.recursos || {}), curvaS: fn(p.recursos?.curvaS || []) } }));
+  const edit = (arr: any[], i: number, campo: string, v: any) => arr.map((r, idx) => idx === i ? { ...r, [campo]: v } : r);
+  const del = (arr: any[], i: number) => arr.filter((_, idx) => idx !== i);
 
   const secoesTexto: [string, string, string][] = [
     ["suprimentos", "4. Suprimentos e Compras", dados.suprimentos],
@@ -174,84 +293,123 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
           <Card><CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                <th className="text-left p-2 pl-4 w-20">Código</th><th className="text-left p-2">Descrição</th><th className="text-left p-2 w-40">Responsável</th>
+                <th className="text-left p-2 pl-4 w-24">Código</th><th className="text-center p-2 w-16">Nível</th><th className="text-left p-2">Descrição</th><th className="text-left p-2 w-44">Responsável</th><th className="w-10"></th>
               </tr></thead>
               <tbody>
                 {(dados.eap || []).map((e: any, i: number) => (
-                  <tr key={i} className={`border-b last:border-0 ${e.nivel === 1 ? "bg-primary/5 font-semibold" : ""}`}>
-                    <td className="p-2 pl-4">{e.codigo}</td>
-                    <td className="p-2" style={{ paddingLeft: e.nivel === 1 ? 8 : 28 }}>{e.descricao}</td>
-                    <td className="p-2 text-muted-foreground">{e.responsavel}</td>
+                  <tr key={i} className={`border-b last:border-0 ${e.nivel === 1 ? "bg-primary/5" : ""}`}>
+                    <td className="p-1 pl-3"><Input className={cellCls} value={e.codigo ?? ""} onChange={ev => setEap(a => edit(a, i, "codigo", ev.target.value))} /></td>
+                    <td className="p-1"><Input type="number" min={1} className={cellCls + " text-center"} value={e.nivel ?? 1} onChange={ev => setEap(a => edit(a, i, "nivel", parseInt(ev.target.value) || 1))} /></td>
+                    <td className="p-1"><Input className={cellCls + (e.nivel === 1 ? " font-semibold" : "")} value={e.descricao ?? ""} onChange={ev => setEap(a => edit(a, i, "descricao", ev.target.value))} /></td>
+                    <td className="p-1"><Input className={cellCls} value={e.responsavel ?? ""} onChange={ev => setEap(a => edit(a, i, "responsavel", ev.target.value))} /></td>
+                    <td className="p-1 text-center"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEap(a => del(a, i))}><Trash2 className="w-3.5 h-3.5" /></Button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <div className="p-3 border-t"><Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEap(a => [...a, { codigo: "", nivel: 2, descricao: "", responsavel: "" }])}><Plus className="w-4 h-4" /> Adicionar item</Button></div>
           </CardContent></Card>
         </TabsContent>
 
         <TabsContent value="cronograma" className="mt-4 space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <p className="text-xs text-muted-foreground">Defina <b>duração</b> e <b>predecessoras</b> (IDs separados por vírgula) e clique em <b>Recalcular datas</b>. Use o cadeado 🔒 para fixar uma data manualmente.</p>
+            <Button size="sm" variant="secondary" className="gap-1.5" onClick={recalcular}><CalendarRange className="w-4 h-4" /> Recalcular datas</Button>
+          </div>
           <Card><CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                <th className="text-left p-2 pl-4">ID</th><th className="text-left p-2">Atividade</th><th className="text-left p-2">Fase</th>
-                <th className="text-center p-2">Dur.</th><th className="text-left p-2">Início</th><th className="text-left p-2">Fim</th>
+                <th className="text-left p-2 pl-3 w-14">ID</th><th className="text-left p-2">Atividade</th><th className="text-left p-2 w-32">Fase</th>
+                <th className="text-center p-2 w-16">Dur.</th><th className="text-left p-2 w-24">Pred.</th><th className="text-left p-2 w-36">Início</th><th className="text-left p-2 w-36">Fim</th><th className="text-center p-2 w-16">Folga</th><th className="w-10"></th>
               </tr></thead>
               <tbody>
-                {(dados.cronograma?.atividades || []).map((a: any) => (
-                  <tr key={a.id} className="border-b last:border-0 hover:bg-muted/20">
-                    <td className="p-2 pl-4">{a.id}</td>
-                    <td className="p-2">{a.descricao}</td>
-                    <td className="p-2"><Badge variant="secondary" className="text-xs">{a.fase}</Badge></td>
-                    <td className="text-center p-2">{a.duracaoDias}d</td>
-                    <td className="p-2">{fmtData(a.inicio)}</td>
-                    <td className="p-2">{fmtData(a.fim)}</td>
+                {(dados.cronograma?.atividades || []).map((a: any, i: number) => (
+                  <tr key={i} className={`border-b last:border-0 ${a.critico ? "bg-red-50 dark:bg-red-950/20" : ""}`}>
+                    <td className="p-1 pl-3"><Input className={cellCls} value={a.id ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "id", ev.target.value))} /></td>
+                    <td className="p-1"><Input className={cellCls} value={a.descricao ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "descricao", ev.target.value))} /></td>
+                    <td className="p-1"><Input className={cellCls} value={a.fase ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "fase", ev.target.value))} /></td>
+                    <td className="p-1"><Input type="number" min={0} className={cellCls + " text-center"} value={a.duracaoDias ?? 0} onChange={ev => setAtiv(arr => edit(arr, i, "duracaoDias", parseInt(ev.target.value) || 0))} /></td>
+                    <td className="p-1"><Input className={cellCls} placeholder="ex: 1,2" value={a.predecessoras ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "predecessoras", ev.target.value))} /></td>
+                    <td className="p-1"><div className="flex items-center gap-1">
+                      <Input type="date" className={cellCls} value={a.inicio ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "inicio", ev.target.value).map((x, idx) => idx === i ? { ...x, travado: true } : x))} />
+                      <button type="button" title={a.travado ? "Data fixada — clique para liberar" : "Data automática — clique para fixar"} className={`shrink-0 text-xs ${a.travado ? "" : "opacity-40"}`} onClick={() => setAtiv(arr => edit(arr, i, "travado", !a.travado))}>{a.travado ? "🔒" : "🔓"}</button>
+                    </div></td>
+                    <td className="p-1"><Input type="date" className={cellCls} value={a.fim ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "fim", ev.target.value))} /></td>
+                    <td className="p-1 text-center text-xs">{a.critico ? <span className="text-red-600 font-medium">crítica</span> : <span className="text-muted-foreground">{a.folgaDias ?? 0}d</span>}</td>
+                    <td className="p-1 text-center"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setAtiv(arr => del(arr, i))}><Trash2 className="w-3.5 h-3.5" /></Button></td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <div className="p-3 border-t"><Button variant="outline" size="sm" className="gap-1.5" onClick={() => setAtiv(arr => [...arr, { id: String(arr.length + 1), descricao: "", fase: "", duracaoDias: 1, predecessoras: arr.length ? String(arr.length) : "", inicio: "", fim: "", critico: false, folgaDias: 0 }])}><Plus className="w-4 h-4" /> Adicionar atividade</Button></div>
           </CardContent></Card>
-          {dados.cronograma?.marcos?.length > 0 && (
-            <Card><CardContent className="py-3">
-              <p className="text-sm font-medium mb-2">Marcos contratuais</p>
-              <div className="flex flex-wrap gap-2">
-                {dados.cronograma.marcos.map((m: any, i: number) => (
-                  <Badge key={i} variant="outline" className="text-xs">{m.descricao}: {fmtData(m.data)}</Badge>
-                ))}
-              </div>
-            </CardContent></Card>
-          )}
+          <Card><CardContent className="py-3">
+            <p className="text-sm font-medium mb-2">Gráfico de Gantt</p>
+            <Gantt ativs={dados.cronograma?.atividades || []} />
+          </CardContent></Card>
+          <Card><CardContent className="py-3">
+            <p className="text-sm font-medium mb-2">Marcos contratuais</p>
+            <div className="space-y-2">
+              {(dados.cronograma?.marcos || []).map((m: any, i: number) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <Input className="h-8 flex-1" placeholder="Descrição do marco" value={m.descricao ?? ""} onChange={ev => setMarcos(arr => edit(arr, i, "descricao", ev.target.value))} />
+                  <Input type="date" className="h-8 w-40" value={m.data ?? ""} onChange={ev => setMarcos(arr => edit(arr, i, "data", ev.target.value))} />
+                  <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setMarcos(arr => del(arr, i))}><Trash2 className="w-3.5 h-3.5" /></Button>
+                </div>
+              ))}
+            </div>
+            <Button variant="outline" size="sm" className="gap-1.5 mt-2" onClick={() => setMarcos(arr => [...arr, { descricao: "", data: "" }])}><Plus className="w-4 h-4" /> Adicionar marco</Button>
+          </CardContent></Card>
         </TabsContent>
 
         <TabsContent value="recursos" className="mt-4 space-y-3">
           <Card><CardContent className="p-0 overflow-x-auto">
             <p className="text-sm font-medium p-3 pb-1">Mão de obra</p>
             <table className="w-full text-sm">
-              <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground"><th className="text-left p-2 pl-4">Função</th><th className="text-center p-2">Qtd</th><th className="text-left p-2">Regime</th><th className="text-left p-2">Turnos</th></tr></thead>
+              <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground"><th className="text-left p-2 pl-3">Função</th><th className="text-center p-2 w-20">Qtd</th><th className="text-left p-2 w-36">Regime</th><th className="text-left p-2 w-40">Turnos</th><th className="w-10"></th></tr></thead>
               <tbody>{(dados.recursos?.maoDeObra || []).map((m: any, i: number) => (
-                <tr key={i} className="border-b last:border-0"><td className="p-2 pl-4">{m.funcao}</td><td className="text-center p-2">{m.quantidade}</td><td className="p-2">{m.regime}</td><td className="p-2 text-muted-foreground">{m.turnos}</td></tr>
+                <tr key={i} className="border-b last:border-0">
+                  <td className="p-1 pl-3"><Input className={cellCls} value={m.funcao ?? ""} onChange={ev => setMO(a => edit(a, i, "funcao", ev.target.value))} /></td>
+                  <td className="p-1"><Input type="number" min={0} className={cellCls + " text-center"} value={m.quantidade ?? 0} onChange={ev => setMO(a => edit(a, i, "quantidade", parseInt(ev.target.value) || 0))} /></td>
+                  <td className="p-1"><Input className={cellCls} value={m.regime ?? ""} onChange={ev => setMO(a => edit(a, i, "regime", ev.target.value))} /></td>
+                  <td className="p-1"><Input className={cellCls} value={m.turnos ?? ""} onChange={ev => setMO(a => edit(a, i, "turnos", ev.target.value))} /></td>
+                  <td className="p-1 text-center"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setMO(a => del(a, i))}><Trash2 className="w-3.5 h-3.5" /></Button></td>
+                </tr>
               ))}</tbody>
             </table>
+            <div className="p-3 border-t"><Button variant="outline" size="sm" className="gap-1.5" onClick={() => setMO(a => [...a, { funcao: "", quantidade: 1, regime: "CLT", turnos: "1 turno" }])}><Plus className="w-4 h-4" /> Adicionar função</Button></div>
           </CardContent></Card>
           <Card><CardContent className="p-0 overflow-x-auto">
             <p className="text-sm font-medium p-3 pb-1">Equipamentos</p>
             <table className="w-full text-sm">
-              <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground"><th className="text-left p-2 pl-4">Equipamento</th><th className="text-left p-2">Método</th><th className="text-left p-2">Período</th></tr></thead>
+              <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground"><th className="text-left p-2 pl-3">Equipamento</th><th className="text-left p-2">Método</th><th className="text-left p-2 w-40">Período</th><th className="w-10"></th></tr></thead>
               <tbody>{(dados.recursos?.equipamentos || []).map((e: any, i: number) => (
-                <tr key={i} className="border-b last:border-0"><td className="p-2 pl-4">{e.nome}</td><td className="p-2">{e.metodo}</td><td className="p-2 text-muted-foreground">{e.periodo}</td></tr>
+                <tr key={i} className="border-b last:border-0">
+                  <td className="p-1 pl-3"><Input className={cellCls} value={e.nome ?? ""} onChange={ev => setEq(a => edit(a, i, "nome", ev.target.value))} /></td>
+                  <td className="p-1"><Input className={cellCls} value={e.metodo ?? ""} onChange={ev => setEq(a => edit(a, i, "metodo", ev.target.value))} /></td>
+                  <td className="p-1"><Input className={cellCls} value={e.periodo ?? ""} onChange={ev => setEq(a => edit(a, i, "periodo", ev.target.value))} /></td>
+                  <td className="p-1 text-center"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setEq(a => del(a, i))}><Trash2 className="w-3.5 h-3.5" /></Button></td>
+                </tr>
               ))}</tbody>
             </table>
+            <div className="p-3 border-t"><Button variant="outline" size="sm" className="gap-1.5" onClick={() => setEq(a => [...a, { nome: "", metodo: "", periodo: "" }])}><Plus className="w-4 h-4" /> Adicionar equipamento</Button></div>
           </CardContent></Card>
-          {dados.recursos?.curvaS?.length > 0 && (
-            <Card><CardContent className="p-0 overflow-x-auto">
-              <p className="text-sm font-medium p-3 pb-1">Curva S de desembolso</p>
-              <table className="w-full text-sm">
-                <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground"><th className="text-left p-2 pl-4">Mês</th><th className="text-right p-2">% mês</th><th className="text-right p-2">% acum.</th><th className="text-right p-2 pr-4">Acumulado</th></tr></thead>
-                <tbody>{dados.recursos.curvaS.map((c: any, i: number) => (
-                  <tr key={i} className="border-b last:border-0"><td className="p-2 pl-4">{c.mes}</td><td className="text-right p-2">{c.percentualMes}%</td><td className="text-right p-2">{c.percentualAcumulado}%</td><td className="text-right p-2 pr-4 font-medium">{brl(c.valorAcumulado)}</td></tr>
-                ))}</tbody>
-              </table>
-            </CardContent></Card>
-          )}
+          <Card><CardContent className="p-0 overflow-x-auto">
+            <p className="text-sm font-medium p-3 pb-1">Curva S de desembolso</p>
+            <table className="w-full text-sm">
+              <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground"><th className="text-left p-2 pl-3 w-28">Mês</th><th className="text-right p-2 w-24">% mês</th><th className="text-right p-2 w-24">% acum.</th><th className="text-right p-2">Acumulado (R$)</th><th className="w-10"></th></tr></thead>
+              <tbody>{(dados.recursos?.curvaS || []).map((c: any, i: number) => (
+                <tr key={i} className="border-b last:border-0">
+                  <td className="p-1 pl-3"><Input className={cellCls} value={c.mes ?? ""} onChange={ev => setCurva(a => edit(a, i, "mes", ev.target.value))} /></td>
+                  <td className="p-1"><Input type="number" step="0.01" className={cellCls + " text-right"} value={c.percentualMes ?? 0} onChange={ev => setCurva(a => edit(a, i, "percentualMes", parseFloat(ev.target.value) || 0))} /></td>
+                  <td className="p-1"><Input type="number" step="0.01" className={cellCls + " text-right"} value={c.percentualAcumulado ?? 0} onChange={ev => setCurva(a => edit(a, i, "percentualAcumulado", parseFloat(ev.target.value) || 0))} /></td>
+                  <td className="p-1"><Input type="number" step="0.01" className={cellCls + " text-right"} value={c.valorAcumulado ?? 0} onChange={ev => setCurva(a => edit(a, i, "valorAcumulado", parseFloat(ev.target.value) || 0))} /></td>
+                  <td className="p-1 text-center"><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setCurva(a => del(a, i))}><Trash2 className="w-3.5 h-3.5" /></Button></td>
+                </tr>
+              ))}</tbody>
+            </table>
+            <div className="p-3 border-t"><Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCurva(a => [...a, { mes: "", percentualMes: 0, percentualAcumulado: 0, valorAcumulado: 0 }])}><Plus className="w-4 h-4" /> Adicionar mês</Button></div>
+          </CardContent></Card>
         </TabsContent>
 
         <TabsContent value="textos" className="mt-4 space-y-4">

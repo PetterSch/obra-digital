@@ -356,7 +356,7 @@ Início previsto: ${fmt(inicio)}
 Prazo total estimado: ${prazoTotalDias} dias (${Math.ceil(prazoTotalDias / 30)} meses)
 Valor total do orçamento: ${valorTotal > 0 ? "R$ " + valorTotal.toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "a definir"}
 
-Fases macro: ${[...new Set(atividades.map(a => a.fase))].join(" → ") || "a definir"}
+Fases macro: ${Array.from(new Set(atividades.map(a => a.fase))).join(" → ") || "a definir"}
 Total de pacotes de trabalho (EAP): ${eap.length}
 Atividades no cronograma: ${atividades.length}
 

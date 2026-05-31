@@ -153,7 +153,7 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   // ── Revestimentos de Parede ──
   { categoria: "Revestimentos de Parede", descricao: "Chapisco", unidade: "m²", precoReferencia: 14.00 },
   { categoria: "Revestimentos de Parede", descricao: "Emboço / massa única", unidade: "m²", precoReferencia: 42.00 },
-  { categoria: "Revestimentos de Parede", descricao: "Reboco fino", unidade: "m²", precoReferencia: 38.00 },
+  { categoria: "Revestimentos de Parede", descricao: "Reboco Esp. 1,5CM", unidade: "m²", precoReferencia: 38.00 },
   { categoria: "Revestimentos de Parede", descricao: "Azulejo de parede", unidade: "m²", precoReferencia: 88.00 },
   { categoria: "Revestimentos de Parede", descricao: "Revestimento porcelanato parede", unidade: "m²", precoReferencia: 125.00 },
   { categoria: "Revestimentos de Parede", descricao: "Pastilha / mosaico", unidade: "m²", precoReferencia: 145.00 },

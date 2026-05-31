@@ -265,6 +265,11 @@ function buildCoverPage(opts: {
 
   const empresaNome = opts.config.empresaNome || "Diário de Obras Digital";
   const empresaSub  = opts.config.empresaSubtitulo || "Sistema Profissional de Gestão de Obras";
+  // Primeira palavra (iniciais, ex: "RC") em preto; restante no tom âmbar da logo
+  const _np = empresaNome.trim().split(/\s+/);
+  const empresaNomeHTML = _np.length > 1
+    ? `<span style="color:#1a1a1a">${_np[0]}</span> <span style="color:#B45309">${_np.slice(1).join(" ")}</span>`
+    : `<span style="color:#B45309">${empresaNome}</span>`;
   const now = new Date().toLocaleString("pt-BR");
 
   // Linha de contato da empresa
@@ -294,7 +299,7 @@ function buildCoverPage(opts: {
       <div>
         <!-- Empresa emissora -->
         <div style="margin-bottom:20px;padding-bottom:16px;border-bottom:1px solid #e5e7eb">
-          <div style="font-size:26px;font-weight:800;color:#B45309;line-height:1.15;letter-spacing:-0.3px">${empresaNome}</div>
+          <div style="font-size:26px;font-weight:800;line-height:1.15;letter-spacing:-0.3px">${empresaNomeHTML}</div>
           ${empresaSub ? `<div style="font-size:12px;color:#6b7280;margin-top:3px">${empresaSub}</div>` : ""}
           ${contatoLine ? `<div style="font-size:11px;color:#6b7280;margin-top:6px">${contatoLine}</div>` : ""}
         </div>

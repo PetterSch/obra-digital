@@ -181,6 +181,16 @@ export async function runMigrations() {
     )`);
   } catch { /* já existe */ }
 
+  // Tabela de planejamentos
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`CREATE TABLE IF NOT EXISTS planejamentos (
+      id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(255) NOT NULL,
+      obraId INT, orcamentoId INT, dataInicio DATE, dados LONGTEXT,
+      criadoEm TIMESTAMP DEFAULT NOW(), atualizadoEm TIMESTAMP DEFAULT NOW() ON UPDATE NOW()
+    )`);
+  } catch { /* já existe */ }
+
   // Campos de cliente/obra no orçamento (módulo independente)
   for (const col of [
     "clienteNome VARCHAR(255)", "clienteTelefone VARCHAR(50)", "clienteEmail VARCHAR(255)",
@@ -951,4 +961,46 @@ export async function setEmpresaConfig(config: any): Promise<void> {
   const json = JSON.stringify(config);
   await db.execute(sql`INSERT INTO empresa_config (id, dados) VALUES (1, ${json})
     ON DUPLICATE KEY UPDATE dados = ${json}`);
+}
+
+// ============= PLANEJAMENTOS =============
+
+export async function getPlanejamentos() {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`SELECT id, nome, obraId, orcamentoId, dataInicio, criadoEm FROM planejamentos ORDER BY criadoEm DESC`);
+  return Array.isArray(r) ? r[0] : r;
+}
+
+export async function getPlanejamentoById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const r: any = await db.execute(sql`SELECT * FROM planejamentos WHERE id = ${id} LIMIT 1`);
+  const rows = Array.isArray(r) ? r[0] : r;
+  const row = rows?.[0];
+  if (!row) return null;
+  return { ...row, dados: row.dados ? JSON.parse(row.dados) : {} };
+}
+
+export async function createPlanejamento(data: { nome: string; obraId?: number | null; orcamentoId?: number | null; dataInicio?: string | null; dados: any }) {
+  const db = await getDb();
+  if (!db) throw new Error("Banco indisponível");
+  const json = JSON.stringify(data.dados);
+  const r: any = await db.execute(sql`INSERT INTO planejamentos (nome, obraId, orcamentoId, dataInicio, dados)
+    VALUES (${data.nome}, ${data.obraId ?? null}, ${data.orcamentoId ?? null}, ${data.dataInicio ?? null}, ${json})`);
+  const res = Array.isArray(r) ? r[0] : r;
+  return res?.insertId;
+}
+
+export async function updatePlanejamentoDados(id: number, dados: any) {
+  const db = await getDb();
+  if (!db) return;
+  const json = JSON.stringify(dados);
+  await db.execute(sql`UPDATE planejamentos SET dados = ${json} WHERE id = ${id}`);
+}
+
+export async function deletePlanejamento(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`DELETE FROM planejamentos WHERE id = ${id}`);
 }

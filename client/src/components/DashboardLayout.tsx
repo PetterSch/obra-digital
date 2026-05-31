@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings, UserCog, Calculator } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings, UserCog, Calculator, ClipboardList } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -33,6 +33,7 @@ const menuItems = [
   { icon: LayoutDashboard, label: "Dashboard",              path: "/" },
   { icon: Building2,       label: "Obras",                  path: "/obras" },
   { icon: Calculator,      label: "Orçamentos",             path: "/orcamentos" },
+  { icon: ClipboardList,   label: "Planejamento",           path: "/planejamento" },
   { icon: FileText,        label: "Resumos",                path: "/resumos" },
   { icon: Zap,             label: "Sugestões LLM",          path: "/sugestoes-llm" },
   { icon: UserCog,         label: "Usuários",               path: "/admin", adminOnly: true },

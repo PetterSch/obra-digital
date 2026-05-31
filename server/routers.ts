@@ -6,6 +6,7 @@ import { TRPCError } from "@trpc/server";
 import { invokeLLM } from "./_core/llm";
 import { ENV } from "./_core/env";
 import { CATALOGO_ORCAMENTO, CATEGORIAS_ORCAMENTO } from "./catalogo-orcamento";
+import { gerarPlanejamento } from "./planejamento-gerador";
 import { createSessionToken } from "./_core/auth";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
@@ -1006,6 +1007,63 @@ Gere um resumo executivo profissional em português que:
 
         return { resumo, consolidacao };
       }),
+  }),
+
+  // ============= PLANEJAMENTO ROUTER =============
+  planejamento: router({
+    list: protectedProcedure.query(async () => db.getPlanejamentos()),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => db.getPlanejamentoById(input.id)),
+
+    // Lista orçamentos para escolher na criação
+    orcamentosDisponiveis: protectedProcedure.query(async () => {
+      const orcs = await db.getAllOrcamentos();
+      return (orcs as any[]).map(o => ({ id: o.id, nome: o.nome, obraNomeRef: o.obraNomeRef, clienteNome: o.clienteNome }));
+    }),
+
+    create: engineerProcedure
+      .input(z.object({
+        nome: z.string().min(1),
+        dataInicio: z.string(),
+        orcamentoId: z.number().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        let orcamentoData = null;
+        let obraId: number | null = null;
+        if (input.orcamentoId) {
+          const orc = await db.getOrcamentoById(input.orcamentoId);
+          if (orc) {
+            const itens = await db.getItensByOrcamento(input.orcamentoId);
+            const itensFmt = (itens as any[]).map(i => ({
+              categoria: i.categoria, descricao: i.descricao,
+              quantidade: Number(i.quantidade), precoUnitario: Number(i.precoUnitario),
+            }));
+            const valorTotal = itensFmt.reduce((s, i) => s + i.quantidade * i.precoUnitario, 0)
+              * (1 + Number((orc as any).bdiPercent || 0) / 100) * (1 + Number((orc as any).administracaoPercent || 0) / 100);
+            orcamentoData = { nome: (orc as any).nome, itens: itensFmt, valorTotal };
+            obraId = (orc as any).obraId ?? null;
+          }
+        }
+        const dados = gerarPlanejamento({ dataInicio: input.dataInicio, orcamento: orcamentoData });
+        const id = await db.createPlanejamento({
+          nome: input.nome, obraId, orcamentoId: input.orcamentoId ?? null,
+          dataInicio: input.dataInicio, dados,
+        });
+        return { id };
+      }),
+
+    updateDados: engineerProcedure
+      .input(z.object({ id: z.number(), dados: z.any() }))
+      .mutation(async ({ input }) => {
+        await db.updatePlanejamentoDados(input.id, input.dados);
+        return { success: true };
+      }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deletePlanejamento(input.id); return { success: true }; }),
   }),
 
   // ============= CONFIG DA EMPRESA (compartilhada) =============

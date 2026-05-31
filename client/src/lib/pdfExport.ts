@@ -67,7 +67,7 @@ const BASE_CSS = `
 
   /* ── Capa ── */
   .cover-page {
-    width: 100%; height: 100vh; min-height: 1050px;
+    width: 100%; height: 100vh;
     display: flex; flex-direction: column;
     page-break-after: always; break-after: page;
     position: relative; overflow: hidden;
@@ -238,9 +238,11 @@ const BASE_CSS = `
 
   @media print {
     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .cover-page { height: 100vh; page-break-after: always; }
+    /* Capa ocupa exatamente uma página, sem gerar página em branco */
+    .cover-page { height: 100vh; min-height: 0; overflow: hidden; page-break-after: always; }
     .page { padding: 12px 16px; }
   }
+  @page { margin: 0; }
 `;
 
 // ─── Builders de bloco ────────────────────────────────────────────────────

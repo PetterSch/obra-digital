@@ -49,6 +49,9 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
   const porCategoria: Record<string, any[]> = {};
   itens.forEach((it: any) => { (porCategoria[it.categoria || "Outros"] ??= []).push(it); });
 
+  // Chaves dos itens já presentes no orçamento (evita duplicidade no catálogo)
+  const chavesExistentes = new Set(itens.map((i: any) => `${i.categoria || ""}|${i.descricao}`));
+
   const dadosExport = {
     obraNome: o.obraNomeRef || o.nome,
     obraCodigo: "—",
@@ -282,11 +285,12 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
                     <div className="bg-muted/20 px-3 py-1">
                       {itens.map(it => {
                         const key = cat + "|" + it.descricao;
+                        const jaTem = chavesExistentes.has(key);
                         return (
-                          <label key={key} className="flex items-center gap-2 py-1.5 cursor-pointer text-sm">
-                            <Checkbox checked={selCat.has(key)}
-                              onCheckedChange={() => setSelCat(p => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; })} />
-                            <span className="flex-1">{it.descricao}</span>
+                          <label key={key} className={`flex items-center gap-2 py-1.5 text-sm ${jaTem ? "opacity-60 cursor-default" : "cursor-pointer"}`}>
+                            <Checkbox checked={jaTem || selCat.has(key)} disabled={jaTem}
+                              onCheckedChange={() => { if (jaTem) return; setSelCat(p => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; }); }} />
+                            <span className="flex-1">{it.descricao}{jaTem && <span className="text-xs text-muted-foreground italic"> · já no orçamento</span>}</span>
                             <span className="text-xs text-muted-foreground">{it.unidade} · {brl(it.precoReferencia)}</span>
                           </label>
                         );
@@ -302,7 +306,10 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
               onClick={async () => {
                 setSalvandoCat(true);
                 try {
-                  const escolhidos = (catalogo?.itens ?? []).filter(i => selCat.has(i.categoria + "|" + i.descricao));
+                  const escolhidos = (catalogo?.itens ?? []).filter(i => {
+                    const k = i.categoria + "|" + i.descricao;
+                    return selCat.has(k) && !chavesExistentes.has(k);
+                  });
                   for (const it of escolhidos) {
                     await addItemAsync.mutateAsync({
                       orcamentoId, categoria: it.categoria, descricao: it.descricao,

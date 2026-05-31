@@ -12,6 +12,30 @@ export interface CatalogoItem {
 }
 
 export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
+  // ── Projetos e Serviços Iniciais ──
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto arquitetônico", unidade: "m²", precoReferencia: 45.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto estrutural", unidade: "m²", precoReferencia: 28.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto elétrico", unidade: "m²", precoReferencia: 18.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto hidrossanitário", unidade: "m²", precoReferencia: 18.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto de prevenção contra incêndio (PPCI)", unidade: "m²", precoReferencia: 16.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto de climatização / AVAC", unidade: "m²", precoReferencia: 15.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto de gás", unidade: "m²", precoReferencia: 12.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto de fundações", unidade: "m²", precoReferencia: 14.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto luminotécnico", unidade: "m²", precoReferencia: 16.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto de interiores / detalhamento", unidade: "m²", precoReferencia: 60.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Projeto paisagístico", unidade: "m²", precoReferencia: 22.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Compatibilização de projetos / BIM", unidade: "vb", precoReferencia: 4500.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Maquete eletrônica / renderização 3D", unidade: "vb", precoReferencia: 2800.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Levantamento topográfico", unidade: "vb", precoReferencia: 3500.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Topografia (locação/nivelamento)", unidade: "ha", precoReferencia: 2200.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Sondagem do solo (SPT)", unidade: "furo", precoReferencia: 1800.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Estudo / laudo geotécnico", unidade: "vb", precoReferencia: 3200.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Estudo de viabilidade", unidade: "vb", precoReferencia: 2500.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Aprovação na prefeitura / órgãos", unidade: "vb", precoReferencia: 3500.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Aprovação no corpo de bombeiros", unidade: "vb", precoReferencia: 2200.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "ART / RRT de projetos", unidade: "un", precoReferencia: 320.00 },
+  { categoria: "Projetos e Serviços Iniciais", descricao: "Licenciamento ambiental", unidade: "vb", precoReferencia: 4500.00 },
+
   // ── Serviços Preliminares ──
   { categoria: "Serviços Preliminares", descricao: "Limpeza e preparação do terreno", unidade: "m²", precoReferencia: 4.50 },
   { categoria: "Serviços Preliminares", descricao: "Demolição de construção existente", unidade: "m²", precoReferencia: 65.00 },
@@ -438,6 +462,7 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
 
 // Lista de categorias na ordem de exibição
 export const CATEGORIAS_ORCAMENTO = [
+  "Projetos e Serviços Iniciais",
   "Serviços Preliminares",
   "Demolição e Remoção",
   "Recuperação e Tratamento",

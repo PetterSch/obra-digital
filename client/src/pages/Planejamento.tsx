@@ -76,6 +76,31 @@ ${tasks}
   a.click(); URL.revokeObjectURL(url);
 }
 
+function ganttHTMLPdf(ativs: any[]) {
+  const v = (ativs || []).filter(a => a.inicio && a.fim);
+  if (!v.length) return "<p style='font-size:10px;color:#666'>Sem atividades com datas. Use \"Recalcular datas\" no cronograma.</p>";
+  const min = new Date(Math.min(...v.map(a => toDate(a.inicio).getTime())));
+  const max = new Date(Math.max(...v.map(a => toDate(a.fim).getTime())));
+  const total = Math.max(1, diasEntre(min, max) + 1);
+  const BAR = 520, LABEL = 165, ROW = 16;
+  const px = (dias: number) => (dias / total) * BAR;
+  const tickArr: { left: number; label: string }[] = [];
+  const m = new Date(min.getFullYear(), min.getMonth(), 1);
+  while (m <= max) { tickArr.push({ left: Math.max(0, diasEntre(min, m)), label: `${String(m.getMonth() + 1).padStart(2, "0")}/${String(m.getFullYear()).slice(2)}` }); m.setMonth(m.getMonth() + 1); }
+  const header = `<div style="position:relative;height:13px;margin-left:${LABEL}px;width:${BAR}px;border-bottom:1px solid #ccc">` +
+    tickArr.map(t => `<span style="position:absolute;left:${px(t.left)}px;font-size:7px;color:#888;border-left:1px solid #ddd;padding-left:1px">${t.label}</span>`).join("") + `</div>`;
+  const rows = v.map(a => {
+    const left = px(diasEntre(min, toDate(a.inicio)));
+    const w = Math.max(2, px(diasEntre(toDate(a.inicio), toDate(a.fim)) + 1));
+    const color = a.critico ? "#dc2626" : "#B45309";
+    return `<div style="position:relative;height:${ROW}px;border-bottom:1px solid #f2f2f2">
+      <span style="position:absolute;left:0;width:${LABEL - 4}px;font-size:8px;overflow:hidden;white-space:nowrap;line-height:${ROW}px;color:#333">${a.id} ${String(a.descricao || "").slice(0, 34)}</span>
+      <span style="position:absolute;left:${LABEL + left}px;top:3px;height:10px;width:${w}px;background:${color};border-radius:2px"></span>
+    </div>`;
+  }).join("");
+  return `<div style="font-size:8px">${header}${rows}<div style="margin-top:5px;font-size:8px;color:#555"><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:2px;vertical-align:middle"></span> Caminho crítico &nbsp;&nbsp; <span style="display:inline-block;width:8px;height:8px;background:#B45309;border-radius:2px;vertical-align:middle"></span> Atividade com folga</div></div>`;
+}
+
 function exportarPDF(nome: string, d: any) {
   const cfg = getPDFConfig();
   const empresa = cfg.empresaNome || "Obra Digital";
@@ -94,12 +119,14 @@ function exportarPDF(nome: string, d: any) {
   </div>
   ${sec("Resumo Executivo", linha(d.resumoExecutivo))}
   ${sec("1. EAP — Estrutura Analítica do Projeto", tabela(["Código", "Descrição", "Responsável"], (d.eap || []).map((e: any) => [e.codigo, (e.nivel === 1 ? "<b>" + e.descricao + "</b>" : "&nbsp;&nbsp;" + e.descricao), e.responsavel])))}
-  ${sec("2. Cronograma de Obras", tabela(["ID", "Atividade", "Fase", "Dur.", "Início", "Fim"], (d.cronograma?.atividades || []).map((a: any) => [a.id, a.descricao, a.fase, a.duracaoDias + "d", fmtData(a.inicio), fmtData(a.fim)]))
-    + "<p style='font-size:10px;margin-top:6px'><b>Marcos:</b> " + (d.cronograma?.marcos || []).map((m: any) => `${m.descricao} (${fmtData(m.data)})`).join(" · ") + "</p>")}
+  ${sec("2. Cronograma de Obras", tabela(["ID", "Atividade", "Fase", "Dur.", "Pred.", "Início", "Fim", "Folga"], (d.cronograma?.atividades || []).map((a: any) => [a.id, a.descricao, a.fase, a.duracaoDias + "d", a.predecessoras || "—", fmtData(a.inicio), fmtData(a.fim), a.critico ? "<b style='color:#dc2626'>crítica</b>" : (a.folgaDias ?? 0) + "d"])))}
+  ${sec("2.1 Gráfico de Gantt", ganttHTMLPdf(d.cronograma?.atividades || []))}
+  ${(d.cronograma?.marcos?.length ? sec("2.2 Marcos Contratuais", tabela(["Marco", "Data"], d.cronograma.marcos.map((m: any) => [m.descricao, fmtData(m.data)]))) : "")}
   ${sec("3. Planejamento de Recursos", tabela(["Função", "Qtd", "Regime", "Turnos"], (d.recursos?.maoDeObra || []).map((m: any) => [m.funcao, m.quantidade, m.regime, m.turnos]))
     + tabela(["Equipamento", "Método", "Período"], (d.recursos?.equipamentos || []).map((e: any) => [e.nome, e.metodo, e.periodo]))
     + (d.recursos?.curvaS?.length ? "<p style='font-size:11px;margin-top:8px;font-weight:600'>Curva S de desembolso</p>" + tabela(["Mês", "% mês", "% acum.", "Acumulado"], d.recursos.curvaS.map((c: any) => [c.mes, c.percentualMes + "%", c.percentualAcumulado + "%", brl(c.valorAcumulado)])) : ""))}
   ${(() => { const cg = computeCarga(d.cronograma?.atividades || [], d.recursos?.maoDeObra || []); return cg.length ? sec("3.1 Análise de Carga (Superalocação)", tabela(["Função", "Capacidade", "Pico", "Situação"], cg.map((c: any) => [c.funcao, c.capacidade, c.pico, c.status === "super" ? `Superalocado (pico ${c.pico} > ${c.capacidade})` : c.status === "cheio" ? "Totalmente alocado" : c.status === "sub" ? `Subutilizado (${c.pico}/${c.capacidade})` : "Ocioso"]))) : ""; })()}
+  ${(() => { const linhas = (d.cronograma?.atividades || []).filter((a: any) => (a.alocacoes || []).length).map((a: any) => [`${a.id} ${a.descricao}`, (a.alocacoes || []).map((al: any) => `${al.funcao} (${al.quantidade})`).join(", ")]); return linhas.length ? sec("3.2 Alocação de Equipe por Atividade", tabela(["Atividade", "Equipe alocada"], linhas)) : ""; })()}
   ${sec("4. Suprimentos e Compras", linha(d.suprimentos))}
   ${sec("5. Plano de Qualidade", linha(d.qualidade))}
   ${sec("6. Saúde, Segurança e Medicina do Trabalho", linha(d.ssmt))}

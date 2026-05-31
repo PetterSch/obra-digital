@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { getPDFConfig, setPDFConfig, type PDFConfig } from "@/lib/pdfExport";
+import { setPDFConfig, type PDFConfig } from "@/lib/pdfExport";
+import { trpc } from "@/lib/trpc";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { Building2, Upload, Trash2, FileText, Eye, Phone, Mail, Globe, Hash, MapPin, User, Award } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
 
@@ -76,13 +78,45 @@ function CoverPreview({ config }: { config: PDFConfig }) {
 // ─── Página principal ─────────────────────────────────────────────────────
 
 export default function ConfiguracaoEmpresa() {
+  const { user } = useAuth();
   const [config, setConfig] = useState<PDFConfig>({});
   const [saved, setSaved] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const utils = trpc.useUtils();
 
+  // Carrega a config compartilhada do servidor
+  const { data: serverConfig } = trpc.empresa.get.useQuery();
   useEffect(() => {
-    setConfig(getPDFConfig());
-  }, []);
+    if (serverConfig && typeof serverConfig === "object") {
+      setConfig(serverConfig as PDFConfig);
+      setPDFConfig(serverConfig as PDFConfig);
+    }
+  }, [serverConfig]);
+
+  const updateMutation = trpc.empresa.update.useMutation({
+    onSuccess: () => {
+      setPDFConfig(config);
+      utils.empresa.get.invalidate();
+      setSaved(true);
+      toast.success("Configurações salvas! Aplicadas para todos os usuários.");
+      setTimeout(() => setSaved(false), 3000);
+    },
+    onError: (e) => toast.error(e.message || "Erro ao salvar"),
+  });
+
+  // Gate de admin
+  if (user?.role !== "admin") {
+    return (
+      <DashboardLayout>
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center max-w-md">
+            <h1 className="text-xl font-bold mb-2">Acesso restrito</h1>
+            <p className="text-muted-foreground">Apenas administradores podem editar os dados da empresa.</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   function set(field: keyof PDFConfig) {
     return (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -99,10 +133,7 @@ export default function ConfiguracaoEmpresa() {
   }
 
   function handleSave() {
-    setPDFConfig(config);
-    setSaved(true);
-    toast.success("Configurações salvas! Serão aplicadas em todos os PDFs exportados.");
-    setTimeout(() => setSaved(false), 3000);
+    updateMutation.mutate({ config });
   }
 
   function handleRemoveLogo() {

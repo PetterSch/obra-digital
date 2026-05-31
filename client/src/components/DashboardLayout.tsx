@@ -25,6 +25,8 @@ import { ThemeToggle } from "./ThemeToggle";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import { DashboardLayoutSkeleton } from './DashboardLayoutSkeleton';
+import { trpc } from "@/lib/trpc";
+import { setPDFConfig } from "@/lib/pdfExport";
 import { Button } from "./ui/button";
 
 const menuItems = [
@@ -34,7 +36,7 @@ const menuItems = [
   { icon: FileText,        label: "Resumos",                path: "/resumos" },
   { icon: Zap,             label: "Sugestões LLM",          path: "/sugestoes-llm" },
   { icon: UserCog,         label: "Usuários",               path: "/admin", adminOnly: true },
-  { icon: Settings,        label: "Minha Empresa",          path: "/configuracoes/empresa" },
+  { icon: Settings,        label: "Minha Empresa",          path: "/configuracoes/empresa", adminOnly: true },
 ];
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
@@ -52,6 +54,14 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+
+  // Sincroniza a config da empresa (servidor → local) para os PDFs de todos os usuários
+  const { data: empresaConfig } = trpc.empresa.get.useQuery(undefined, { enabled: !!user });
+  useEffect(() => {
+    if (empresaConfig && typeof empresaConfig === "object") {
+      setPDFConfig(empresaConfig as any);
+    }
+  }, [empresaConfig]);
 
   useEffect(() => {
     localStorage.setItem(SIDEBAR_WIDTH_KEY, sidebarWidth.toString());

@@ -989,6 +989,21 @@ Gere um resumo executivo profissional em português que:
       }),
   }),
 
+  // ============= CONFIG DA EMPRESA (compartilhada) =============
+  empresa: router({
+    // Todos os usuários autenticados leem (para usar nos PDFs)
+    get: protectedProcedure.query(async () => {
+      return db.getEmpresaConfig();
+    }),
+    // Apenas administradores editam
+    update: adminProcedure
+      .input(z.object({ config: z.any() }))
+      .mutation(async ({ input }) => {
+        await db.setEmpresaConfig(input.config);
+        return { success: true };
+      }),
+  }),
+
   // ============= ORÇAMENTOS ROUTER =============
   orcamentos: router({
     // Catálogo base de serviços

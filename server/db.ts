@@ -173,6 +173,14 @@ export async function runMigrations() {
     if (db) await db.execute(sql`ALTER TABLE users MODIFY COLUMN role ENUM('admin','engenheiro','cliente','auxiliar') NOT NULL DEFAULT 'engenheiro'`);
   } catch { /* já aplicado */ }
 
+  // Tabela de config da empresa (compartilhada entre usuários)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`CREATE TABLE IF NOT EXISTS empresa_config (
+      id INT PRIMARY KEY, dados LONGTEXT, atualizadoEm TIMESTAMP DEFAULT NOW() ON UPDATE NOW()
+    )`);
+  } catch { /* já existe */ }
+
   // Campos de cliente/obra no orçamento (módulo independente)
   for (const col of [
     "clienteNome VARCHAR(255)", "clienteTelefone VARCHAR(50)", "clienteEmail VARCHAR(255)",
@@ -920,4 +928,27 @@ export async function deleteOrcamentoItem(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.delete(orcamentoItens).where(eq(orcamentoItens.id, id));
+}
+
+// ============= CONFIG DA EMPRESA (compartilhada) =============
+
+export async function getEmpresaConfig(): Promise<any> {
+  const db = await getDb();
+  if (!db) return {};
+  try {
+    const r: any = await db.execute(sql`SELECT dados FROM empresa_config WHERE id = 1`);
+    const rows = Array.isArray(r) ? r[0] : r;
+    const dados = rows?.[0]?.dados;
+    return dados ? JSON.parse(dados) : {};
+  } catch {
+    return {};
+  }
+}
+
+export async function setEmpresaConfig(config: any): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  const json = JSON.stringify(config);
+  await db.execute(sql`INSERT INTO empresa_config (id, dados) VALUES (1, ${json})
+    ON DUPLICATE KEY UPDATE dados = ${json}`);
 }

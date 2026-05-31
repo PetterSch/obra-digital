@@ -407,6 +407,28 @@ export const CATALOGO_ORCAMENTO: CatalogoItem[] = [
   { categoria: "Acessibilidade", descricao: "Piso tátil (direcional/alerta)", unidade: "m²", precoReferencia: 120.00 },
   { categoria: "Acessibilidade", descricao: "Plataforma elevatória PNE", unidade: "vb", precoReferencia: 42000.00 },
 
+  // ── Custos Indiretos ──
+  { categoria: "Custos Indiretos", descricao: "Engenheiro responsável (honorários)", unidade: "mês", precoReferencia: 8500.00 },
+  { categoria: "Custos Indiretos", descricao: "Engenheiro / técnico de acompanhamento", unidade: "mês", precoReferencia: 5500.00 },
+  { categoria: "Custos Indiretos", descricao: "Mestre de obras", unidade: "mês", precoReferencia: 4200.00 },
+  { categoria: "Custos Indiretos", descricao: "Encarregado de obra", unidade: "mês", precoReferencia: 3500.00 },
+  { categoria: "Custos Indiretos", descricao: "Auxiliar administrativo / apontador", unidade: "mês", precoReferencia: 2800.00 },
+  { categoria: "Custos Indiretos", descricao: "Folha de pagamento de funcionários", unidade: "mês", precoReferencia: 0.00 },
+  { categoria: "Custos Indiretos", descricao: "Encargos sociais e trabalhistas", unidade: "mês", precoReferencia: 0.00 },
+  { categoria: "Custos Indiretos", descricao: "Alimentação / vale-refeição", unidade: "mês", precoReferencia: 1800.00 },
+  { categoria: "Custos Indiretos", descricao: "Transporte / vale-transporte", unidade: "mês", precoReferencia: 1200.00 },
+  { categoria: "Custos Indiretos", descricao: "Alojamento da equipe", unidade: "mês", precoReferencia: 2500.00 },
+  { categoria: "Custos Indiretos", descricao: "EPI (equipamentos de proteção)", unidade: "vb", precoReferencia: 1500.00 },
+  { categoria: "Custos Indiretos", descricao: "Ferramentas e equipamentos (locação)", unidade: "mês", precoReferencia: 2200.00 },
+  { categoria: "Custos Indiretos", descricao: "Energia e água do canteiro", unidade: "mês", precoReferencia: 850.00 },
+  { categoria: "Custos Indiretos", descricao: "Despesas administrativas / escritório", unidade: "mês", precoReferencia: 3000.00 },
+  { categoria: "Custos Indiretos", descricao: "Contabilidade / jurídico", unidade: "mês", precoReferencia: 1500.00 },
+  { categoria: "Custos Indiretos", descricao: "ART / RRT (anotação de responsabilidade)", unidade: "un", precoReferencia: 320.00 },
+  { categoria: "Custos Indiretos", descricao: "Taxas e licenças (alvará, prefeitura)", unidade: "vb", precoReferencia: 2500.00 },
+  { categoria: "Custos Indiretos", descricao: "Seguro de obra (RC / riscos)", unidade: "vb", precoReferencia: 3500.00 },
+  { categoria: "Custos Indiretos", descricao: "Mobilização e desmobilização", unidade: "vb", precoReferencia: 4000.00 },
+  { categoria: "Custos Indiretos", descricao: "Exames e treinamentos (NRs)", unidade: "vb", precoReferencia: 1200.00 },
+
   // ── Serviços Finais ──
   { categoria: "Serviços Finais", descricao: "Limpeza final da obra", unidade: "m²", precoReferencia: 12.00 },
   { categoria: "Serviços Finais", descricao: "Limpeza pós-obra pesada", unidade: "m²", precoReferencia: 18.00 },
@@ -457,5 +479,6 @@ export const CATEGORIAS_ORCAMENTO = [
   "Energia Solar",
   "Elevador",
   "Acessibilidade",
+  "Custos Indiretos",
   "Serviços Finais",
 ];

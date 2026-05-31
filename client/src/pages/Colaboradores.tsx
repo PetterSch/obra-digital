@@ -578,12 +578,8 @@ export default function Colaboradores({ obraId, embedded = false }: { obraId?: n
     e.empresa?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const Wrapper = embedded
-    ? ({ children }: { children: React.ReactNode }) => <>{children}</>
-    : ({ children }: { children: React.ReactNode }) => <DashboardLayout>{children}</DashboardLayout>;
-
-  return (
-    <Wrapper>
+  const conteudo = (
+    <>
       <div className={embedded ? "space-y-6" : "space-y-6 max-w-4xl"}>
 
         {/* ── Header ── */}
@@ -777,6 +773,8 @@ export default function Colaboradores({ obraId, embedded = false }: { obraId?: n
           </form>
         </DialogContent>
       </Dialog>
-    </Wrapper>
+    </>
   );
+
+  return embedded ? conteudo : <DashboardLayout>{conteudo}</DashboardLayout>;
 }

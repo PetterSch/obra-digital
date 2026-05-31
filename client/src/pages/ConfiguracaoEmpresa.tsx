@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { setPDFConfig, type PDFConfig } from "@/lib/pdfExport";
+import { getPDFConfig, setPDFConfig, type PDFConfig } from "@/lib/pdfExport";
 import { trpc } from "@/lib/trpc";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Building2, Upload, Trash2, FileText, Eye, Phone, Mail, Globe, Hash, MapPin, User, Award } from "lucide-react";
@@ -84,12 +84,19 @@ export default function ConfiguracaoEmpresa() {
   const fileRef = useRef<HTMLInputElement>(null);
   const utils = trpc.useUtils();
 
-  // Carrega a config compartilhada do servidor
+  // Carrega a config compartilhada do servidor.
+  // Se o servidor ainda estiver vazio, usa os dados salvos localmente (migração):
+  // ao clicar em Salvar, eles sobem para o servidor e passam a valer para todos.
   const { data: serverConfig } = trpc.empresa.get.useQuery();
   useEffect(() => {
-    if (serverConfig && typeof serverConfig === "object") {
+    if (serverConfig === undefined) return;
+    const temNoServidor = serverConfig && typeof serverConfig === "object" && Object.keys(serverConfig).length > 0;
+    if (temNoServidor) {
       setConfig(serverConfig as PDFConfig);
       setPDFConfig(serverConfig as PDFConfig);
+    } else {
+      const local = getPDFConfig();
+      if (Object.keys(local).length > 0) setConfig(local);
     }
   }, [serverConfig]);
 

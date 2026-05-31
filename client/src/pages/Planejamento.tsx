@@ -95,7 +95,7 @@ function ganttHTMLPdf(ativs: any[]) {
     const color = a.critico ? "#dc2626" : "#B45309";
     return `<div style="position:relative;height:${ROW}px;border-bottom:1px solid #f2f2f2">
       <span style="position:absolute;left:0;width:${LABEL - 4}px;font-size:8px;overflow:hidden;white-space:nowrap;line-height:${ROW}px;color:#333">${a.id} ${String(a.descricao || "").slice(0, 34)}</span>
-      <span style="position:absolute;left:${LABEL + left}px;top:3px;height:10px;width:${w}px;background:${color};border-radius:2px"></span>
+      <span style="position:absolute;left:${LABEL + left}px;top:3px;height:10px;width:${w}px;background:${color};border:1px solid ${color};border-radius:2px;-webkit-print-color-adjust:exact;print-color-adjust:exact"></span>
     </div>`;
   }).join("");
   return `<div style="font-size:8px">${header}${rows}<div style="margin-top:5px;font-size:8px;color:#555"><span style="display:inline-block;width:8px;height:8px;background:#dc2626;border-radius:2px;vertical-align:middle"></span> Caminho crítico &nbsp;&nbsp; <span style="display:inline-block;width:8px;height:8px;background:#B45309;border-radius:2px;vertical-align:middle"></span> Atividade com folga</div></div>`;
@@ -111,7 +111,9 @@ function exportarPDF(nome: string, d: any) {
   const sec = (titulo: string, corpo: string) => `<div style="margin-bottom:18px"><h2 style="font-size:14px;color:#1e3a5f;border-bottom:2px solid #1e3a5f;padding-bottom:3px;margin-bottom:8px">${titulo}</h2>${corpo}</div>`;
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Planejamento ${nome}</title>
-  <style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:Arial,sans-serif;padding:32px;color:#1a1a1a}
+  <style>*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+  html,body{-webkit-print-color-adjust:exact !important;print-color-adjust:exact !important}
+  body{font-family:Arial,sans-serif;padding:32px;color:#1a1a1a}
   h1{color:#1e3a5f;font-size:22px}@page{margin:1.5cm}</style></head><body>
   <div style="border-bottom:3px solid #1e3a5f;padding-bottom:10px;margin-bottom:18px">
     <div style="font-size:11px;color:#B45309;font-weight:700">${empresa}</div>

@@ -29,8 +29,16 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
   const updateItem = trpc.orcamentos.updateItem.useMutation({ onSuccess: inval });
   const deleteItem = trpc.orcamentos.deleteItem.useMutation({ onSuccess: () => { toast.success("Item removido"); inval(); } });
   const addItem = trpc.orcamentos.addItem.useMutation({ onSuccess: () => { toast.success("Item adicionado"); inval(); } });
+  const addItemAsync = trpc.orcamentos.addItem.useMutation();
 
   const [novoItem, setNovoItem] = useState({ descricao: "", unidade: "", quantidade: "", precoUnitario: "" });
+
+  // Catálogo para adicionar serviços já prontos
+  const { data: catalogo } = trpc.orcamentos.catalogo.useQuery();
+  const [catalogoOpen, setCatalogoOpen] = useState(false);
+  const [selCat, setSelCat] = useState<Set<string>>(new Set());
+  const [expCat, setExpCat] = useState<Set<string>>(new Set());
+  const [salvandoCat, setSalvandoCat] = useState(false);
 
   if (isLoading) return <div className="flex justify-center py-10"><Spinner /></div>;
   if (!data?.orcamento) return <p className="text-muted-foreground">Orçamento não encontrado.</p>;
@@ -155,6 +163,22 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
         </CardContent>
       </Card>
 
+      {/* Adicionar do catálogo */}
+      {!readOnly && (
+        <Card>
+          <CardContent className="py-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium">Adicionar serviços do catálogo</p>
+              <p className="text-xs text-muted-foreground">Inclua itens prontos que não foram selecionados na criação</p>
+            </div>
+            <Button variant="default" size="sm" className="gap-1.5 shrink-0"
+              onClick={() => { setSelCat(new Set()); setExpCat(new Set()); setCatalogoOpen(true); }}>
+              <Plus className="w-4 h-4" /> Catálogo
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Adicionar item avulso */}
       {!readOnly && (
         <Card>
@@ -232,6 +256,71 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
           )}
         </CardContent>
       </Card>
+
+      {/* Modal: adicionar serviços do catálogo */}
+      <Dialog open={catalogoOpen} onOpenChange={v => { if (!v) setCatalogoOpen(false); }}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adicionar serviços do catálogo</DialogTitle>
+            <DialogDescription>Selecione os serviços para incluir neste orçamento ({selCat.size} selecionado(s)).</DialogDescription>
+          </DialogHeader>
+          <div className="border rounded-lg divide-y max-h-72 overflow-y-auto">
+            {(catalogo?.categorias ?? []).map(cat => {
+              const itens = (catalogo?.itens ?? []).filter(i => i.categoria === cat);
+              const aberta = expCat.has(cat);
+              const sel = itens.filter(i => selCat.has(cat + "|" + i.descricao)).length;
+              return (
+                <div key={cat}>
+                  <button type="button" className="w-full flex items-center justify-between px-3 py-2 hover:bg-muted/40"
+                    onClick={() => setExpCat(p => { const n = new Set(p); n.has(cat) ? n.delete(cat) : n.add(cat); return n; })}>
+                    <span className="flex items-center gap-2 font-medium text-sm">
+                      {aberta ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}{cat}
+                    </span>
+                    {sel > 0 && <Badge variant="secondary" className="text-xs">{sel}</Badge>}
+                  </button>
+                  {aberta && (
+                    <div className="bg-muted/20 px-3 py-1">
+                      {itens.map(it => {
+                        const key = cat + "|" + it.descricao;
+                        return (
+                          <label key={key} className="flex items-center gap-2 py-1.5 cursor-pointer text-sm">
+                            <Checkbox checked={selCat.has(key)}
+                              onCheckedChange={() => setSelCat(p => { const n = new Set(p); n.has(key) ? n.delete(key) : n.add(key); return n; })} />
+                            <span className="flex-1">{it.descricao}</span>
+                            <span className="text-xs text-muted-foreground">{it.unidade} · {brl(it.precoReferencia)}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div className="flex gap-2 pt-1">
+            <Button className="flex-1" disabled={salvandoCat || selCat.size === 0}
+              onClick={async () => {
+                setSalvandoCat(true);
+                try {
+                  const escolhidos = (catalogo?.itens ?? []).filter(i => selCat.has(i.categoria + "|" + i.descricao));
+                  for (const it of escolhidos) {
+                    await addItemAsync.mutateAsync({
+                      orcamentoId, categoria: it.categoria, descricao: it.descricao,
+                      unidade: it.unidade, quantidade: 0, precoUnitario: it.precoReferencia,
+                    });
+                  }
+                  toast.success(`${escolhidos.length} serviço(s) adicionado(s)!`);
+                  setCatalogoOpen(false);
+                  inval();
+                } catch { toast.error("Erro ao adicionar serviços"); }
+                setSalvandoCat(false);
+              }}>
+              {salvandoCat ? "Adicionando..." : `Adicionar ${selCat.size} serviço(s)`}
+            </Button>
+            <Button variant="outline" onClick={() => setCatalogoOpen(false)}>Cancelar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -114,8 +114,8 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
             </thead>
             <tbody>
               {Object.entries(porCategoria).map(([cat, lista]) => (
-                <>
-                  <tr key={cat} className="bg-primary/5">
+                <React.Fragment key={cat}>
+                  <tr className="bg-primary/5">
                     <td colSpan={6} className="px-4 py-1.5 font-semibold text-xs text-primary uppercase tracking-wide">{cat}</td>
                   </tr>
                   {lista.map((it: any) => {
@@ -145,7 +145,7 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
                       </tr>
                     );
                   })}
-                </>
+                </React.Fragment>
               ))}
               {itens.length === 0 && (
                 <tr><td colSpan={6} className="text-center text-muted-foreground py-6">Nenhum item. Adicione abaixo.</td></tr>

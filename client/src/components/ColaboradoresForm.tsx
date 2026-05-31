@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { FUNCOES } from "@/lib/funcoes";
 
 interface ColaboradoresFormProps {
   obraId: number;
@@ -93,15 +94,9 @@ export function ColaboradoresForm({ obraId, onSuccess }: ColaboradoresFormProps)
               required
             >
               <option value="">Selecione uma função</option>
-              <option value="engenheiro">Engenheiro</option>
-              <option value="encarregado">Encarregado</option>
-              <option value="pedreiro">Pedreiro</option>
-              <option value="servente">Servente</option>
-              <option value="carpinteiro">Carpinteiro</option>
-              <option value="armador">Armador</option>
-              <option value="eletricista">Eletricista</option>
-              <option value="encanador">Encanador</option>
-              <option value="pintor">Pintor</option>
+              {FUNCOES.map((f) => (
+                <option key={f.value} value={f.value}>{f.label}</option>
+              ))}
             </select>
           </div>
 

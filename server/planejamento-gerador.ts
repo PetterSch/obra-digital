@@ -292,14 +292,18 @@ export function gerarPlanejamento(opts: {
 
   // ── RECURSOS ─────────────────────────────────────────────────────
   const maoDeObra: PlanejamentoDados["recursos"]["maoDeObra"] = [
-    { funcao: "Servente", quantidade: 4, regime: "CLT", turnos: "1 turno (8h)" },
+    { funcao: "Mestre de Obras", quantidade: 1, regime: "CLT", turnos: "Integral" },
+    { funcao: "Encarregado", quantidade: 1, regime: "CLT", turnos: "Integral" },
+    { funcao: "Servente / Ajudante", quantidade: 4, regime: "CLT", turnos: "1 turno (8h)" },
     { funcao: "Pedreiro", quantidade: 3, regime: "CLT/Empreitada", turnos: "1 turno (8h)" },
     { funcao: "Carpinteiro", quantidade: 2, regime: "Empreitada", turnos: "1 turno (8h)" },
-    { funcao: "Armador", quantidade: 2, regime: "Empreitada", turnos: "1 turno (8h)" },
+    { funcao: "Armador (Ferreiro)", quantidade: 2, regime: "Empreitada", turnos: "1 turno (8h)" },
     { funcao: "Eletricista", quantidade: 1, regime: "Empreitada", turnos: "Conforme fase" },
-    { funcao: "Encanador", quantidade: 1, regime: "Empreitada", turnos: "Conforme fase" },
+    { funcao: "Bombeiro Hidráulico", quantidade: 1, regime: "Empreitada", turnos: "Conforme fase" },
+    { funcao: "Ladrilheiro (Azulejista)", quantidade: 2, regime: "Empreitada", turnos: "Fase de revestimento" },
+    { funcao: "Gesseiro", quantidade: 1, regime: "Empreitada", turnos: "Fase de acabamento" },
+    { funcao: "Serralheiro", quantidade: 1, regime: "Empreitada", turnos: "Conforme fase" },
     { funcao: "Pintor", quantidade: 2, regime: "Empreitada", turnos: "Fase de acabamento" },
-    { funcao: "Mestre de obras", quantidade: 1, regime: "CLT", turnos: "Integral" },
   ];
   const equipamentos: PlanejamentoDados["recursos"]["equipamentos"] = [
     { nome: "Betoneira", metodo: "Próprio/Alugado", periodo: "Fundação a estrutura" },

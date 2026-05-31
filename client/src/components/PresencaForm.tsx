@@ -83,7 +83,7 @@ export function PresencaForm({ diarioId, onSuccess }: PresencaFormProps) {
               <option value="">Selecione um colaborador</option>
               <option value="1">Colaborador 1 - Pedreiro</option>
               <option value="2">Colaborador 2 - Carpinteiro</option>
-              <option value="3">Colaborador 3 - Encanador</option>
+              <option value="3">Colaborador 3 - Bombeiro Hidráulico</option>
             </select>
           </div>
 

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { FUNCAO_LABELS } from "@/lib/funcoes";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -42,18 +43,6 @@ interface MaoDeObraSelectorProps {
   value: MaoDeObraItem[];
   onChange: (value: MaoDeObraItem[]) => void;
 }
-
-const FUNCAO_LABELS: Record<string, string> = {
-  servente: "Servente",
-  pedreiro: "Pedreiro",
-  carpinteiro: "Carpinteiro",
-  armador: "Armador",
-  eletricista: "Eletricista",
-  encanador: "Encanador",
-  pintor: "Pintor",
-  encarregado: "Encarregado",
-  engenheiro: "Engenheiro",
-};
 
 const FUNCAO_OPTIONS = Object.entries(FUNCAO_LABELS);
 

@@ -367,7 +367,7 @@ export const appRouter = router({
     create: engineerProcedure
       .input(z.object({
         diarioId: z.number(),
-        funcao: z.enum(["servente", "pedreiro", "carpinteiro", "armador", "eletricista", "encanador", "pintor", "encarregado", "engenheiro"]),
+        funcao: z.string().min(1),
         quantidade: z.number().min(1),
         horasTrabalhadas: z.string().optional(),
         faltas: z.number().optional(),

@@ -16,10 +16,8 @@ import { useState, useRef, useEffect } from "react";
 
 // ─── Sugestões padrão de função ───────────────────────────────────────────
 
-const FUNCOES_SUGESTOES = [
-  "Servente", "Pedreiro", "Carpinteiro", "Armador",
-  "Eletricista", "Encanador", "Pintor", "Encarregado", "Engenheiro",
-];
+import { FUNCOES } from "@/lib/funcoes";
+const FUNCOES_SUGESTOES = FUNCOES.map((f) => f.label);
 
 // ─── Combobox de função: texto livre + sugestões ──────────────────────────
 

@@ -52,7 +52,7 @@ function FuncaoBadge({ funcao }: { funcao: string }) {
     encarregado: "bg-purple-100 text-purple-800 border-purple-200",
     engenheiro:  "bg-blue-100 text-blue-800 border-blue-200",
     eletricista: "bg-yellow-100 text-yellow-800 border-yellow-200",
-    encanador:   "bg-cyan-100 text-cyan-800 border-cyan-200",
+    bombeiro_hidraulico: "bg-cyan-100 text-cyan-800 border-cyan-200",
     pedreiro:    "bg-orange-100 text-orange-800 border-orange-200",
     armador:     "bg-red-100 text-red-800 border-red-200",
     carpinteiro: "bg-amber-100 text-amber-800 border-amber-200",

@@ -52,7 +52,7 @@ export function ColaboradoresForm({ obraId, onSuccess }: ColaboradoresFormProps)
     createMutation.mutate({
       equipeId: 1, // TODO: Get from equipe selector
       nome: formData.nome,
-      funcao: (formData.funcao as "engenheiro" | "servente" | "pedreiro" | "carpinteiro" | "armador" | "eletricista" | "encanador" | "pintor" | "encarregado") || "servente",
+      funcao: formData.funcao || "servente",
       cpf: formData.cpf || undefined,
       dataAdmissao: formData.dataAdmissao,
     });

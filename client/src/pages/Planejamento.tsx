@@ -312,15 +312,20 @@ function NovoModal({ open, onClose, onCreated }: { open: boolean; onClose: () =>
           {origem === "orcamento" && (
             <div className="space-y-1.5">
               <Label>Orçamento *</Label>
-              <Select value={orcamentoId} onValueChange={setOrcamentoId}>
-                <SelectTrigger><SelectValue placeholder="Selecione o orçamento" /></SelectTrigger>
-                <SelectContent>
-                  {(orcamentos as any[]).map(o => (
-                    <SelectItem key={o.id} value={String(o.id)}>{o.nome}{o.clienteNome ? ` — ${o.clienteNome}` : ""}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {orcamentos.length === 0 && <p className="text-xs text-muted-foreground">Nenhum orçamento cadastrado. Crie um orçamento primeiro ou comece em branco.</p>}
+              {orcamentos.length === 0 ? (
+                <div className="rounded-lg border border-dashed p-3 text-sm text-muted-foreground bg-muted/30">
+                  Nenhum orçamento cadastrado ainda. Vá em <strong>Orçamentos → Novo Orçamento</strong>, crie e salve um orçamento — depois ele aparecerá aqui. Ou escolha <strong>"Começar em branco"</strong> acima.
+                </div>
+              ) : (
+                <Select value={orcamentoId} onValueChange={setOrcamentoId}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o orçamento" /></SelectTrigger>
+                  <SelectContent>
+                    {(orcamentos as any[]).map(o => (
+                      <SelectItem key={o.id} value={String(o.id)}>{o.nome}{o.clienteNome ? ` — ${o.clienteNome}` : ""}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
             </div>
           )}
           <div className="flex gap-2 pt-1">

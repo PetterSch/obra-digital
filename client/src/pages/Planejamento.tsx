@@ -99,6 +99,7 @@ function exportarPDF(nome: string, d: any) {
   ${sec("3. Planejamento de Recursos", tabela(["Função", "Qtd", "Regime", "Turnos"], (d.recursos?.maoDeObra || []).map((m: any) => [m.funcao, m.quantidade, m.regime, m.turnos]))
     + tabela(["Equipamento", "Método", "Período"], (d.recursos?.equipamentos || []).map((e: any) => [e.nome, e.metodo, e.periodo]))
     + (d.recursos?.curvaS?.length ? "<p style='font-size:11px;margin-top:8px;font-weight:600'>Curva S de desembolso</p>" + tabela(["Mês", "% mês", "% acum.", "Acumulado"], d.recursos.curvaS.map((c: any) => [c.mes, c.percentualMes + "%", c.percentualAcumulado + "%", brl(c.valorAcumulado)])) : ""))}
+  ${(() => { const cg = computeCarga(d.cronograma?.atividades || [], d.recursos?.maoDeObra || []); return cg.length ? sec("3.1 Análise de Carga (Superalocação)", tabela(["Função", "Capacidade", "Pico", "Situação"], cg.map((c: any) => [c.funcao, c.capacidade, c.pico, c.status === "super" ? `Superalocado (pico ${c.pico} > ${c.capacidade})` : c.status === "cheio" ? "Totalmente alocado" : c.status === "sub" ? `Subutilizado (${c.pico}/${c.capacidade})` : "Ocioso"]))) : ""; })()}
   ${sec("4. Suprimentos e Compras", linha(d.suprimentos))}
   ${sec("5. Plano de Qualidade", linha(d.qualidade))}
   ${sec("6. Saúde, Segurança e Medicina do Trabalho", linha(d.ssmt))}
@@ -158,6 +159,32 @@ function calcularCronograma(ativs: any[], projStartISO: string) {
   return ativs.map(a => {
     const k = String(a.id); const folga = Math.max(0, (LS[k] ?? ES[k] ?? 0) - (ES[k] ?? 0));
     return { ...a, inicio: fmtISO(addDias(start, ES[k] || 0)), fim: fmtISO(addDias(start, EF[k] || 0)), folgaDias: folga, critico: folga <= 0 };
+  });
+}
+
+// ─── Análise de carga / superalocação ───────────────────────────────────────
+function computeCarga(ativs: any[], maoDeObra: any[]) {
+  const funcoes = (maoDeObra || []).filter(m => m.funcao).map(m => ({ funcao: m.funcao, capacidade: Number(m.quantidade) || 0 }));
+  return funcoes.map(f => {
+    const eventos: { t: number; q: number }[] = [];
+    (ativs || []).forEach(a => {
+      if (!a.inicio || !a.fim) return;
+      const al = (a.alocacoes || []).find((x: any) => x.funcao === f.funcao);
+      const q = al ? Number(al.quantidade) || 0 : 0;
+      if (q > 0) {
+        eventos.push({ t: toDate(a.inicio).getTime(), q });
+        eventos.push({ t: addDias(toDate(a.fim), 1).getTime(), q: -q });
+      }
+    });
+    eventos.sort((x, y) => x.t - y.t || x.q - y.q);
+    let cur = 0, pico = 0, picoT: number | null = null;
+    for (const e of eventos) { cur += e.q; if (cur > pico) { pico = cur; picoT = e.t; } }
+    let status: "super" | "cheio" | "sub" | "ocioso";
+    if (pico === 0) status = "ocioso";
+    else if (pico > f.capacidade) status = "super";
+    else if (pico === f.capacidade) status = "cheio";
+    else status = "sub";
+    return { ...f, pico, picoData: picoT ? fmtISO(new Date(picoT)) : null, status };
   });
 }
 
@@ -235,6 +262,9 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
   const projInicio = (data as any)?.dataInicio ? String((data as any).dataInicio).split("T")[0] : new Date().toISOString().split("T")[0];
   const setTexto = (campo: string, v: string) => setDados((p: any) => ({ ...p, [campo]: v }));
   const recalcular = () => setAtiv(arr => calcularCronograma(arr, projInicio));
+  const setAtivAloc = (i: number, fn: (a: any[]) => any[]) => setAtiv(arr => arr.map((a, idx) => idx === i ? { ...a, alocacoes: fn(a.alocacoes || []) } : a));
+  const cargaList = computeCarga(dados.cronograma?.atividades || [], dados.recursos?.maoDeObra || []);
+  const funcoesDisp = (dados.recursos?.maoDeObra || []).filter((m: any) => m.funcao);
 
   // ── Helpers de edição das tabelas ──
   const cellCls = "h-8 border-0 shadow-none px-2 focus-visible:ring-1 focus-visible:ring-primary/40 rounded";
@@ -279,6 +309,7 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
           <TabsTrigger value="eap" className="text-xs">EAP</TabsTrigger>
           <TabsTrigger value="cronograma" className="text-xs">Cronograma</TabsTrigger>
           <TabsTrigger value="recursos" className="text-xs">Recursos</TabsTrigger>
+          <TabsTrigger value="alocacao" className="text-xs">Alocação</TabsTrigger>
           <TabsTrigger value="textos" className="text-xs">Planos (4-10)</TabsTrigger>
         </TabsList>
 
@@ -409,6 +440,71 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
               ))}</tbody>
             </table>
             <div className="p-3 border-t"><Button variant="outline" size="sm" className="gap-1.5" onClick={() => setCurva(a => [...a, { mes: "", percentualMes: 0, percentualAcumulado: 0, valorAcumulado: 0 }])}><Plus className="w-4 h-4" /> Adicionar mês</Button></div>
+          </CardContent></Card>
+        </TabsContent>
+
+        <TabsContent value="alocacao" className="mt-4 space-y-3">
+          <Card><CardContent className="py-3">
+            <p className="text-sm font-medium mb-1">Análise de carga (superalocação)</p>
+            <p className="text-xs text-muted-foreground mb-3">Compara a <b>capacidade</b> de cada função (cadastrada em Recursos) com o <b>pico de demanda</b> simultânea entre as atividades. Recalcule as datas do cronograma antes de analisar.</p>
+            {cargaList.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Cadastre a mão de obra na aba <b>Recursos</b> para habilitar a análise.</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground"><th className="text-left p-2 pl-3">Função</th><th className="text-center p-2 w-24">Capacidade</th><th className="text-center p-2 w-28">Pico demanda</th><th className="text-left p-2 w-64">Situação</th></tr></thead>
+                <tbody>
+                  {cargaList.map((c: any, i: number) => {
+                    const cor = c.status === "super" ? "text-red-600" : c.status === "cheio" ? "text-amber-600" : c.status === "sub" ? "text-emerald-600" : "text-muted-foreground";
+                    const txt = c.status === "super" ? `⚠️ Superalocado — pico ${c.pico} excede ${c.capacidade}${c.picoData ? ` (em ${fmtData(c.picoData)})` : ""}`
+                      : c.status === "cheio" ? `Totalmente alocado (${c.pico}/${c.capacidade})`
+                      : c.status === "sub" ? `Subutilizado — pico ${c.pico} de ${c.capacidade}`
+                      : "Ocioso — não alocado a nenhuma atividade";
+                    return (
+                      <tr key={i} className={`border-b last:border-0 ${c.status === "super" ? "bg-red-50 dark:bg-red-950/20" : ""}`}>
+                        <td className="p-2 pl-3">{c.funcao}</td>
+                        <td className="text-center p-2">{c.capacidade}</td>
+                        <td className="text-center p-2 font-medium">{c.pico}</td>
+                        <td className={`p-2 text-xs ${cor}`}>{txt}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </CardContent></Card>
+
+          <Card><CardContent className="p-0">
+            <p className="text-sm font-medium p-3 pb-1">Alocação de equipe por atividade</p>
+            {(dados.cronograma?.atividades || []).length === 0 ? (
+              <p className="text-sm text-muted-foreground p-3 pt-0">Adicione atividades na aba <b>Cronograma</b> primeiro.</p>
+            ) : (dados.cronograma?.atividades || []).map((a: any, i: number) => (
+              <div key={i} className="border-t p-3">
+                <div className="flex items-center justify-between gap-2 flex-wrap mb-2">
+                  <div className="text-sm"><span className="text-muted-foreground mr-1">{a.id}</span><b>{a.descricao || "(sem nome)"}</b>
+                    {a.inicio && a.fim ? <span className="text-xs text-muted-foreground ml-2">{fmtData(a.inicio)} → {fmtData(a.fim)} · {a.duracaoDias}d</span> : null}
+                  </div>
+                  <Button variant="outline" size="sm" className="gap-1.5 h-7" disabled={funcoesDisp.length === 0}
+                    onClick={() => setAtivAloc(i, arr => [...arr, { funcao: funcoesDisp[0]?.funcao || "", quantidade: 1 }])}><Plus className="w-3.5 h-3.5" /> Alocar função</Button>
+                </div>
+                {(a.alocacoes || []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Nenhuma função alocada.</p>
+                ) : (
+                  <div className="space-y-1.5">
+                    {(a.alocacoes || []).map((al: any, j: number) => (
+                      <div key={j} className="flex items-center gap-2">
+                        <Select value={al.funcao || ""} onValueChange={v => setAtivAloc(i, arr => edit(arr, j, "funcao", v))}>
+                          <SelectTrigger className="h-8 w-56"><SelectValue placeholder="Função" /></SelectTrigger>
+                          <SelectContent>{funcoesDisp.map((m: any, k: number) => <SelectItem key={k} value={m.funcao}>{m.funcao}</SelectItem>)}</SelectContent>
+                        </Select>
+                        <Input type="number" min={1} className="h-8 w-24" value={al.quantidade ?? 1} onChange={ev => setAtivAloc(i, arr => edit(arr, j, "quantidade", parseInt(ev.target.value) || 0))} />
+                        <span className="text-xs text-muted-foreground">pessoa(s)</span>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setAtivAloc(i, arr => del(arr, j))}><Trash2 className="w-3.5 h-3.5" /></Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ))}
           </CardContent></Card>
         </TabsContent>
 

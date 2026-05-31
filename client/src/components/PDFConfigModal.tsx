@@ -27,8 +27,8 @@ export function PDFConfigModal({ open, onClose }: PDFConfigModalProps) {
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 500_000) {
-      toast.error("Logo muito grande. Use uma imagem de até 500 KB.");
+    if (file.size > 5_000_000) {
+      toast.error("Logo muito grande. Use uma imagem de até 5 MB.");
       return;
     }
     const reader = new FileReader();

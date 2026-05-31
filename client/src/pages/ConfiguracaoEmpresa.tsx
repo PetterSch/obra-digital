@@ -92,7 +92,7 @@ export default function ConfiguracaoEmpresa() {
   function handleLogoUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 800_000) { toast.error("Logo muito grande. Use até 800 KB."); return; }
+    if (file.size > 5_000_000) { toast.error("Logo muito grande. Use até 5 MB."); return; }
     const reader = new FileReader();
     reader.onload = ev => setConfig(c => ({ ...c, logoBase64: ev.target?.result as string }));
     reader.readAsDataURL(file);
@@ -160,7 +160,7 @@ export default function ConfiguracaoEmpresa() {
                   >
                     <Upload className="w-8 h-8 mx-auto mb-2 text-muted-foreground/50 group-hover:text-primary transition-colors" />
                     <p className="font-medium text-sm">Clique para enviar o logo</p>
-                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG ou SVG · Máx. 800 KB · Recomendado: fundo transparente</p>
+                    <p className="text-xs text-muted-foreground mt-1">PNG, JPG ou SVG · Máx. 5 MB · Use alta resolução (ideal: PNG/SVG com fundo transparente)</p>
                   </div>
                 )}
                 <input ref={fileRef} type="file" accept="image/png,image/jpeg,image/svg+xml,image/webp" className="hidden" onChange={handleLogoUpload} />

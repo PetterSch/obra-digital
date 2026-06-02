@@ -231,19 +231,12 @@ function EquipeCard({
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
                       <Checkbox
-                        id={`op-${item.equipeId}-${op.id}`}
                         checked={presente}
-                        onCheckedChange={() => onToggleOperario(item.equipeId, op.id)}
-                        onClick={(e) => e.stopPropagation()}
-                        className={presente ? "border-green-500 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : ""}
+                        tabIndex={-1}
+                        className={`pointer-events-none ${presente ? "border-green-500 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : ""}`}
                       />
                       <div className="min-w-0">
-                        <Label
-                          htmlFor={`op-${item.equipeId}-${op.id}`}
-                          className="font-normal cursor-pointer text-sm truncate block"
-                        >
-                          {op.nome}
-                        </Label>
+                        <span className="font-normal text-sm truncate block">{op.nome}</span>
                         <FuncaoBadge funcao={op.funcao} />
                       </div>
                     </div>
@@ -332,6 +325,9 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
   const [openNovaEquipe, setOpenNovaEquipe] = useState(false);
   const [novaEquipeNome, setNovaEquipeNome] = useState("");
   const [novaEquipeEmpresa, setNovaEquipeEmpresa] = useState("");
+  // remonta o Select de "adicionar equipe" a cada seleção, evitando que o Radix
+  // fique com estado interno apontando para um item que saiu da lista (React #185)
+  const [selectKey, setSelectKey] = useState(0);
 
   const { data: equipes = [], refetch: refetchEquipes } = trpc.equipes.list.useQuery();
 
@@ -352,8 +348,9 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
   const equipesDisponiveis = equipes.filter((e) => !value.some((v) => v.equipeId === e.id));
 
   const handleAddEquipe = (equipeId: number) => {
-    if (value.some((v) => v.equipeId === equipeId)) {
-      toast.warning("Equipe já adicionada");
+    setSelectKey((k) => k + 1); // remonta o Select para limpar o estado interno
+    if (!equipeId || value.some((v) => v.equipeId === equipeId)) {
+      if (equipeId) toast.warning("Equipe já adicionada");
       return;
     }
     onChange([...value, { equipeId, operariosPresentes: [] }]);
@@ -382,6 +379,7 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
       {/* Seletor de equipes */}
       <div className="flex gap-2">
         <Select
+          key={selectKey}
           value=""
           onValueChange={(v) => handleAddEquipe(Number(v))}
           disabled={equipesDisponiveis.length === 0}

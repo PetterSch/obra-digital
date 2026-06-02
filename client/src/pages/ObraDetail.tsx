@@ -1,5 +1,10 @@
+import { useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +25,7 @@ export default function ObraDetail() {
   const [, navigate] = useLocation();
   const [match, params] = useRoute("/obras/:id");
   const obraId = params?.id ? parseInt(params.id) : null;
+  const [diarioToDelete, setDiarioToDelete] = useState<any | null>(null);
 
   const { data: obra, isLoading, refetch: refetchObra } = trpc.obras.getById.useQuery(
     { id: obraId! },
@@ -45,6 +51,11 @@ export default function ObraDetail() {
     { obraId: obraId! },
     { enabled: !!obraId }
   );
+
+  const deleteDiarioMutation = trpc.diarios.delete.useMutation({
+    onSuccess: () => { toast.success("Diário excluído"); setDiarioToDelete(null); refetchDiarios(); },
+    onError: (e: any) => toast.error(e.message || "Erro ao excluir diário"),
+  });
 
   const refetch = () => {
     refetchObra();
@@ -225,14 +236,23 @@ export default function ObraDetail() {
                             <Eye className="w-4 h-4" />
                             Ver
                           </Button>
-                          <Button 
-                            variant="default" 
+                          <Button
+                            variant="default"
                             size="sm"
                             className="gap-2"
                             onClick={() => navigate(`/obras/${obraId}/diario/${diario.id}?edit=true`)}
                           >
                             <Edit className="w-4 h-4" />
                             Editar
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="gap-2 text-destructive hover:text-destructive"
+                            onClick={() => setDiarioToDelete(diario)}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                            Deletar
                           </Button>
                         </div>
                       </div>
@@ -328,6 +348,29 @@ export default function ObraDetail() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <AlertDialog open={!!diarioToDelete} onOpenChange={(o) => { if (!o) setDiarioToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir diário?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o diário de{" "}
+              <strong>{diarioToDelete ? new Date(diarioToDelete.data).toLocaleDateString("pt-BR") : ""}</strong>?
+              Esta ação não pode ser desfeita e removerá atividades, mão de obra, equipamentos e fotos vinculados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteDiarioMutation.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteDiarioMutation.isPending}
+              onClick={(e) => { e.preventDefault(); if (diarioToDelete) deleteDiarioMutation.mutate({ id: diarioToDelete.id }); }}
+            >
+              {deleteDiarioMutation.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </DashboardLayout>
   );
 }

@@ -312,6 +312,12 @@ export async function createAtividade(data: typeof atividades.$inferInsert) {
   return db.insert(atividades).values(data);
 }
 
+export async function deleteAtividade(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  return db.delete(atividades).where(eq(atividades.id, id));
+}
+
 // ============= MÃO DE OBRA =============
 
 export async function getMaoDeObraByDiarioId(diarioId: number) {
@@ -338,6 +344,12 @@ export async function createEquipamento(data: typeof equipamentos.$inferInsert) 
   const db = await getDb();
   if (!db) return demo.demo_createEquipamento(data);
   return db.insert(equipamentos).values(data);
+}
+
+export async function deleteEquipamento(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  return db.delete(equipamentos).where(eq(equipamentos.id, id));
 }
 
 // ============= MATERIAIS =============
@@ -475,6 +487,12 @@ export async function createPresenca(data: typeof presenca.$inferInsert) {
   return db.insert(presenca).values(data);
 }
 
+export async function deletePresencaByDiario(diarioId: number) {
+  const db = await getDb();
+  if (!db) return;
+  return db.delete(presenca).where(eq(presenca.diarioId, diarioId));
+}
+
 // Resumo de mão de obra do diário, agrupado por equipe/empresa (para PDF)
 export async function getMaoDeObraResumoByDiario(diarioId: number) {
   const db = await getDb();
@@ -484,6 +502,7 @@ export async function getMaoDeObraResumoByDiario(diarioId: number) {
       equipeId: equipes.id,
       equipeNome: equipes.nome,
       empresa: equipes.empresa,
+      colaboradorId: colaboradores.id,
       funcao: colaboradores.funcao,
       presente: presenca.presente,
     })
@@ -492,12 +511,13 @@ export async function getMaoDeObraResumoByDiario(diarioId: number) {
     .innerJoin(equipes, eq(colaboradores.equipeId, equipes.id))
     .where(eq(presenca.diarioId, diarioId));
 
-  const mapa = new Map<number, { equipeId: number; equipeNome: string; empresa: string; presentes: number; funcoes: Record<string, number> }>();
+  const mapa = new Map<number, { equipeId: number; equipeNome: string; empresa: string; presentes: number; funcoes: Record<string, number>; operarios: number[] }>();
   for (const r of rows) {
     if (r.presente === false) continue;
     let g = mapa.get(r.equipeId);
-    if (!g) { g = { equipeId: r.equipeId, equipeNome: r.equipeNome, empresa: r.empresa, presentes: 0, funcoes: {} }; mapa.set(r.equipeId, g); }
+    if (!g) { g = { equipeId: r.equipeId, equipeNome: r.equipeNome, empresa: r.empresa, presentes: 0, funcoes: {}, operarios: [] }; mapa.set(r.equipeId, g); }
     g.presentes += 1;
+    g.operarios.push(r.colaboradorId);
     if (r.funcao) g.funcoes[r.funcao] = (g.funcoes[r.funcao] || 0) + 1;
   }
   return Array.from(mapa.values());

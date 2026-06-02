@@ -354,6 +354,12 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return db.createAtividade(input);
       }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteAtividade(input.id);
+      }),
   }),
 
   // ============= MÃO DE OBRA ROUTER =============
@@ -396,6 +402,12 @@ export const appRouter = router({
       }))
       .mutation(async ({ input }) => {
         return db.createEquipamento(input);
+      }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        return db.deleteEquipamento(input.id);
       }),
   }),
 
@@ -575,6 +587,31 @@ export const appRouter = router({
           ...input,
           data: new Date(input.data),
         });
+      }),
+
+    // Substitui toda a mão de obra (presenças) de um diário de uma vez (usado na edição)
+    setForDiario: engineerProcedure
+      .input(z.object({
+        diarioId: z.number(),
+        data: z.string(),
+        maoDeObra: z.array(z.object({
+          equipeId: z.number(),
+          operariosPresentes: z.array(z.number()),
+        })),
+      }))
+      .mutation(async ({ input }) => {
+        await db.deletePresencaByDiario(input.diarioId);
+        for (const item of input.maoDeObra) {
+          for (const colaboradorId of item.operariosPresentes) {
+            await db.createPresenca({
+              colaboradorId,
+              diarioId: input.diarioId,
+              data: new Date(input.data),
+              presente: true,
+            });
+          }
+        }
+        return { success: true };
       }),
   }),
 

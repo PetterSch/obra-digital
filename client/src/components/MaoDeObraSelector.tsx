@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { FUNCAO_LABELS } from "@/lib/funcoes";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -25,6 +24,7 @@ import {
   Plus,
   Trash2,
   Users,
+  Check,
   CheckSquare,
   Square,
   ChevronDown,
@@ -230,11 +230,9 @@ function EquipeCard({
                     onClick={() => onToggleOperario(item.equipeId, op.id)}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <Checkbox
-                        checked={presente}
-                        tabIndex={-1}
-                        className={`pointer-events-none ${presente ? "border-green-500 data-[state=checked]:bg-green-600 data-[state=checked]:border-green-600" : ""}`}
-                      />
+                      <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${presente ? "bg-green-600 border-green-600 text-white" : "border-input bg-background"}`}>
+                        {presente && <Check className="w-3 h-3" strokeWidth={3} />}
+                      </span>
                       <div className="min-w-0">
                         <span className="font-normal text-sm truncate block">{op.nome}</span>
                         <FuncaoBadge funcao={op.funcao} />
@@ -325,9 +323,6 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
   const [openNovaEquipe, setOpenNovaEquipe] = useState(false);
   const [novaEquipeNome, setNovaEquipeNome] = useState("");
   const [novaEquipeEmpresa, setNovaEquipeEmpresa] = useState("");
-  // remonta o Select de "adicionar equipe" a cada seleção, evitando que o Radix
-  // fique com estado interno apontando para um item que saiu da lista (React #185)
-  const [selectKey, setSelectKey] = useState(0);
 
   const { data: equipes = [], refetch: refetchEquipes } = trpc.equipes.list.useQuery();
 
@@ -348,7 +343,6 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
   const equipesDisponiveis = equipes.filter((e) => !value.some((v) => v.equipeId === e.id));
 
   const handleAddEquipe = (equipeId: number) => {
-    setSelectKey((k) => k + 1); // remonta o Select para limpar o estado interno
     if (!equipeId || value.some((v) => v.equipeId === equipeId)) {
       if (equipeId) toast.warning("Equipe já adicionada");
       return;
@@ -376,36 +370,27 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
         </div>
       )}
 
-      {/* Seletor de equipes */}
+      {/* Seletor de equipes (select nativo — evita loop do Radix Presence) */}
       <div className="flex gap-2">
-        <Select
-          key={selectKey}
+        <select
           value=""
-          onValueChange={(v) => handleAddEquipe(Number(v))}
+          onChange={(e) => { if (e.target.value) handleAddEquipe(Number(e.target.value)); }}
           disabled={equipesDisponiveis.length === 0}
+          className="flex-1 px-3 py-2 border border-input rounded-md bg-background text-sm disabled:opacity-60"
         >
-          <SelectTrigger className="flex-1">
-            <SelectValue
-              placeholder={
-                equipesDisponiveis.length === 0
-                  ? equipes.length === 0
-                    ? "Nenhuma equipe cadastrada"
-                    : "Todas as equipes já adicionadas"
-                  : `Adicionar equipe ao diário...`
-              }
-            />
-          </SelectTrigger>
-          <SelectContent>
-            {equipesDisponiveis.map((equipe) => (
-              <SelectItem key={equipe.id} value={equipe.id.toString()}>
-                <div className="flex flex-col">
-                  <span>{equipe.nome}</span>
-                  <span className="text-xs text-muted-foreground">{equipe.empresa}</span>
-                </div>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+          <option value="">
+            {equipesDisponiveis.length === 0
+              ? equipes.length === 0
+                ? "Nenhuma equipe cadastrada"
+                : "Todas as equipes já adicionadas"
+              : "Adicionar equipe ao diário..."}
+          </option>
+          {equipesDisponiveis.map((equipe) => (
+            <option key={equipe.id} value={equipe.id}>
+              {equipe.nome}{equipe.empresa ? ` — ${equipe.empresa}` : ""}
+            </option>
+          ))}
+        </select>
         <Button
           type="button"
           variant="outline"

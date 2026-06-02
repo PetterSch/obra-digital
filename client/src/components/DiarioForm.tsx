@@ -35,26 +35,54 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
   const [enviando, setEnviando] = useState(false);
 
   const uploadMutation = trpc.midia.upload.useMutation();
+  const addAtividade = trpc.atividades.create.useMutation();
+  const addEquipamento = trpc.equipamentos.create.useMutation();
+  const addOcorrencia = trpc.ocorrencias.create.useMutation();
 
   const createMutation = trpc.diarios.create.useMutation({
     onSuccess: async (diarioCriado: any) => {
-      // Faz upload das fotos pendentes, se houver
-      if (fotos.length > 0 && diarioCriado?.id) {
+      const novoId = diarioCriado?.id;
+      if (novoId) {
         setEnviando(true);
         try {
+          // Atividades
+          for (const a of atividades) {
+            if (!a.descricao?.trim()) continue;
+            await addAtividade.mutateAsync({
+              diarioId: novoId, descricao: a.descricao.trim(),
+              local: a.local || undefined,
+              status: (a.status || undefined) as any,
+              percentualConcluido: a.percentualConcluido ? parseInt(a.percentualConcluido) : undefined,
+            });
+          }
+          // Equipamentos
+          for (const eq of equipamentos) {
+            if (!eq.nome?.trim()) continue;
+            await addEquipamento.mutateAsync({
+              diarioId: novoId, nome: eq.nome.trim(),
+              quantidade: parseInt(eq.quantidade) || 1,
+              horasUso: eq.horasUso || undefined,
+            });
+          }
+          // Ocorrências
+          for (const oc of ocorrencias) {
+            if (!oc.descricao?.trim()) continue;
+            await addOcorrencia.mutateAsync({
+              diarioId: novoId, descricao: oc.descricao.trim(),
+              tipo: (oc.tipo || "outro") as any,
+              criticidade: (oc.criticidade || undefined) as any,
+            });
+          }
+          // Fotos
           for (const f of fotos) {
             await uploadMutation.mutateAsync({
-              diarioId: diarioCriado.id,
-              obraId,
-              tipo: "foto",
+              diarioId: novoId, obraId, tipo: "foto",
               descricao: f.descricao || undefined,
-              arquivo: f.base64,
-              nomeOriginal: f.nome,
-              mimeType: f.mimeType,
+              arquivo: f.base64, nomeOriginal: f.nome, mimeType: f.mimeType,
             });
           }
         } catch {
-          toast.error("Diário criado, mas houve erro ao enviar algumas fotos.");
+          toast.error("Diário criado, mas houve erro ao salvar alguns itens (atividades/equipamentos/fotos).");
         }
         setEnviando(false);
       }

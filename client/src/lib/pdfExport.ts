@@ -422,10 +422,10 @@ export interface DiarioPDFData {
     prioridade?: string;
   }>;
   maoDeObra: Array<{
-    quantidade: number;
-    funcao: string;
+    equipeNome?: string;
     empresa?: string;
-    horasTrabalhadas?: number;
+    presentes: number;
+    funcoes?: string;
   }>;
   equipamentos: Array<{
     nome: string;
@@ -463,16 +463,18 @@ export function exportDiarioPDF(data: DiarioPDFData): void {
             <td style="text-align:center">${a.percentualConcluido ?? 0}%</td>
           </tr>`).join("");
 
+  const totalPresentes = data.maoDeObra.reduce((s, m) => s + (m.presentes || 0), 0);
   const maoDeObraHTML =
     data.maoDeObra.length === 0
       ? "<tr><td colspan='4' style='color:#666;font-style:italic;padding:8px'>Nenhum registro de mão de obra</td></tr>"
       : data.maoDeObra.map((m) => `
           <tr>
-            <td>${m.funcao}</td>
-            <td style="text-align:center">${m.quantidade}</td>
+            <td>${m.equipeNome ?? "—"}</td>
             <td>${m.empresa ?? "—"}</td>
-            <td style="text-align:center">${m.horasTrabalhadas ?? "—"}</td>
-          </tr>`).join("");
+            <td style="font-size:11px;color:#444">${m.funcoes || "—"}</td>
+            <td style="text-align:center;font-weight:700">${m.presentes}</td>
+          </tr>`).join("")
+        + `<tr><td colspan="3" style="text-align:right;font-weight:700">Total de presentes</td><td style="text-align:center;font-weight:800;color:#B45309">${totalPresentes}</td></tr>`;
 
   const equipamentosHTML =
     data.equipamentos.length === 0
@@ -570,7 +572,7 @@ ${cover}
     <div class="section-title">Mão de Obra</div>
     <table>
       <thead>
-        <tr><th>Função</th><th style="text-align:center">Qtd.</th><th>Empresa</th><th style="text-align:center">Horas</th></tr>
+        <tr><th>Equipe</th><th>Empresa</th><th>Funções</th><th style="text-align:center">Presentes</th></tr>
       </thead>
       <tbody>${maoDeObraHTML}</tbody>
     </table>

@@ -1,4 +1,5 @@
 import DashboardLayout from "@/components/DashboardLayout";
+import { funcaoLabel } from "@/lib/funcoes";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -69,6 +70,7 @@ export default function DiarioView() {
 
   const { data: atividades = [] } = trpc.atividades.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: maoDeObra = [] } = trpc.maoDeObra.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
+  const { data: maoObraResumo = [] } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: equipamentos = [] } = trpc.equipamentos.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: ocorrencias = [] } = trpc.ocorrencias.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
 
@@ -99,11 +101,11 @@ export default function DiarioView() {
         percentualConcluido: a.percentualConcluido ?? undefined,
         prioridade: a.prioridade ?? undefined,
       })),
-      maoDeObra: maoDeObra.map((m) => ({
-        quantidade: m.quantidade,
-        funcao: m.funcao,
-        empresa: m.empresa ?? undefined,
-        horasTrabalhadas: m.horasTrabalhadas ?? undefined,
+      maoDeObra: (maoObraResumo as any[]).map((g) => ({
+        equipeNome: g.equipeNome,
+        empresa: g.empresa,
+        presentes: g.presentes,
+        funcoes: Object.entries(g.funcoes || {}).map(([f, n]) => `${funcaoLabel(f)} (${n})`).join(", "),
       })),
       equipamentos: equipamentos.map((e) => ({
         nome: e.nome,
@@ -247,7 +249,7 @@ export default function DiarioView() {
         <Tabs defaultValue="atividades" className="w-full">
           <TabsList className="flex w-full overflow-x-auto">
             <TabsTrigger value="atividades" className="flex-1 text-xs sm:text-sm">Atividades {atividades.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{atividades.length}</Badge>}</TabsTrigger>
-            <TabsTrigger value="mao-obra" className="flex-1 text-xs sm:text-sm">Mão de Obra {maoDeObra.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{maoDeObra.length}</Badge>}</TabsTrigger>
+            <TabsTrigger value="mao-obra" className="flex-1 text-xs sm:text-sm">Mão de Obra {maoObraResumo.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{maoObraResumo.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="equipamentos" className="flex-1 text-xs sm:text-sm">Equipamentos {equipamentos.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{equipamentos.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="ocorrencias" className="flex-1 text-xs sm:text-sm">Ocorrências {ocorrencias.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{ocorrencias.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1 text-xs sm:text-sm">Fotos</TabsTrigger>
@@ -281,28 +283,32 @@ export default function DiarioView() {
           </TabsContent>
 
           <TabsContent value="mao-obra" className="space-y-3 mt-4">
-            {maoDeObra.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum registro de mão de obra</CardContent></Card>
+            {maoObraResumo.length === 0 ? (
+              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhuma equipe/presença registrada neste diário</CardContent></Card>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm min-w-[400px]">
                   <thead>
                     <tr className="border-b">
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Função</th>
-                      <th className="text-center py-2 px-3 font-medium text-muted-foreground">Qtd.</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Equipe</th>
                       <th className="text-left py-2 px-3 font-medium text-muted-foreground">Empresa</th>
-                      <th className="text-center py-2 px-3 font-medium text-muted-foreground">Horas</th>
+                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Funções</th>
+                      <th className="text-center py-2 px-3 font-medium text-muted-foreground">Presentes</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {maoDeObra.map((mao) => (
-                      <tr key={mao.id} className="border-b hover:bg-muted/30">
-                        <td className="py-2 px-3 font-medium">{mao.funcao}</td>
-                        <td className="py-2 px-3 text-center">{mao.quantidade}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{mao.empresa ?? "—"}</td>
-                        <td className="py-2 px-3 text-center">{mao.horasTrabalhadas ?? "—"}</td>
+                    {(maoObraResumo as any[]).map((g) => (
+                      <tr key={g.equipeId} className="border-b hover:bg-muted/30">
+                        <td className="py-2 px-3 font-medium">{g.equipeNome}</td>
+                        <td className="py-2 px-3 text-muted-foreground">{g.empresa ?? "—"}</td>
+                        <td className="py-2 px-3 text-muted-foreground text-xs">{Object.entries(g.funcoes || {}).map(([f, n]) => `${funcaoLabel(f)} (${n})`).join(", ") || "—"}</td>
+                        <td className="py-2 px-3 text-center font-semibold">{g.presentes}</td>
                       </tr>
                     ))}
+                    <tr className="bg-muted/20">
+                      <td colSpan={3} className="py-2 px-3 text-right font-semibold">Total de presentes</td>
+                      <td className="py-2 px-3 text-center font-bold text-primary">{(maoObraResumo as any[]).reduce((s, g) => s + (g.presentes || 0), 0)}</td>
+                    </tr>
                   </tbody>
                 </table>
               </div>

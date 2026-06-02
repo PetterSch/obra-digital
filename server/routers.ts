@@ -554,6 +554,13 @@ export const appRouter = router({
         return db.getPresencaByDiarioId(input.diarioId);
       }),
 
+    // Resumo agrupado por equipe/empresa com contagem de presentes (para PDF)
+    resumoByDiario: protectedProcedure
+      .input(z.object({ diarioId: z.number() }))
+      .query(async ({ input }) => {
+        return db.getMaoDeObraResumoByDiario(input.diarioId);
+      }),
+
     create: engineerProcedure
       .input(z.object({
         colaboradorId: z.number(),

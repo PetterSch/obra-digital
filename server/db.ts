@@ -475,6 +475,34 @@ export async function createPresenca(data: typeof presenca.$inferInsert) {
   return db.insert(presenca).values(data);
 }
 
+// Resumo de mão de obra do diário, agrupado por equipe/empresa (para PDF)
+export async function getMaoDeObraResumoByDiario(diarioId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db
+    .select({
+      equipeId: equipes.id,
+      equipeNome: equipes.nome,
+      empresa: equipes.empresa,
+      funcao: colaboradores.funcao,
+      presente: presenca.presente,
+    })
+    .from(presenca)
+    .innerJoin(colaboradores, eq(presenca.colaboradorId, colaboradores.id))
+    .innerJoin(equipes, eq(colaboradores.equipeId, equipes.id))
+    .where(eq(presenca.diarioId, diarioId));
+
+  const mapa = new Map<number, { equipeId: number; equipeNome: string; empresa: string; presentes: number; funcoes: Record<string, number> }>();
+  for (const r of rows) {
+    if (r.presente === false) continue;
+    let g = mapa.get(r.equipeId);
+    if (!g) { g = { equipeId: r.equipeId, equipeNome: r.equipeNome, empresa: r.empresa, presentes: 0, funcoes: {} }; mapa.set(r.equipeId, g); }
+    g.presentes += 1;
+    if (r.funcao) g.funcoes[r.funcao] = (g.funcoes[r.funcao] || 0) + 1;
+  }
+  return Array.from(mapa.values());
+}
+
 // ============= MÍDIA =============
 
 export async function getMidiaByObraId(obraId: number) {

@@ -409,6 +409,7 @@ export interface DiarioPDFData {
     data: string;
     horarioInicio?: string;
     horarioFim?: string;
+    criadoEm?: string | Date;
     clima?: string;
     temperatura?: number | string;
     umidade?: number;
@@ -537,7 +538,13 @@ ${cover}
   <div class="obra-info">
     <div class="obra-info-item"><strong>Cliente</strong>${data.obra.cliente}</div>
     <div class="obra-info-item"><strong>Responsável Técnico</strong>${data.obra.responsavelTecnico}</div>
-    <div class="obra-info-item"><strong>Horário</strong>${data.diario.horarioInicio ?? "—"} às ${data.diario.horarioFim ?? "—"}</div>
+    <div class="obra-info-item"><strong>Horário</strong>${
+      data.diario.horarioInicio
+        ? `${data.diario.horarioInicio} às ${data.diario.horarioFim ?? "—"}`
+        : data.diario.criadoEm
+          ? "Registrado às " + new Date(data.diario.criadoEm).toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" })
+          : "—"
+    }</div>
   </div>
 
   <div class="section">

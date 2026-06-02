@@ -18,6 +18,14 @@ export function hojeISO(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+// Hora (HH:MM) no fuso de Brasília a partir de um timestamp
+export function fmtHoraBR(val: any): string {
+  if (!val) return "—";
+  const d = new Date(val);
+  if (isNaN(d.getTime())) return "—";
+  return d.toLocaleTimeString("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit" });
+}
+
 // Extrai YYYY-MM-DD de um valor de data (sem deslocar o dia)
 export function dataISO(val: any): string {
   if (!val) return "";

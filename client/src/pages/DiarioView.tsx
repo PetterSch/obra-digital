@@ -1,5 +1,6 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { funcaoLabel } from "@/lib/funcoes";
+import { fmtHoraBR } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -89,6 +90,7 @@ export default function DiarioView() {
         data: parseData(diario.data).toISOString().split("T")[0],
         horarioInicio: diario.horarioInicio ?? undefined,
         horarioFim: diario.horarioFim ?? undefined,
+        criadoEm: (diario as any).criadoEm ?? undefined,
         clima: diario.clima ?? undefined,
         temperatura: diario.temperatura ?? undefined,
         umidade: diario.umidade ?? undefined,
@@ -194,7 +196,9 @@ export default function DiarioView() {
               <div className="flex items-center gap-2 text-muted-foreground text-sm mb-1">
                 <Clock className="w-4 h-4" /> Horário
               </div>
-              <p className="font-semibold">{diario.horarioInicio ?? "—"} às {diario.horarioFim ?? "—"}</p>
+              {diario.horarioInicio
+                ? <p className="font-semibold">{diario.horarioInicio} às {diario.horarioFim ?? "—"}</p>
+                : <p className="font-semibold">Registrado às {fmtHoraBR((diario as any).criadoEm)}</p>}
             </CardContent>
           </Card>
 

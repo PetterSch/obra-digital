@@ -58,10 +58,10 @@ export default function DiarioEdit() {
   const delEquip = trpc.equipamentos.delete.useMutation({ onSuccess: () => utils.equipamentos.listByDiario.invalidate({ diarioId: diarioId! }) });
 
   // ── Mão de obra (presença por equipe) ──
-  const { data: resumo = [] } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
+  const { data: resumo } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const [maoDeObra, setMaoDeObra] = useState<Array<{ equipeId: number; operariosPresentes: number[] }>>([]);
   useEffect(() => {
-    setMaoDeObra((resumo as any[]).map((g) => ({ equipeId: g.equipeId, operariosPresentes: g.operarios || [] })));
+    if (resumo) setMaoDeObra((resumo as any[]).map((g) => ({ equipeId: g.equipeId, operariosPresentes: g.operarios || [] })));
   }, [resumo]);
   const saveMao = trpc.presenca.setForDiario.useMutation({
     onSuccess: () => { toast.success("Mão de obra salva!"); utils.presenca.resumoByDiario.invalidate({ diarioId: diarioId! }); },

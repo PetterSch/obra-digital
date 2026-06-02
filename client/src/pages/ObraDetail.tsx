@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { fmtDataBR } from "@/lib/data";
 import { useAuth } from "@/_core/hooks/useAuth";
 import DashboardLayout from "@/components/DashboardLayout";
 import {
@@ -222,7 +223,7 @@ export default function ObraDetail() {
                         <div className="flex items-center gap-3">
                           <Calendar className="w-4 h-4 text-muted-foreground" />
                           <div>
-                            <p className="font-medium">{new Date(diario.data).toLocaleDateString("pt-BR")}</p>
+                            <p className="font-medium">{fmtDataBR(diario.data)}</p>
                             <p className="text-sm text-muted-foreground">{diario.clima || "Sem informação de clima"}</p>
                           </div>
                         </div>
@@ -355,7 +356,7 @@ export default function ObraDetail() {
             <AlertDialogTitle>Excluir diário?</AlertDialogTitle>
             <AlertDialogDescription>
               Tem certeza que deseja excluir o diário de{" "}
-              <strong>{diarioToDelete ? new Date(diarioToDelete.data).toLocaleDateString("pt-BR") : ""}</strong>?
+              <strong>{diarioToDelete ? fmtDataBR(diarioToDelete.data) : ""}</strong>?
               Esta ação não pode ser desfeita e removerá atividades, mão de obra, equipamentos e fotos vinculados.
             </AlertDialogDescription>
           </AlertDialogHeader>

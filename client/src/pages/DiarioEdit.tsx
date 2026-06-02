@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { trpc } from "@/lib/trpc";
+import { fmtDataBR, dataISO } from "@/lib/data";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft, Save, X, Plus, Trash2, Upload } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -106,7 +107,7 @@ export default function DiarioEdit() {
           <Button variant="ghost" size="icon" onClick={verDiario}><ArrowLeft className="w-4 h-4" /></Button>
           <div className="flex-1">
             <h1 className="text-3xl font-bold tracking-tight">Editar Diário de Obra</h1>
-            <p className="text-muted-foreground mt-1">{new Date(diario.data).toLocaleDateString("pt-BR")}</p>
+            <p className="text-muted-foreground mt-1">{fmtDataBR(diario.data)}</p>
           </div>
           <Button variant="outline" onClick={verDiario} className="gap-2"><X className="w-4 h-4" /> Fechar</Button>
         </div>
@@ -190,7 +191,7 @@ export default function DiarioEdit() {
             <Card><CardContent className="pt-4 space-y-4">
               <MaoDeObraSelector value={maoDeObra} onChange={setMaoDeObra} />
               <Button className="gap-2" disabled={saveMao.isPending}
-                onClick={() => saveMao.mutate({ diarioId: diarioId!, data: new Date(diario.data).toISOString().split("T")[0], maoDeObra })}>
+                onClick={() => saveMao.mutate({ diarioId: diarioId!, data: dataISO(diario.data), maoDeObra })}>
                 <Save className="w-4 h-4" /> {saveMao.isPending ? "Salvando..." : "Salvar mão de obra"}
               </Button>
             </CardContent></Card>

@@ -2,6 +2,7 @@ import { useAuth } from "@/_core/hooks/useAuth";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
+import { fmtDataBR } from "@/lib/data";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft, Calendar, MapPin, User, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -149,7 +150,7 @@ export default function ClientPanel() {
                       <div className="flex justify-between items-start mb-3">
                         <div>
                           <p className="font-semibold">
-                            {new Date(diario.data).toLocaleDateString("pt-BR")}
+                            {fmtDataBR(diario.data)}
                           </p>
                           <p className="text-sm text-muted-foreground">
                             {diario.clima && `Clima: ${diario.clima}`}

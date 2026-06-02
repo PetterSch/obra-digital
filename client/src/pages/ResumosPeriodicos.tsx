@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
+import { fmtDataBR } from "@/lib/data";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft, Calendar, Download, Loader2, AlertCircle } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -423,7 +424,7 @@ export default function ResumosPeriodicos() {
                 {diariosDoPeriodo.map((diario) => (
                   <div key={diario.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50">
                     <div>
-                      <p className="font-medium">{new Date(diario.data).toLocaleDateString("pt-BR")}</p>
+                      <p className="font-medium">{fmtDataBR(diario.data)}</p>
                       <p className="text-sm text-muted-foreground capitalize">{diario.clima || "Sem clima"}</p>
                     </div>
                     <Button

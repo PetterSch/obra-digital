@@ -10,6 +10,7 @@ import { Plus, X, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { MaoDeObraSelector } from "./MaoDeObraSelector";
+import { hojeISO } from "@/lib/data";
 
 interface DiarioFormProps {
   obraId: number;
@@ -19,7 +20,7 @@ interface DiarioFormProps {
 export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState({
-    data: new Date().toISOString().split("T")[0],
+    data: hojeISO(),
     clima: "ensolarado" as string,
     temperatura: "",
     umidade: "",
@@ -89,7 +90,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
       toast.success("Diário criado com sucesso!");
       setOpen(false);
       setFormData({
-        data: new Date().toISOString().split("T")[0],
+        data: hojeISO(),
         clima: "",
         temperatura: "",
         umidade: "",

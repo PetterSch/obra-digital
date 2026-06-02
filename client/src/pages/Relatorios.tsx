@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
+import { fmtDataBR } from "@/lib/data";
 import { useLocation, useRoute } from "wouter";
 import {
   ArrowLeft, Download, Calendar, FileText, FileSpreadsheet,
@@ -86,10 +87,10 @@ export default function Relatorios() {
 
     const dataInicioLabel = dateRange.start
       ? new Date(dateRange.start + "T12:00:00").toLocaleDateString("pt-BR")
-      : new Date(filteredDiarios[filteredDiarios.length - 1].data).toLocaleDateString("pt-BR");
+      : fmtDataBR(filteredDiarios[filteredDiarios.length - 1].data);
     const dataFimLabel = dateRange.end
       ? new Date(dateRange.end + "T12:00:00").toLocaleDateString("pt-BR")
-      : new Date(filteredDiarios[0].data).toLocaleDateString("pt-BR");
+      : fmtDataBR(filteredDiarios[0].data);
 
     exportPeriodoPDF({
       obra: {
@@ -273,9 +274,9 @@ export default function Relatorios() {
                 <p className="text-sm font-medium">
                   {filteredDiarios.length > 0 && (
                     <>
-                      {new Date(filteredDiarios[filteredDiarios.length - 1].data).toLocaleDateString("pt-BR")}
+                      {fmtDataBR(filteredDiarios[filteredDiarios.length - 1].data)}
                       {" → "}
-                      {new Date(filteredDiarios[0].data).toLocaleDateString("pt-BR")}
+                      {fmtDataBR(filteredDiarios[0].data)}
                     </>
                   )}
                 </p>
@@ -356,7 +357,7 @@ export default function Relatorios() {
                           onClick={() => navigate(`/obras/${obraId}/diario/${diario.id}`)}
                         >
                           <td className="py-2 px-3 font-medium">
-                            {new Date(diario.data).toLocaleDateString("pt-BR")}
+                            {fmtDataBR(diario.data)}
                           </td>
                           <td className="py-2 px-3">
                             {climaConf ? (

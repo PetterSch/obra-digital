@@ -293,7 +293,7 @@ export const appRouter = router({
         const { temperatura, maoDeObra, ...data } = input;
         const diario = await db.createDiario({
           ...data,
-          data: new Date(input.data),
+          data: new Date(input.data + "T12:00:00"),
           responsavel: ctx.user.id,
           ...(temperatura && { temperatura: parseFloat(temperatura) as unknown as string }),
         });
@@ -304,7 +304,7 @@ export const appRouter = router({
               await db.createPresenca({
                 colaboradorId,
                 diarioId: diario.id,
-                data: new Date(input.data),
+                data: new Date(input.data + "T12:00:00"),
                 presente: true,
               });
             }
@@ -464,7 +464,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return db.createMovimentacao({
           ...input,
-          data: new Date(input.data),
+          data: new Date(input.data + "T12:00:00"),
         });
       }),
   }),
@@ -585,7 +585,7 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return db.createPresenca({
           ...input,
-          data: new Date(input.data),
+          data: new Date(input.data + "T12:00:00"),
         });
       }),
 
@@ -606,7 +606,7 @@ export const appRouter = router({
             await db.createPresenca({
               colaboradorId,
               diarioId: input.diarioId,
-              data: new Date(input.data),
+              data: new Date(input.data + "T12:00:00"),
               presente: true,
             });
           }

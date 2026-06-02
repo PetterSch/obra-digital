@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
+import { fmtDataBR } from "@/lib/data";
 import { useLocation, useRoute } from "wouter";
 import { ArrowLeft, Plus } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
@@ -72,7 +73,7 @@ export default function DiarioObra() {
           </Button>
           <div className="flex-1">
             <h1 className="text-3xl font-bold tracking-tight">Diário de Obra</h1>
-            <p className="text-muted-foreground mt-1">{new Date(diario.data).toLocaleDateString("pt-BR")}</p>
+            <p className="text-muted-foreground mt-1">{fmtDataBR(diario.data)}</p>
           </div>
         </div>
 

@@ -325,6 +325,7 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
   const [novaEquipeEmpresa, setNovaEquipeEmpresa] = useState("");
 
   const { data: equipes = [], refetch: refetchEquipes } = trpc.equipes.list.useQuery();
+  const utils = trpc.useUtils();
 
   const createEquipeMutation = trpc.equipes.create.useMutation({
     onSuccess: (novaEquipe) => {
@@ -342,12 +343,18 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
 
   const equipesDisponiveis = equipes.filter((e) => !value.some((v) => v.equipeId === e.id));
 
-  const handleAddEquipe = (equipeId: number) => {
+  const handleAddEquipe = async (equipeId: number) => {
     if (!equipeId || value.some((v) => v.equipeId === equipeId)) {
       if (equipeId) toast.warning("Equipe já adicionada");
       return;
     }
-    onChange([...value, { equipeId, operariosPresentes: [] }]);
+    // Já marca todos os operários da equipe como presentes (pode desmarcar depois)
+    let presentes: number[] = [];
+    try {
+      const ops = await utils.colaboradores.listByEquipe.fetch({ equipeId });
+      presentes = (ops as any[]).map((o) => o.id);
+    } catch { /* sem operários ou erro: adiciona vazio */ }
+    onChange([...value, { equipeId, operariosPresentes: presentes }]);
   };
 
   const totalPresentes = value.reduce((sum, v) => sum + v.operariosPresentes.length, 0);

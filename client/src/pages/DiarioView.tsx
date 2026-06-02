@@ -1,13 +1,13 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { funcaoLabel } from "@/lib/funcoes";
-import { fmtHoraBR } from "@/lib/data";
+import { fmtHoraBR, dataISO, fmtDataBR } from "@/lib/data";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Edit, FileDown, Trash2, Sun, Cloud, CloudRain, Wind, Zap, Thermometer, Droplets, Clock, Settings2 } from "lucide-react";
+import { ArrowLeft, Edit, FileDown, Trash2, Sun, Cloud, CloudRain, Wind, Zap, Thermometer, Droplets, Clock, Settings2, ChevronLeft, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/_core/hooks/useAuth";
@@ -63,6 +63,13 @@ export default function DiarioView() {
     { enabled: !!diarioId }
   );
   const { data: obra } = trpc.obras.getById.useQuery({ id: obraId! }, { enabled: !!obraId });
+
+  // Navegação entre diários da obra (ordenados por data)
+  const { data: diariosObra = [] } = trpc.diarios.listByObra.useQuery({ obraId: obraId! }, { enabled: !!obraId });
+  const ordenados = [...(diariosObra as any[])].sort((a, b) => dataISO(a.data).localeCompare(dataISO(b.data)));
+  const idxAtual = ordenados.findIndex((d) => d.id === diarioId);
+  const diarioAnterior = idxAtual > 0 ? ordenados[idxAtual - 1] : null;
+  const diarioProximo = idxAtual >= 0 && idxAtual < ordenados.length - 1 ? ordenados[idxAtual + 1] : null;
 
   const deleteMutation = trpc.diarios.delete.useMutation({
     onSuccess: () => { toast.success("Diário deletado com sucesso"); navigate(`/obras/${obraId}`); },
@@ -160,6 +167,18 @@ export default function DiarioView() {
             <p className="text-muted-foreground mt-1 capitalize">{dataFormatada}</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <Button variant="outline" className="gap-1" disabled={!diarioAnterior}
+              title={diarioAnterior ? `Diário de ${fmtDataBR(diarioAnterior.data)}` : "Não há diário anterior"}
+              onClick={() => diarioAnterior && navigate(`/obras/${obraId}/diario/${diarioAnterior.id}`)}>
+              <ChevronLeft className="w-4 h-4" />
+              <span className="hidden sm:inline">Anterior</span>
+            </Button>
+            <Button variant="outline" className="gap-1" disabled={!diarioProximo}
+              title={diarioProximo ? `Diário de ${fmtDataBR(diarioProximo.data)}` : "Não há próximo diário"}
+              onClick={() => diarioProximo && navigate(`/obras/${obraId}/diario/${diarioProximo.id}`)}>
+              <span className="hidden sm:inline">Próximo</span>
+              <ChevronRight className="w-4 h-4" />
+            </Button>
             {user?.role !== "cliente" && (
               <>
                 <Button variant="default" className="gap-2" onClick={() => navigate(`/obras/${obraId}/diario/${diarioId}/edit`)}>

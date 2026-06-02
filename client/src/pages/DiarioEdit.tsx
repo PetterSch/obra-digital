@@ -52,12 +52,6 @@ export default function DiarioEdit() {
   const addAtiv = trpc.atividades.create.useMutation({ onSuccess: () => { setNovaAtiv({ descricao: "", local: "", status: "em_andamento", percentualConcluido: "" }); utils.atividades.listByDiario.invalidate({ diarioId: diarioId! }); }, onError: (e) => toast.error(e.message) });
   const delAtiv = trpc.atividades.delete.useMutation({ onSuccess: () => utils.atividades.listByDiario.invalidate({ diarioId: diarioId! }) });
 
-  // ── Equipamentos ──
-  const { data: equipamentos = [] } = trpc.equipamentos.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
-  const [novoEquip, setNovoEquip] = useState({ nome: "", quantidade: "1", horasUso: "", observacoes: "" });
-  const addEquip = trpc.equipamentos.create.useMutation({ onSuccess: () => { setNovoEquip({ nome: "", quantidade: "1", horasUso: "", observacoes: "" }); utils.equipamentos.listByDiario.invalidate({ diarioId: diarioId! }); }, onError: (e) => toast.error(e.message) });
-  const delEquip = trpc.equipamentos.delete.useMutation({ onSuccess: () => utils.equipamentos.listByDiario.invalidate({ diarioId: diarioId! }) });
-
   // ── Mão de obra (presença por equipe) ──
   const { data: resumo } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const [maoDeObra, setMaoDeObra] = useState<Array<{ equipeId: number; operariosPresentes: number[] }>>([]);
@@ -144,10 +138,9 @@ export default function DiarioEdit() {
 
         {/* Seções */}
         <Tabs defaultValue="atividades" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="atividades">Atividades ({atividades.length})</TabsTrigger>
             <TabsTrigger value="mao-obra">Mão de Obra</TabsTrigger>
-            <TabsTrigger value="equipamentos">Equipamentos ({equipamentos.length})</TabsTrigger>
             <TabsTrigger value="fotos">Fotos ({fotos.length})</TabsTrigger>
           </TabsList>
 
@@ -193,34 +186,6 @@ export default function DiarioEdit() {
               <Button className="gap-2" disabled={saveMao.isPending}
                 onClick={() => saveMao.mutate({ diarioId: diarioId!, data: dataISO(diario.data), maoDeObra })}>
                 <Save className="w-4 h-4" /> {saveMao.isPending ? "Salvando..." : "Salvar mão de obra"}
-              </Button>
-            </CardContent></Card>
-          </TabsContent>
-
-          {/* Equipamentos */}
-          <TabsContent value="equipamentos" className="space-y-3 mt-4">
-            <Card><CardContent className="pt-4 space-y-2">
-              {equipamentos.length === 0 ? <p className="text-sm text-muted-foreground">Nenhum equipamento. Adicione abaixo.</p> :
-                equipamentos.map((e: any) => (
-                  <div key={e.id} className="flex items-center justify-between gap-2 border rounded-lg px-3 py-2">
-                    <div className="min-w-0"><p className="font-medium text-sm truncate">{e.nome}</p>
-                      <p className="text-xs text-muted-foreground">Qtd: {e.quantidade}{e.horasUso ? ` · ${e.horasUso}h de uso` : ""}{e.observacoes ? ` · ${e.observacoes}` : ""}</p>
-                    </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => delEquip.mutate({ id: e.id })}><Trash2 className="w-4 h-4" /></Button>
-                  </div>
-                ))}
-            </CardContent></Card>
-            <Card><CardContent className="pt-4 space-y-3">
-              <p className="text-sm font-medium">Adicionar equipamento</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                <Input placeholder="Nome *" value={novoEquip.nome} onChange={(e) => setNovoEquip({ ...novoEquip, nome: e.target.value })} />
-                <Input type="number" placeholder="Quantidade" value={novoEquip.quantidade} onChange={(e) => setNovoEquip({ ...novoEquip, quantidade: e.target.value })} />
-                <Input placeholder="Horas de uso" value={novoEquip.horasUso} onChange={(e) => setNovoEquip({ ...novoEquip, horasUso: e.target.value })} />
-                <Input placeholder="Observações" value={novoEquip.observacoes} onChange={(e) => setNovoEquip({ ...novoEquip, observacoes: e.target.value })} />
-              </div>
-              <Button size="sm" className="gap-1.5" disabled={!novoEquip.nome || addEquip.isPending}
-                onClick={() => addEquip.mutate({ diarioId: diarioId!, nome: novoEquip.nome, quantidade: parseInt(novoEquip.quantidade) || 1, horasUso: novoEquip.horasUso || undefined, observacoes: novoEquip.observacoes || undefined })}>
-                <Plus className="w-4 h-4" /> Adicionar
               </Button>
             </CardContent></Card>
           </TabsContent>

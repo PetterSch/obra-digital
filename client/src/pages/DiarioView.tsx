@@ -72,7 +72,6 @@ export default function DiarioView() {
   const { data: atividades = [] } = trpc.atividades.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: maoDeObra = [] } = trpc.maoDeObra.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: maoObraResumo = [] } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
-  const { data: equipamentos = [] } = trpc.equipamentos.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: ocorrencias = [] } = trpc.ocorrencias.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
 
   const handleExportPDF = () => {
@@ -108,12 +107,6 @@ export default function DiarioView() {
         empresa: g.empresa,
         presentes: g.presentes,
         funcoes: Object.entries(g.funcoes || {}).map(([f, n]) => `${funcaoLabel(f)} (${n})`).join(", "),
-      })),
-      equipamentos: equipamentos.map((e) => ({
-        nome: e.nome,
-        quantidade: e.quantidade,
-        horasUso: e.horasUso ?? undefined,
-        observacoes: e.observacoes ?? undefined,
       })),
       ocorrencias: ocorrencias.map((o) => ({
         descricao: o.descricao,
@@ -254,7 +247,6 @@ export default function DiarioView() {
           <TabsList className="flex w-full overflow-x-auto">
             <TabsTrigger value="atividades" className="flex-1 text-xs sm:text-sm">Atividades {atividades.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{atividades.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="mao-obra" className="flex-1 text-xs sm:text-sm">Mão de Obra {maoObraResumo.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{maoObraResumo.length}</Badge>}</TabsTrigger>
-            <TabsTrigger value="equipamentos" className="flex-1 text-xs sm:text-sm">Equipamentos {equipamentos.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{equipamentos.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="ocorrencias" className="flex-1 text-xs sm:text-sm">Ocorrências {ocorrencias.length > 0 && <Badge variant="secondary" className="ml-1 text-xs">{ocorrencias.length}</Badge>}</TabsTrigger>
             <TabsTrigger value="fotos" className="flex-1 text-xs sm:text-sm">Fotos</TabsTrigger>
           </TabsList>
@@ -313,35 +305,6 @@ export default function DiarioView() {
                       <td colSpan={3} className="py-2 px-3 text-right font-semibold">Total de presentes</td>
                       <td className="py-2 px-3 text-center font-bold text-primary">{(maoObraResumo as any[]).reduce((s, g) => s + (g.presentes || 0), 0)}</td>
                     </tr>
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="equipamentos" className="space-y-3 mt-4">
-            {equipamentos.length === 0 ? (
-              <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhum equipamento registrado</CardContent></Card>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm min-w-[350px]">
-                  <thead>
-                    <tr className="border-b">
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Equipamento</th>
-                      <th className="text-center py-2 px-3 font-medium text-muted-foreground">Qtd.</th>
-                      <th className="text-center py-2 px-3 font-medium text-muted-foreground">Horas</th>
-                      <th className="text-left py-2 px-3 font-medium text-muted-foreground">Obs.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {equipamentos.map((equip) => (
-                      <tr key={equip.id} className="border-b hover:bg-muted/30">
-                        <td className="py-2 px-3 font-medium">{equip.nome}</td>
-                        <td className="py-2 px-3 text-center">{equip.quantidade}</td>
-                        <td className="py-2 px-3 text-center">{equip.horasUso ?? "—"}</td>
-                        <td className="py-2 px-3 text-muted-foreground">{equip.observacoes ?? "—"}</td>
-                      </tr>
-                    ))}
                   </tbody>
                 </table>
               </div>

@@ -29,7 +29,6 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
 
   const [atividades, setAtividades] = useState<Array<{ descricao: string; local: string; status: string; percentualConcluido: string }>>([]);
   const [maoDeObra, setMaoDeObra] = useState<Array<{ equipeId: number; operariosPresentes: number[] }>>([]);
-  const [equipamentos, setEquipamentos] = useState<Array<{ nome: string; quantidade: string; horasUso: string }>>([]);
   const [ocorrencias, setOcorrencias] = useState<Array<{ tipo: string; descricao: string; criticidade: string }>>([]);
   // Fotos coletadas antes de criar o diário (enviadas após a criação)
   const [fotos, setFotos] = useState<Array<{ base64: string; nome: string; mimeType: string; descricao: string }>>([]);
@@ -37,7 +36,6 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
 
   const uploadMutation = trpc.midia.upload.useMutation();
   const addAtividade = trpc.atividades.create.useMutation();
-  const addEquipamento = trpc.equipamentos.create.useMutation();
   const addOcorrencia = trpc.ocorrencias.create.useMutation();
 
   const createMutation = trpc.diarios.create.useMutation({
@@ -54,15 +52,6 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
               local: a.local || undefined,
               status: (a.status || undefined) as any,
               percentualConcluido: a.percentualConcluido ? parseInt(a.percentualConcluido) : undefined,
-            });
-          }
-          // Equipamentos
-          for (const eq of equipamentos) {
-            if (!eq.nome?.trim()) continue;
-            await addEquipamento.mutateAsync({
-              diarioId: novoId, nome: eq.nome.trim(),
-              quantidade: parseInt(eq.quantidade) || 1,
-              horasUso: eq.horasUso || undefined,
             });
           }
           // Ocorrências
@@ -83,7 +72,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
             });
           }
         } catch {
-          toast.error("Diário criado, mas houve erro ao salvar alguns itens (atividades/equipamentos/fotos).");
+          toast.error("Diário criado, mas houve erro ao salvar alguns itens (atividades/ocorrências/fotos).");
         }
         setEnviando(false);
       }
@@ -98,7 +87,6 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
       });
       setAtividades([]);
       setMaoDeObra([]);
-      setEquipamentos([]);
       setOcorrencias([]);
       setFotos([]);
       onSuccess?.();
@@ -322,78 +310,6 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
             <MaoDeObraSelector value={maoDeObra} onChange={setMaoDeObra} />
           </div>
 
-          {/* Equipamentos */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Equipamentos</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setEquipamentos([...equipamentos, { nome: "", quantidade: "", horasUso: "" }])}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar
-              </Button>
-            </div>
-            {equipamentos.map((equip, idx) => (
-              <Card key={idx}>
-                <CardContent className="pt-6 space-y-3">
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setEquipamentos(equipamentos.filter((_, i) => i !== idx))}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label>Nome</Label>
-                      <Input
-                        value={equip.nome}
-                        onChange={(e) => {
-                          const newEquip = [...equipamentos];
-                          newEquip[idx].nome = e.target.value;
-                          setEquipamentos(newEquip);
-                        }}
-                        placeholder="Ex: Escavadeira"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Quantidade</Label>
-                      <Input
-                        type="number"
-                        value={equip.quantidade}
-                        onChange={(e) => {
-                          const newEquip = [...equipamentos];
-                          newEquip[idx].quantidade = e.target.value;
-                          setEquipamentos(newEquip);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Horas de Uso</Label>
-                      <Input
-                        type="number"
-                        step="0.5"
-                        value={equip.horasUso}
-                        onChange={(e) => {
-                          const newEquip = [...equipamentos];
-                          newEquip[idx].horasUso = e.target.value;
-                          setEquipamentos(newEquip);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
 
           {/* Ocorrências */}
           <div className="space-y-4">

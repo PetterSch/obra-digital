@@ -32,10 +32,6 @@ export default function DiarioObra() {
     { enabled: !!diarioId }
   );
 
-  const { data: equipamentos = [] } = trpc.equipamentos.listByDiario.useQuery(
-    { diarioId: diarioId! },
-    { enabled: !!diarioId }
-  );
 
   const { data: ocorrencias = [] } = trpc.ocorrencias.listByDiario.useQuery(
     { diarioId: diarioId! },
@@ -121,10 +117,9 @@ export default function DiarioObra() {
 
         {/* Tabs */}
         <Tabs defaultValue="atividades" className="w-full">
-          <TabsList className="grid w-full grid-cols-5">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="atividades">Atividades ({atividades.length})</TabsTrigger>
             <TabsTrigger value="mao-obra">Mão de Obra ({maoDeObra.length})</TabsTrigger>
-            <TabsTrigger value="equipamentos">Equipamentos ({equipamentos.length})</TabsTrigger>
             <TabsTrigger value="ocorrencias">Ocorrências ({ocorrencias.length})</TabsTrigger>
             <TabsTrigger value="fotos">Fotos</TabsTrigger>
           </TabsList>
@@ -193,39 +188,6 @@ export default function DiarioObra() {
                           {mao.horasTrabalhadas && <p>Horas: {mao.horasTrabalhadas}</p>}
                           {mao.faltas && <p className="text-red-600">Faltas: {mao.faltas}</p>}
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="equipamentos" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Equipamentos</h3>
-              <Button size="sm" className="gap-2">
-                <Plus className="w-4 h-4" />
-                Adicionar
-              </Button>
-            </div>
-            {equipamentos.length === 0 ? (
-              <Card>
-                <CardContent className="pt-6 text-center py-8">
-                  <p className="text-muted-foreground">Nenhum equipamento registrado</p>
-                </CardContent>
-              </Card>
-            ) : (
-              <div className="space-y-2">
-                {equipamentos.map(equip => (
-                  <Card key={equip.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{equip.nome}</p>
-                          <p className="text-sm text-muted-foreground">Quantidade: {equip.quantidade}</p>
-                        </div>
-                        {equip.horasUso && <p className="text-sm">Horas: {equip.horasUso}</p>}
                       </div>
                     </CardContent>
                   </Card>

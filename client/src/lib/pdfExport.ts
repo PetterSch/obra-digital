@@ -428,7 +428,7 @@ export interface DiarioPDFData {
     presentes: number;
     funcoes?: string;
   }>;
-  equipamentos: Array<{
+  equipamentos?: Array<{
     nome: string;
     quantidade: number;
     horasUso?: number;
@@ -476,16 +476,6 @@ export function exportDiarioPDF(data: DiarioPDFData): void {
             <td style="text-align:center;font-weight:700">${m.presentes}</td>
           </tr>`).join("")
         + `<tr><td colspan="3" style="text-align:right;font-weight:700">Total de presentes</td><td style="text-align:center;font-weight:800;color:#B45309">${totalPresentes}</td></tr>`;
-
-  const equipamentosHTML =
-    data.equipamentos.length === 0
-      ? "<tr><td colspan='3' style='color:#666;font-style:italic;padding:8px'>Nenhum equipamento registrado</td></tr>"
-      : data.equipamentos.map((e) => `
-          <tr>
-            <td>${e.nome}</td>
-            <td style="text-align:center">${e.quantidade}</td>
-            <td style="text-align:center">${e.horasUso ?? "—"}</td>
-          </tr>`).join("");
 
   const ocorrenciasHTML =
     data.ocorrencias.length === 0
@@ -582,16 +572,6 @@ ${cover}
         <tr><th>Equipe</th><th>Empresa</th><th>Funções</th><th style="text-align:center">Presentes</th></tr>
       </thead>
       <tbody>${maoDeObraHTML}</tbody>
-    </table>
-  </div>
-
-  <div class="section">
-    <div class="section-title">Equipamentos</div>
-    <table>
-      <thead>
-        <tr><th>Equipamento</th><th style="text-align:center">Qtd.</th><th style="text-align:center">Horas de Uso</th></tr>
-      </thead>
-      <tbody>${equipamentosHTML}</tbody>
     </table>
   </div>
 

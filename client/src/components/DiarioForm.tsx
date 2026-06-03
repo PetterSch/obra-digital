@@ -165,7 +165,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
           Novo Diário
         </Button>
       </DialogTrigger>
-      <DialogContent className="!max-w-[1500px] w-[98vw] max-h-[96vh] overflow-y-auto">
+      <DialogContent className="!max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Novo Diário de Obra</DialogTitle>
           <DialogDescription>Preencha as informações do diário</DialogDescription>
@@ -175,12 +175,12 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
           {/* Informações Básicas */}
           <Card><CardContent className="pt-5 space-y-4">
             <h3 className="font-semibold flex items-center gap-2"><CloudSun className="w-4 h-4 text-primary" /> Informações Básicas</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="space-y-1.5">
+            <div className="grid grid-cols-2 md:grid-cols-12 gap-3">
+              <div className="space-y-1.5 md:col-span-4">
                 <Label htmlFor="data">Data *</Label>
                 <Input id="data" type="date" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} required />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 md:col-span-4">
                 <Label htmlFor="clima">Clima</Label>
                 <select id="clima" value={formData.clima} onChange={(e) => setFormData({ ...formData, clima: e.target.value })}
                   className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
@@ -191,11 +191,11 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
                   <option value="ventania">Ventania</option>
                 </select>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="temperatura">Temperatura (°C)</Label>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="temperatura">Temp. (°C)</Label>
                 <Input id="temperatura" type="number" step="0.1" value={formData.temperatura} onChange={(e) => setFormData({ ...formData, temperatura: e.target.value })} placeholder="25.5" />
               </div>
-              <div className="space-y-1.5">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="umidade">Umidade (%)</Label>
                 <Input id="umidade" type="number" min="0" max="100" value={formData.umidade} onChange={(e) => setFormData({ ...formData, umidade: e.target.value })} placeholder="60" />
               </div>
@@ -231,12 +231,12 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
                     onChange={(e) => { const n = [...atividades]; n[idx].descricao = e.target.value; setAtividades(n); }}
                     placeholder="Descrição da atividade" />
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div className="space-y-1.5">
+                <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
+                  <div className="space-y-1.5 sm:col-span-6">
                     <Label className="text-xs">Local</Label>
                     <Input value={ativ.local} onChange={(e) => { const n = [...atividades]; n[idx].local = e.target.value; setAtividades(n); }} placeholder="Ex: Térreo" />
                   </div>
-                  <div className="space-y-1.5">
+                  <div className="space-y-1.5 sm:col-span-4">
                     <Label className="text-xs">Status</Label>
                     <select value={ativ.status} onChange={(e) => { const n = [...atividades]; n[idx].status = e.target.value; setAtividades(n); }}
                       className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
@@ -245,8 +245,8 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
                       <option value="concluida">Concluída</option>
                     </select>
                   </div>
-                  <div className="space-y-1.5">
-                    <Label className="text-xs">% Concluído</Label>
+                  <div className="space-y-1.5 sm:col-span-2">
+                    <Label className="text-xs">% Concl.</Label>
                     <Input type="number" min="0" max="100" value={ativ.percentualConcluido} onChange={(e) => { const n = [...atividades]; n[idx].percentualConcluido = e.target.value; setAtividades(n); }} placeholder="0" />
                   </div>
                 </div>

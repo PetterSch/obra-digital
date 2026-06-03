@@ -16,6 +16,7 @@ import {
   Wallet, Ruler, ListChecks, Percent,
 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 import { exportOrcamentoPDF } from "@/lib/pdfExport";
 import { exportOrcamentoToExcel } from "@/lib/exportUtils";
 

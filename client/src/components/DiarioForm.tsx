@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Plus, X, ImagePlus } from "lucide-react";
+import { Plus, X, ImagePlus, CloudSun, ClipboardList, Users, AlertTriangle } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { MaoDeObraSelector } from "./MaoDeObraSelector";
@@ -165,259 +165,156 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
           Novo Diário
         </Button>
       </DialogTrigger>
-      <DialogContent className="!max-w-6xl w-[95vw] sm:w-[92vw] max-h-[92vh] overflow-y-auto">
+      <DialogContent className="!max-w-4xl w-[95vw] max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Novo Diário de Obra</DialogTitle>
           <DialogDescription>Preencha as informações do diário</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5">
           {/* Informações Básicas */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Informações Básicas</h3>
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-2">
+          <Card><CardContent className="pt-5 space-y-4">
+            <h3 className="font-semibold flex items-center gap-2"><CloudSun className="w-4 h-4 text-primary" /> Informações Básicas</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="space-y-1.5">
                 <Label htmlFor="data">Data *</Label>
-                <Input
-                  id="data"
-                  type="date"
-                  value={formData.data}
-                  onChange={(e) => setFormData({ ...formData, data: e.target.value })}
-                  required
-                />
+                <Input id="data" type="date" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} required />
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="clima">Clima</Label>
-                <select
-                id="clima"
-                value={formData.clima}
-                onChange={(e) => setFormData({ ...formData, clima: e.target.value })}
-                className="w-full px-3 py-2 border border-input rounded-md bg-background"
-              >
-                <option value="ensolarado">Ensolarado</option>
-                <option value="nublado">Nublado</option>
-                <option value="chuvoso">Chuvoso</option>
-                <option value="tempestade">Tempestade</option>
-                <option value="ventania">Ventania</option>
-              </select>
+                <select id="clima" value={formData.clima} onChange={(e) => setFormData({ ...formData, clima: e.target.value })}
+                  className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
+                  <option value="ensolarado">Ensolarado</option>
+                  <option value="nublado">Nublado</option>
+                  <option value="chuvoso">Chuvoso</option>
+                  <option value="tempestade">Tempestade</option>
+                  <option value="ventania">Ventania</option>
+                </select>
               </div>
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="temperatura">Temperatura (°C)</Label>
-                <Input
-                  id="temperatura"
-                  type="number"
-                  step="0.1"
-                  value={formData.temperatura}
-                  onChange={(e) => setFormData({ ...formData, temperatura: e.target.value })}
-                  placeholder="25.5"
-                />
+                <Input id="temperatura" type="number" step="0.1" value={formData.temperatura} onChange={(e) => setFormData({ ...formData, temperatura: e.target.value })} placeholder="25.5" />
               </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="umidade">Umidade (%)</Label>
-                <Input
-                  id="umidade"
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={formData.umidade}
-                  onChange={(e) => setFormData({ ...formData, umidade: e.target.value })}
-                  placeholder="60"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="observacoes">Observações Gerais</Label>
-                <Textarea
-                  id="observacoes"
-                  value={formData.observacoesGerais}
-                  onChange={(e) => setFormData({ ...formData, observacoesGerais: e.target.value })}
-                  placeholder="Observações gerais do dia..."
-                  className="min-h-20"
-                />
+                <Input id="umidade" type="number" min="0" max="100" value={formData.umidade} onChange={(e) => setFormData({ ...formData, umidade: e.target.value })} placeholder="60" />
               </div>
             </div>
-          </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="observacoes">Observações Gerais</Label>
+              <Textarea id="observacoes" value={formData.observacoesGerais} onChange={(e) => setFormData({ ...formData, observacoesGerais: e.target.value })} placeholder="Observações gerais do dia..." className="min-h-16" />
+            </div>
+          </CardContent></Card>
 
           {/* Atividades */}
-          <div className="space-y-4">
+          <Card><CardContent className="pt-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Atividades Executadas</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setAtividades([...atividades, { descricao: "", local: "", status: "em_execução", percentualConcluido: "0" }])}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar
+              <h3 className="font-semibold flex items-center gap-2"><ClipboardList className="w-4 h-4 text-primary" /> Atividades Executadas</h3>
+              <Button type="button" variant="outline" size="sm" className="gap-1.5"
+                onClick={() => setAtividades([...atividades, { descricao: "", local: "", status: "em_andamento", percentualConcluido: "0" }])}>
+                <Plus className="w-4 h-4" /> Adicionar
               </Button>
             </div>
-            {atividades.map((ativ, idx) => (
-              <Card key={idx}>
-                <CardContent className="pt-6 space-y-3">
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setAtividades(atividades.filter((_, i) => i !== idx))}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+            {atividades.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">Nenhuma atividade adicionada.</p>
+            ) : atividades.map((ativ, idx) => (
+              <div key={idx} className="rounded-xl border bg-muted/20 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Atividade {idx + 1}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setAtividades(atividades.filter((_, i) => i !== idx))}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Descrição</Label>
+                  <Textarea value={ativ.descricao} className="min-h-16"
+                    onChange={(e) => { const n = [...atividades]; n[idx].descricao = e.target.value; setAtividades(n); }}
+                    placeholder="Descrição da atividade" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Local</Label>
+                    <Input value={ativ.local} onChange={(e) => { const n = [...atividades]; n[idx].local = e.target.value; setAtividades(n); }} placeholder="Ex: Térreo" />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Descrição</Label>
-                    <Textarea
-                      value={ativ.descricao}
-                      onChange={(e) => {
-                        const newAtiv = [...atividades];
-                        newAtiv[idx].descricao = e.target.value;
-                        setAtividades(newAtiv);
-                      }}
-                      placeholder="Descrição da atividade"
-                    />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Status</Label>
+                    <select value={ativ.status} onChange={(e) => { const n = [...atividades]; n[idx].status = e.target.value; setAtividades(n); }}
+                      className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
+                      <option value="nao_iniciada">Não iniciada</option>
+                      <option value="em_andamento">Em andamento</option>
+                      <option value="concluida">Concluída</option>
+                    </select>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
-                    <div className="space-y-2">
-                      <Label>Local</Label>
-                      <Input
-                        value={ativ.local}
-                        onChange={(e) => {
-                          const newAtiv = [...atividades];
-                          newAtiv[idx].local = e.target.value;
-                          setAtividades(newAtiv);
-                        }}
-                        placeholder="Local da atividade"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Status</Label>
-                      <select
-                        value={ativ.status}
-                        onChange={(e) => {
-                          const newAtiv = [...atividades];
-                          newAtiv[idx].status = e.target.value;
-                          setAtividades(newAtiv);
-                        }}
-                        className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                      >
-                        <option value="em_execução">Em Execução</option>
-                        <option value="concluída">Concluída</option>
-                        <option value="pausada">Pausada</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>% Concluído</Label>
-                      <Input
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={ativ.percentualConcluido}
-                        onChange={(e) => {
-                          const newAtiv = [...atividades];
-                          newAtiv[idx].percentualConcluido = e.target.value;
-                          setAtividades(newAtiv);
-                        }}
-                        placeholder="0"
-                      />
-                    </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">% Concluído</Label>
+                    <Input type="number" min="0" max="100" value={ativ.percentualConcluido} onChange={(e) => { const n = [...atividades]; n[idx].percentualConcluido = e.target.value; setAtividades(n); }} placeholder="0" />
                   </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
-          </div>
+          </CardContent></Card>
 
           {/* Mão de Obra */}
-          <div className="space-y-4">
-            <h3 className="font-semibold">Mão de Obra - Selecione Equipes e Operários</h3>
+          <Card><CardContent className="pt-5 space-y-3">
+            <h3 className="font-semibold flex items-center gap-2"><Users className="w-4 h-4 text-primary" /> Mão de Obra</h3>
             <MaoDeObraSelector value={maoDeObra} onChange={setMaoDeObra} />
-          </div>
-
+          </CardContent></Card>
 
           {/* Ocorrências */}
-          <div className="space-y-4">
+          <Card><CardContent className="pt-5 space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-semibold">Ocorrências</h3>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setOcorrencias([...ocorrencias, { tipo: "outro", descricao: "", criticidade: "baixa" }])}
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                Adicionar
+              <h3 className="font-semibold flex items-center gap-2"><AlertTriangle className="w-4 h-4 text-primary" /> Ocorrências</h3>
+              <Button type="button" variant="outline" size="sm" className="gap-1.5"
+                onClick={() => setOcorrencias([...ocorrencias, { tipo: "outro", descricao: "", criticidade: "baixa" }])}>
+                <Plus className="w-4 h-4" /> Adicionar
               </Button>
             </div>
-            {ocorrencias.map((ocor, idx) => (
-              <Card key={idx}>
-                <CardContent className="pt-6 space-y-3">
-                  <div className="flex justify-end">
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setOcorrencias(ocorrencias.filter((_, i) => i !== idx))}
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
+            {ocorrencias.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-2">Nenhuma ocorrência registrada.</p>
+            ) : ocorrencias.map((ocor, idx) => (
+              <div key={idx} className="rounded-xl border bg-muted/20 p-3 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ocorrência {idx + 1}</span>
+                  <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setOcorrencias(ocorrencias.filter((_, i) => i !== idx))}>
+                    <X className="w-4 h-4" />
+                  </Button>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Descrição</Label>
+                  <Textarea value={ocor.descricao} className="min-h-16"
+                    onChange={(e) => { const n = [...ocorrencias]; n[idx].descricao = e.target.value; setOcorrencias(n); }}
+                    placeholder="Descrição da ocorrência" />
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Tipo</Label>
+                    <select value={ocor.tipo} onChange={(e) => { const n = [...ocorrencias]; n[idx].tipo = e.target.value; setOcorrencias(n); }}
+                      className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
+                      <option value="acidente">Acidente</option>
+                      <option value="atraso_material">Atraso de material</option>
+                      <option value="chuva">Chuva</option>
+                      <option value="problema_projeto">Problema de projeto</option>
+                      <option value="outro">Outro</option>
+                    </select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Descrição</Label>
-                    <Textarea
-                      value={ocor.descricao}
-                      onChange={(e) => {
-                        const newOcor = [...ocorrencias];
-                        newOcor[idx].descricao = e.target.value;
-                        setOcorrencias(newOcor);
-                      }}
-                      placeholder="Descrição da ocorrência"
-                    />
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Criticidade</Label>
+                    <select value={ocor.criticidade} onChange={(e) => { const n = [...ocorrencias]; n[idx].criticidade = e.target.value; setOcorrencias(n); }}
+                      className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
+                      <option value="baixa">Baixa</option>
+                      <option value="media">Média</option>
+                      <option value="alta">Alta</option>
+                      <option value="critica">Crítica</option>
+                    </select>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-2">
-                      <Label>Tipo</Label>
-                      <select
-                        value={ocor.tipo}
-                        onChange={(e) => {
-                          const newOcor = [...ocorrencias];
-                          newOcor[idx].tipo = e.target.value;
-                          setOcorrencias(newOcor);
-                        }}
-                        className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                      >
-                        <option value="acidente">Acidente</option>
-                        <option value="atraso">Atraso</option>
-                        <option value="defeito">Defeito</option>
-                        <option value="outro">Outro</option>
-                      </select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Criticidade</Label>
-                      <select
-                        value={ocor.criticidade}
-                        onChange={(e) => {
-                          const newOcor = [...ocorrencias];
-                          newOcor[idx].criticidade = e.target.value;
-                          setOcorrencias(newOcor);
-                        }}
-                        className="w-full px-3 py-2 border border-input rounded-md bg-background"
-                      >
-                        <option value="baixa">Baixa</option>
-                        <option value="média">Média</option>
-                        <option value="alta">Alta</option>
-                        <option value="crítica">Crítica</option>
-                      </select>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
+                </div>
+              </div>
             ))}
-          </div>
+          </CardContent></Card>
 
           {/* Fotos */}
-          <div className="space-y-3">
-            <h3 className="font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4" /> Fotos</h3>
+          <Card><CardContent className="pt-5 space-y-3">
+            <h3 className="font-semibold flex items-center gap-2"><ImagePlus className="w-4 h-4 text-primary" /> Fotos</h3>
             <label className="border-2 border-dashed rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:bg-muted/40 transition-colors text-center">
               <ImagePlus className="w-7 h-7 text-muted-foreground/50 mb-1" />
               <span className="text-sm font-medium">Clique para adicionar fotos</span>
@@ -429,29 +326,21 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
                 {fotos.map((f, i) => (
                   <div key={i} className="relative group border rounded-lg overflow-hidden">
                     <img src={f.base64} alt={f.nome} className="w-full h-24 object-cover" />
-                    <button
-                      type="button"
-                      className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => setFotos(prev => prev.filter((_, idx) => idx !== i))}
-                    >
+                    <button type="button" className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => setFotos(prev => prev.filter((_, idx) => idx !== i))}>
                       <X className="w-3 h-3" />
                     </button>
-                    <Input
-                      placeholder="Descrição"
-                      value={f.descricao}
+                    <Input placeholder="Descrição" value={f.descricao}
                       onChange={e => setFotos(prev => prev.map((x, idx) => idx === i ? { ...x, descricao: e.target.value } : x))}
-                      className="text-xs border-0 rounded-none h-7"
-                    />
+                      className="text-xs border-0 rounded-none h-7" />
                   </div>
                 ))}
               </div>
             )}
-          </div>
+          </CardContent></Card>
 
-          <div className="flex gap-3 justify-end">
-            <Button type="button" variant="outline" onClick={() => setOpen(false)}>
-              Cancelar
-            </Button>
+          <div className="flex gap-3 justify-end sticky bottom-0 bg-background py-3 -mb-2 border-t">
+            <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button type="submit" disabled={createMutation.isPending || enviando}>
               {createMutation.isPending || enviando ? "Criando..." : "Criar Diário"}
             </Button>

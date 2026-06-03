@@ -165,13 +165,13 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
           Novo Diário
         </Button>
       </DialogTrigger>
-      <DialogContent className="!max-w-[860px] w-[95vw] max-h-[92vh] overflow-y-auto">
+      <DialogContent className="!max-w-[860px] w-[95vw] max-h-[92vh] overflow-y-auto overflow-x-hidden">
         <DialogHeader>
           <DialogTitle>Criar Novo Diário de Obra</DialogTitle>
           <DialogDescription>Preencha as informações do diário</DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-5 min-w-0">
           {/* Informações Básicas */}
           <Card><CardContent className="pt-5 space-y-4">
             <h3 className="font-semibold flex items-center gap-2"><CloudSun className="w-4 h-4 text-primary" /> Informações Básicas</h3>

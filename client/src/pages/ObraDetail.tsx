@@ -11,9 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2, Building2 } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2, Building2, FileText, BarChart3, CalendarRange } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
+import { ActionPanel } from "@/components/ActionPanel";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { DiarioForm } from "@/components/DiarioForm";
@@ -187,6 +188,7 @@ export default function ObraDetail() {
         </Card>
 
         {/* Tabs */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
         <Tabs defaultValue="diarios" className="w-full">
           <TabsList className="flex w-full overflow-x-auto">
             <TabsTrigger value="diarios" className="flex-1">Diários ({diarios.length})</TabsTrigger>
@@ -341,6 +343,13 @@ export default function ObraDetail() {
             </Card>
           </TabsContent>
         </Tabs>
+        <ActionPanel title="Ações & Relatórios" actions={[
+          { icon: FileText, label: "Resumos periódicos", description: "Semanal, quinzenal, mensal", onClick: () => navigate(`/obras/${obraId}/resumos`) },
+          { icon: BarChart3, label: "Relatório completo", description: "Diários do período", onClick: () => navigate(`/relatorios/${obraId}`) },
+          { icon: CalendarRange, label: "Cronograma", description: "Linha do tempo da obra", onClick: () => navigate(`/obras/${obraId}/cronograma`) },
+          { icon: Edit, label: "Editar obra", description: "Dados cadastrais", onClick: () => navigate(`/obras/${obraId}/edit`) },
+        ]} />
+        </div>
       </div>
 
       <AlertDialog open={!!diarioToDelete} onOpenChange={(o) => { if (!o) setDiarioToDelete(null); }}>

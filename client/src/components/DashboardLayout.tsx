@@ -29,16 +29,29 @@ import { trpc } from "@/lib/trpc";
 import { setPDFConfig } from "@/lib/pdfExport";
 import { Button } from "./ui/button";
 
-const menuItems = [
-  { icon: LayoutDashboard, label: "Dashboard",              path: "/" },
-  { icon: Building2,       label: "Obras",                  path: "/obras" },
-  { icon: Calculator,      label: "Orçamentos",             path: "/orcamentos" },
-  { icon: ClipboardList,   label: "Planejamento",           path: "/planejamento" },
-  { icon: FileText,        label: "Resumos",                path: "/resumos" },
-  { icon: Zap,             label: "Sugestões LLM",          path: "/sugestoes-llm" },
-  { icon: UserCog,         label: "Usuários",               path: "/admin", adminOnly: true },
-  { icon: Settings,        label: "Minha Empresa",          path: "/configuracoes/empresa", adminOnly: true },
+type MenuItem = { icon: any; label: string; path: string; adminOnly?: boolean; count?: "obras" | "orcamentos" | "planejamentos" };
+type MenuGroup = { label: string; items: MenuItem[] };
+
+const menuGroups: MenuGroup[] = [
+  { label: "Principal", items: [
+    { icon: LayoutDashboard, label: "Dashboard", path: "/" },
+    { icon: Building2,       label: "Obras",     path: "/obras", count: "obras" },
+  ]},
+  { label: "Gestão", items: [
+    { icon: Calculator,    label: "Orçamentos",   path: "/orcamentos", count: "orcamentos" },
+    { icon: ClipboardList, label: "Planejamento", path: "/planejamento", count: "planejamentos" },
+    { icon: FileText,      label: "Resumos",      path: "/resumos" },
+  ]},
+  { label: "Inteligência", items: [
+    { icon: Zap, label: "Sugestões LLM", path: "/sugestoes-llm" },
+  ]},
+  { label: "Administração", items: [
+    { icon: UserCog,  label: "Usuários",      path: "/admin", adminOnly: true },
+    { icon: Settings, label: "Minha Empresa", path: "/configuracoes/empresa", adminOnly: true },
+  ]},
 ];
+
+const allMenuItems: MenuItem[] = menuGroups.flatMap(g => g.items);
 
 const SIDEBAR_WIDTH_KEY = "sidebar-width";
 const DEFAULT_WIDTH = 280;
@@ -128,9 +141,19 @@ function DashboardLayoutContent({
   const isCollapsed = state === "collapsed";
   const [isResizing, setIsResizing] = useState(false);
   const sidebarRef = useRef<HTMLDivElement>(null);
-  const visibleMenuItems = menuItems.filter(item => !item.adminOnly || user?.role === "admin");
-  const activeMenuItem = visibleMenuItems.find(item => item.path === location);
+  const isAdmin = user?.role === "admin";
+  const activeMenuItem = allMenuItems.find(item => item.path === location);
   const isMobile = useIsMobile();
+
+  // Contadores para os badges do menu
+  const { data: obrasC = [] } = trpc.obras.list.useQuery(undefined, { enabled: !!user });
+  const { data: orcsC = [] } = trpc.orcamentos.list.useQuery(undefined, { enabled: !!user });
+  const { data: plansC = [] } = trpc.planejamento.list.useQuery(undefined, { enabled: !!user });
+  const counts: Record<string, number> = {
+    obras: (obrasC as any[]).length,
+    orcamentos: (orcsC as any[]).length,
+    planejamentos: (plansC as any[]).length,
+  };
 
   useEffect(() => {
     if (isCollapsed) {
@@ -196,26 +219,43 @@ function DashboardLayoutContent({
           </SidebarHeader>
 
           <SidebarContent className="gap-0">
-            <SidebarMenu className="px-2 py-1">
-              {visibleMenuItems.map(item => {
-                const isActive = location === item.path;
-                return (
-                  <SidebarMenuItem key={item.path}>
-                    <SidebarMenuButton
-                      isActive={isActive}
-                      onClick={() => setLocation(item.path)}
-                      tooltip={item.label}
-                      className={`h-10 transition-all font-normal`}
-                    >
-                      <item.icon
-                        className={`h-4 w-4 ${isActive ? "text-primary" : ""}`}
-                      />
-                      <span>{item.label}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                );
-              })}
-            </SidebarMenu>
+            {menuGroups.map(group => {
+              const items = group.items.filter(item => !item.adminOnly || isAdmin);
+              if (items.length === 0) return null;
+              return (
+                <div key={group.label} className="mt-2 first:mt-0">
+                  {!isCollapsed && (
+                    <div className="px-4 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                      {group.label}
+                    </div>
+                  )}
+                  <SidebarMenu className="px-2 py-0.5">
+                    {items.map(item => {
+                      const isActive = location === item.path;
+                      const count = item.count ? counts[item.count] : undefined;
+                      return (
+                        <SidebarMenuItem key={item.path}>
+                          <SidebarMenuButton
+                            isActive={isActive}
+                            onClick={() => setLocation(item.path)}
+                            tooltip={item.label}
+                            className={`h-10 transition-all font-normal`}
+                          >
+                            <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
+                            <span className="flex-1">{item.label}</span>
+                            {!isCollapsed && count != null && count > 0 && (
+                              <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
+                                {count}
+                              </span>
+                            )}
+                          </SidebarMenuButton>
+                        </SidebarMenuItem>
+                      );
+                    })}
+                  </SidebarMenu>
+                </div>
+              );
+            })}
           </SidebarContent>
 
           <SidebarFooter className="p-3">

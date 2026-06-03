@@ -260,6 +260,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
             <MaoDeObraSelector value={maoDeObra} onChange={setMaoDeObra} />
           </CardContent></Card>
 
+          <div className="grid lg:grid-cols-2 gap-5 items-start">
           {/* Ocorrências */}
           <Card><CardContent className="pt-5 space-y-3">
             <div className="flex items-center justify-between">
@@ -322,7 +323,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
               <input type="file" accept="image/*" multiple className="hidden" onChange={handleAddFotos} />
             </label>
             {fotos.length > 0 && (
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {fotos.map((f, i) => (
                   <div key={i} className="relative group border rounded-lg overflow-hidden">
                     <img src={f.base64} alt={f.nome} className="w-full h-24 object-cover" />
@@ -338,6 +339,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
               </div>
             )}
           </CardContent></Card>
+          </div>
 
           <div className="flex gap-3 justify-end sticky bottom-0 bg-background py-3 -mb-2 border-t">
             <Button type="button" variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>

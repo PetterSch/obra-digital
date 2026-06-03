@@ -5,8 +5,9 @@ import { Button } from "@/components/ui/button";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { AlertCircle, CheckCircle2, Clock, Plus, Building2 } from "lucide-react";
+import { AlertCircle, CheckCircle2, Clock, Plus, Building2, LayoutDashboard } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -34,17 +35,12 @@ export default function Dashboard() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Bem-vindo, {user?.name}! Aqui está um resumo das suas obras.</p>
-          </div>
-          <Button onClick={() => navigate("/obras")} size="lg" className="gap-2">
-            <Plus className="w-4 h-4" />
-            Nova Obra
-          </Button>
-        </div>
+        <PageHeader
+          title="Dashboard"
+          description={`Bem-vindo, ${user?.name}! Aqui está um resumo das suas obras.`}
+          icon={LayoutDashboard}
+          actions={<Button onClick={() => navigate("/obras")} size="lg" className="gap-2"><Plus className="w-4 h-4" /> Nova Obra</Button>}
+        />
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

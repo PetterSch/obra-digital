@@ -1,6 +1,8 @@
 import DashboardLayout from "@/components/DashboardLayout";
 import { funcaoLabel } from "@/lib/funcoes";
 import { fmtHoraBR, dataISO, fmtDataBR } from "@/lib/data";
+import { PageHeader } from "@/components/PageHeader";
+import { ClipboardList } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -157,16 +159,12 @@ export default function DiarioView() {
   return (
     <DashboardLayout>
       <div className="space-y-6 max-w-5xl">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(`/obras/${obraId}`)}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Diário de Obra</h1>
-            <p className="text-muted-foreground mt-1 capitalize">{dataFormatada}</p>
-          </div>
-          <div className="flex flex-wrap gap-2">
+        <PageHeader
+          breadcrumb={[{ label: "Obras", href: "/obras" }, { label: obra?.nome || "Obra", href: `/obras/${obraId}` }, { label: `Diário ${fmtDataBR(diario?.data)}` }]}
+          title="Diário de Obra"
+          description={dataFormatada}
+          icon={ClipboardList}
+          actions={<>
             <Button variant="outline" className="gap-1" disabled={!diarioAnterior}
               title={diarioAnterior ? `Diário de ${fmtDataBR(diarioAnterior.data)}` : "Não há diário anterior"}
               onClick={() => diarioAnterior && navigate(`/obras/${obraId}/diario/${diarioAnterior.id}`)}>
@@ -198,8 +196,8 @@ export default function DiarioView() {
                 </Button>
               </>
             )}
-          </div>
-        </div>
+          </>}
+        />
 
         {/* Horário + Clima */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

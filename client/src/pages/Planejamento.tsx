@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { ClipboardList, Plus, Trash2, ArrowLeft, FileDown, FileSpreadsheet, CalendarRange } from "lucide-react";
 import * as XLSX from "xlsx";
 import { getPDFConfig } from "@/lib/pdfExport";
+import { PageHeader } from "@/components/PageHeader";
 
 const brl = (n: number) => (n || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 const fmtData = (s: string) => { try { return new Date(s + "T12:00:00").toLocaleDateString("pt-BR"); } catch { return s; } };
@@ -638,13 +639,12 @@ export default function Planejamento() {
           <Editor id={sel} onBack={() => { setSel(null); refetch(); }} />
         ) : (
           <>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2"><ClipboardList className="w-6 h-6 text-primary" /> Planejamento</h1>
-                <p className="text-muted-foreground mt-1">Planeje a obra a partir de um orçamento pronto ou do zero</p>
-              </div>
-              <Button className="gap-2 self-start sm:self-auto" onClick={() => setModal(true)}><Plus className="w-4 h-4" /> Novo Planejamento</Button>
-            </div>
+            <PageHeader
+              title="Planejamento"
+              description="Planeje a obra a partir de um orçamento pronto ou do zero"
+              icon={ClipboardList}
+              actions={<Button className="gap-2" onClick={() => setModal(true)}><Plus className="w-4 h-4" /> Novo Planejamento</Button>}
+            />
             {isLoading ? (
               <div className="flex justify-center py-12"><Spinner /></div>
             ) : (lista as any[]).length === 0 ? (

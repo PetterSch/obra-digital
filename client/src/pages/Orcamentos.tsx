@@ -510,17 +510,12 @@ export default function Orcamentos() {
           <OrcamentoEditor orcamentoId={selecionado} readOnly={modo === "ver"} onBack={() => { setSelecionado(null); refetch(); }} />
         ) : (
           <>
-            <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-              <div className="flex-1">
-                <h1 className="text-2xl font-bold tracking-tight flex items-center gap-2">
-                  <FileText className="w-6 h-6 text-primary" /> Orçamentos
-                </h1>
-                <p className="text-muted-foreground mt-1">Orçamentos para clientes atuais e futuros</p>
-              </div>
-              <Button className="gap-2 self-start sm:self-auto" onClick={() => setModalOpen(true)}>
-                <Plus className="w-4 h-4" /> Novo Orçamento
-              </Button>
-            </div>
+            <PageHeader
+              title="Orçamentos"
+              description="Orçamentos para clientes atuais e futuros"
+              icon={Calculator}
+              actions={<Button className="gap-2" onClick={() => setModalOpen(true)}><Plus className="w-4 h-4" /> Novo Orçamento</Button>}
+            />
 
             {orcamentos.length > 3 && (
               <Input placeholder="Buscar por orçamento, cliente ou obra..." value={search}

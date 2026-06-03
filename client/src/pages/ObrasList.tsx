@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { useLocation } from "wouter";
-import { Plus, Search, MapPin, Calendar } from "lucide-react";
+import { Plus, Search, MapPin, Calendar, Building2 } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -90,12 +91,7 @@ export default function ObrasList() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Obras</h1>
-            <p className="text-muted-foreground mt-1">Gerencie todas as suas obras</p>
-          </div>
+        <PageHeader title="Obras" description="Gerencie todas as suas obras" icon={Building2} actions={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="lg" className="gap-2">
@@ -218,7 +214,7 @@ export default function ObrasList() {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
+        } />
 
         {/* Search */}
         <div className="flex gap-2">

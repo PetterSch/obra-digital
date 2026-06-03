@@ -11,8 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2, Building2 } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
+import { PageHeader } from "@/components/PageHeader";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { DiarioForm } from "@/components/DiarioForm";
@@ -91,42 +92,19 @@ export default function ObraDetail() {
   return (
     <DashboardLayout>
       <div className="space-y-6">
-        {/* Header */}
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/obras")}>
-            <ArrowLeft className="w-4 h-4" />
-          </Button>
-          <div className="flex-1">
-            <h1 className="text-3xl font-bold tracking-tight">{obra.nome}</h1>
-            <p className="text-muted-foreground mt-1">{obra.codigo}</p>
-          </div>
-          <Button 
-            variant="default"
-            onClick={() => navigate(`/obras/${obraId}/edit`)}
-            className="gap-2"
-          >
-            <Edit className="w-4 h-4" />
-            Editar
-          </Button>
-          <Button 
-            variant="outline"
-            onClick={() => navigate(`/obras/${obraId}/resumos`)}
-          >
-            Resumos Periódicos
-          </Button>
-          <Button 
-            variant="destructive"
-            onClick={() => {
-              if (confirm("Tem certeza que deseja deletar esta obra?")) {
-                deleteObra.mutate({ id: obraId! });
-              }
-            }}
-            disabled={deleteObra.isPending}
-          >
-            <Trash2 className="w-4 h-4" />
-            Deletar Obra
-          </Button>
-        </div>
+        <PageHeader
+          breadcrumb={[{ label: "Obras", href: "/obras" }, { label: obra.nome }]}
+          title={obra.nome}
+          description={obra.codigo}
+          icon={Building2}
+          actions={<>
+            <Button variant="default" onClick={() => navigate(`/obras/${obraId}/edit`)} className="gap-2"><Edit className="w-4 h-4" /> Editar</Button>
+            <Button variant="outline" onClick={() => navigate(`/obras/${obraId}/resumos`)}>Resumos Periódicos</Button>
+            <Button variant="destructive" className="gap-2" onClick={() => { if (confirm("Tem certeza que deseja deletar esta obra?")) deleteObra.mutate({ id: obraId! }); }} disabled={deleteObra.isPending}>
+              <Trash2 className="w-4 h-4" /> Deletar Obra
+            </Button>
+          </>}
+        />
 
         {/* KPIs */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

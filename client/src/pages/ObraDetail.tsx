@@ -11,7 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2 } from "lucide-react";
+import { StatCard } from "@/components/StatCard";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { DiarioForm } from "@/components/DiarioForm";
@@ -125,6 +126,20 @@ export default function ObraDetail() {
             <Trash2 className="w-4 h-4" />
             Deletar Obra
           </Button>
+        </div>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <StatCard label="Andamento da obra" value={`${obra.percentualAndamento || 0}%`} icon={Activity} tone="blue" hint="Percentual concluído" />
+          <StatCard label="Diários de obra" value={diarios.length} icon={ClipboardList} tone="green" hint="Registros lançados" />
+          <StatCard label="Pendências" value={pendencias.length} icon={AlertTriangle} tone={pendencias.length > 0 ? "amber" : "neutral"} hint="Itens em aberto" />
+          <StatCard
+            label="Status"
+            value={<span className="capitalize">{(obra.status || "").replace("_", " ")}</span>}
+            icon={CheckCircle2}
+            tone={obra.status === "em_andamento" ? "blue" : obra.status === "finalizada" ? "green" : "amber"}
+            hint="Situação atual"
+          />
         </div>
 
         {/* Info Cards */}

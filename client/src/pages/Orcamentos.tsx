@@ -13,7 +13,9 @@ import { toast } from "sonner";
 import {
   Plus, Trash2, ArrowLeft, Calculator, FileText, FileDown, FileSpreadsheet,
   ChevronDown, ChevronRight, Eye, Pencil, User, Building2,
+  Wallet, Ruler, ListChecks, Percent,
 } from "lucide-react";
+import { StatCard } from "@/components/StatCard";
 import { exportOrcamentoPDF } from "@/lib/pdfExport";
 import { exportOrcamentoToExcel } from "@/lib/exportUtils";
 
@@ -82,6 +84,14 @@ function OrcamentoEditor({ orcamentoId, onBack, readOnly = false }: { orcamentoI
             <FileSpreadsheet className="w-4 h-4" /> Excel
           </Button>
         </div>
+      </div>
+
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard label="Valor total da obra" value={brl(totais.valorTotal)} icon={Wallet} tone="green" hint="Com BDI e administração" />
+        <StatCard label="Custo por m²" value={totais.area > 0 ? brl(totais.custoM2ComAdm) : "—"} icon={Ruler} tone="blue" hint={totais.area > 0 ? `${totais.area.toLocaleString("pt-BR")} m²` : "Informe a área"} />
+        <StatCard label="Itens orçados" value={itens.length} icon={ListChecks} tone="neutral" hint="Serviços no orçamento" />
+        <StatCard label="Administração" value={`${totais.adm}%`} icon={Percent} tone="amber" hint={brl(totais.valorAdministracao)} />
       </div>
 
       {/* Dados do cliente e da obra */}

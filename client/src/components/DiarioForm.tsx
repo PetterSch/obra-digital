@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,7 @@ import { Plus, X, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { MaoDeObraSelector } from "./MaoDeObraSelector";
-import { hojeISO } from "@/lib/data";
+import { hojeISO, dataISO } from "@/lib/data";
 
 interface DiarioFormProps {
   obraId: number;
@@ -33,6 +33,30 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
   // Fotos coletadas antes de criar o diário (enviadas após a criação)
   const [fotos, setFotos] = useState<Array<{ base64: string; nome: string; mimeType: string; descricao: string }>>([]);
   const [enviando, setEnviando] = useState(false);
+  const [prefilled, setPrefilled] = useState(false);
+
+  // Atividades do diário mais recente da obra (para pré-preencher o novo diário)
+  const { data: diariosObra = [] } = trpc.diarios.listByObra.useQuery({ obraId }, { enabled: open });
+  const ultimoDiario = [...(diariosObra as any[])].sort((a, b) => dataISO(b.data).localeCompare(dataISO(a.data)))[0];
+  const { data: atividadesAnteriores = [] } = trpc.atividades.listByDiario.useQuery(
+    { diarioId: ultimoDiario?.id! },
+    { enabled: open && !!ultimoDiario }
+  );
+
+  useEffect(() => {
+    if (open && !prefilled && atividades.length === 0 && (atividadesAnteriores as any[]).length > 0) {
+      setAtividades((atividadesAnteriores as any[]).map((a) => ({
+        descricao: a.descricao || "",
+        local: a.local || "",
+        status: a.status || "em_andamento",
+        percentualConcluido: a.percentualConcluido != null ? String(a.percentualConcluido) : "",
+      })));
+      setPrefilled(true);
+      toast.info(`${(atividadesAnteriores as any[]).length} atividade(s) copiada(s) do diário anterior — ajuste conforme o dia.`);
+    }
+  }, [open, atividadesAnteriores]);
+
+  useEffect(() => { if (!open) setPrefilled(false); }, [open]);
 
   const uploadMutation = trpc.midia.upload.useMutation();
   const addAtividade = trpc.atividades.create.useMutation();

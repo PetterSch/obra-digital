@@ -1,4 +1,44 @@
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
+
+// ─── Estilos reutilizáveis (xlsx-js-style) ──────────────────────────────────
+export const FMT_MOEDA = '"R$" #,##0.00';
+export const FMT_NUM = "#,##0.00";
+const B = { style: "thin", color: { rgb: "E2E2E2" } };
+const BORDER_ALL = { top: B, bottom: B, left: B, right: B };
+const ST_TITLE = { font: { bold: true, sz: 14, color: { rgb: "1E3A5F" } } };
+const ST_HEADER = { font: { bold: true, sz: 11, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E3A5F" } }, alignment: { horizontal: "center", vertical: "center" }, border: BORDER_ALL };
+const ST_LABEL = { font: { bold: true } };
+const ST_TOTAL = { font: { bold: true, sz: 12, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "B45309" } }, border: BORDER_ALL };
+const ZEBRA = { fgColor: { rgb: "F7F5F0" } };
+
+function cell(ws: XLSX.WorkSheet, r: number, c: number) {
+  return ws[XLSX.utils.encode_cell({ r, c })];
+}
+/** Aplica título, cabeçalho colorido, bordas, zebra e formato de moeda. Índices base 0. */
+function dressSheet(
+  ws: XLSX.WorkSheet,
+  opts: { titleRow?: number; headerRow?: number; firstDataRow?: number; lastDataRow?: number; ncols: number; currencyCols?: number[] }
+) {
+  const { titleRow = 0, headerRow, firstDataRow, lastDataRow, ncols, currencyCols = [] } = opts;
+  const t = cell(ws, titleRow, 0);
+  if (t) t.s = ST_TITLE;
+  if (headerRow != null) {
+    for (let c = 0; c < ncols; c++) { const a = cell(ws, headerRow, c); if (a) a.s = ST_HEADER; }
+  }
+  if (firstDataRow != null && lastDataRow != null && lastDataRow >= firstDataRow) {
+    for (let r = firstDataRow; r <= lastDataRow; r++) {
+      const zebra = (r - firstDataRow) % 2 === 1;
+      for (let c = 0; c < ncols; c++) {
+        const addr = XLSX.utils.encode_cell({ r, c });
+        if (!ws[addr]) ws[addr] = { t: "s", v: "" } as any;
+        const s: any = { border: BORDER_ALL, alignment: { vertical: "center" } };
+        if (zebra) s.fill = ZEBRA;
+        if (currencyCols.includes(c)) s.numFmt = FMT_MOEDA;
+        ws[addr].s = s;
+      }
+    }
+  }
+}
 
 export interface ConsolidacaoData {
   totalDiarios: number;
@@ -70,9 +110,13 @@ function formatDate(date: Date | string | null | undefined): string {
   }
 }
 
-function applyHeaderStyle(ws: XLSX.WorkSheet, range: string) {
-  // Basic column widths
-  if (!ws["!cols"]) ws["!cols"] = [];
+/** Cria uma planilha simples (linha 0 = cabeçalho) já estilizada. */
+export function planilhaSimples(aoa: any[][], larguras?: number[], currencyCols?: number[]): XLSX.WorkSheet {
+  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  const ncols = aoa[0]?.length || 0;
+  if (larguras) ws["!cols"] = larguras.map((w) => ({ wch: w }));
+  dressSheet(ws, { titleRow: -1, headerRow: 0, firstDataRow: 1, lastDataRow: aoa.length - 1, ncols, currencyCols });
+  return ws;
 }
 
 export function exportResumoToExcel(
@@ -99,6 +143,9 @@ export function exportResumoToExcel(
     [resumo || "Resumo não gerado."],
   ]);
   resumoSheet["!cols"] = [{ wch: 22 }, { wch: 60 }];
+  resumoSheet["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 1 } }];
+  dressSheet(resumoSheet, { ncols: 2 });
+  if (resumoSheet["A8"]) resumoSheet["A8"].s = ST_LABEL;
   XLSX.utils.book_append_sheet(workbook, resumoSheet, "Resumo");
 
   // ── Sheet 2: Estatísticas ─────────────────────────────────────────
@@ -116,6 +163,7 @@ export function exportResumoToExcel(
     ["Materiais movimentados", consolidacao.materiaisMovimentados.length],
   ]);
   statsSheet["!cols"] = [{ wch: 36 }, { wch: 20 }];
+  dressSheet(statsSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 10, ncols: 2 });
   XLSX.utils.book_append_sheet(workbook, statsSheet, "Estatísticas");
 
   // ── Sheet 3: Diários detalhados ───────────────────────────────────
@@ -140,6 +188,7 @@ export function exportResumoToExcel(
       { wch: 5 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 14 },
       { wch: 14 }, { wch: 12 }, { wch: 50 },
     ];
+    dressSheet(diariosSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 2 + consolidacao.diarios.length, ncols: 8 });
     XLSX.utils.book_append_sheet(workbook, diariosSheet, "Diários");
   }
 
@@ -163,6 +212,7 @@ export function exportResumoToExcel(
     ativSheet["!cols"] = [
       { wch: 14 }, { wch: 45 }, { wch: 20 }, { wch: 16 }, { wch: 14 }, { wch: 12 },
     ];
+    dressSheet(ativSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 2 + consolidacao.atividades.length, ncols: 6 });
     XLSX.utils.book_append_sheet(workbook, ativSheet, "Atividades");
   } else if (consolidacao.principaisAtividades.length > 0) {
     const ativSheet = XLSX.utils.aoa_to_sheet([
@@ -195,6 +245,7 @@ export function exportResumoToExcel(
     ocorSheet["!cols"] = [
       { wch: 14 }, { wch: 20 }, { wch: 45 }, { wch: 14 }, { wch: 20 }, { wch: 18 },
     ];
+    dressSheet(ocorSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 2 + consolidacao.ocorrencias.length, ncols: 6 });
     XLSX.utils.book_append_sheet(workbook, ocorSheet, "Ocorrências");
   } else if (consolidacao.principaisOcorrencias.length > 0) {
     const ocorSheet = XLSX.utils.aoa_to_sheet([
@@ -282,6 +333,7 @@ export function exportDiariosToExcel(
     { wch: 5 }, { wch: 14 }, { wch: 14 }, { wch: 12 }, { wch: 13 },
     { wch: 10 }, { wch: 10 }, { wch: 12 }, { wch: 12 }, { wch: 50 },
   ];
+  dressSheet(diariosSheet, { headerRow: 3, firstDataRow: 4, lastDataRow: 3 + diarios.length, ncols: 10 });
   XLSX.utils.book_append_sheet(workbook, diariosSheet, "Diários");
 
   // ── Sheet 2: Atividades (de todos os diários) ─────────────────────
@@ -304,6 +356,7 @@ export function exportDiariosToExcel(
       ]),
     ]);
     ativSheet["!cols"] = [{ wch: 14 }, { wch: 50 }, { wch: 18 }, { wch: 14 }];
+    dressSheet(ativSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 2 + todasAtividades.length, ncols: 4 });
     XLSX.utils.book_append_sheet(workbook, ativSheet, "Atividades");
   }
 
@@ -327,6 +380,7 @@ export function exportDiariosToExcel(
       ]),
     ]);
     mdoSheet["!cols"] = [{ wch: 14 }, { wch: 25 }, { wch: 14 }, { wch: 20 }];
+    dressSheet(mdoSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 2 + todaMaoDeObra.length, ncols: 4 });
     XLSX.utils.book_append_sheet(workbook, mdoSheet, "Mão de Obra");
   }
 
@@ -349,6 +403,7 @@ export function exportDiariosToExcel(
       ]),
     ]);
     ocorSheet["!cols"] = [{ wch: 14 }, { wch: 55 }, { wch: 14 }];
+    dressSheet(ocorSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 2 + todasOcorrencias.length, ncols: 3 });
     XLSX.utils.book_append_sheet(workbook, ocorSheet, "Ocorrências");
   }
 
@@ -374,9 +429,9 @@ export interface OrcamentoExcelData {
 
 export function exportOrcamentoToExcel(data: OrcamentoExcelData) {
   const wb = XLSX.utils.book_new();
-  const moeda = (n: number) => Number(n.toFixed(2));
+  const moeda = (n: number) => Number((n || 0).toFixed(2));
+  const fatorBdi = 1 + (data.totais.bdi || 0) / 100;
 
-  // Cabeçalho + itens
   const rows: any[][] = [
     ["ORÇAMENTO DE OBRA"],
     [],
@@ -385,32 +440,68 @@ export function exportOrcamentoToExcel(data: OrcamentoExcelData) {
     [],
     ["Categoria", "Descrição", "Un.", "Quantidade", "Preço Unit. (R$)", "Total (R$)"],
   ];
-
-  // BDI EMBUTIDO (diluído) nos preços — não aparece como linha separada.
-  const fatorBdi = 1 + (data.totais.bdi || 0) / 100;
+  const HEADER_ROW = 6; // Excel 1-based
   let catAtual = "";
   data.itens.forEach(it => {
     const precoComBdi = it.precoUnitario * fatorBdi;
-    const total = it.quantidade * precoComBdi;
     rows.push([
       it.categoria !== catAtual ? (catAtual = it.categoria || "", it.categoria || "") : "",
-      it.descricao, it.unidade ?? "", moeda(it.quantidade), moeda(precoComBdi), moeda(total),
+      it.descricao, it.unidade ?? "", moeda(it.quantidade), moeda(precoComBdi), moeda(it.quantidade * precoComBdi),
     ]);
   });
+  const firstItem = HEADER_ROW + 1;
+  const lastItem = HEADER_ROW + data.itens.length;
 
   rows.push([]);
+  const subtotalRow = lastItem + 2;
   rows.push(["", "", "", "", "Subtotal dos serviços:", moeda(data.totais.valorComBdi)]);
+  const admRow = subtotalRow + 1;
   rows.push(["", "", "", "", `Administração (${data.totais.adm}%):`, moeda(data.totais.valorAdministracao)]);
+  const totalRow = admRow + 1;
   rows.push(["", "", "", "", "VALOR TOTAL DA OBRA:", moeda(data.totais.valorTotal)]);
   rows.push([]);
+  const areaRow = totalRow + 2;
   rows.push(["", "", "", "", "Área total (m²):", moeda(data.totais.area)]);
   rows.push(["", "", "", "", "Custo por m² (sem adm.):", moeda(data.totais.custoM2SemAdm)]);
   rows.push(["", "", "", "", "Custo por m² (com adm.):", moeda(data.totais.custoM2ComAdm)]);
 
   const ws = XLSX.utils.aoa_to_sheet(rows);
-  ws["!cols"] = [{ wch: 22 }, { wch: 40 }, { wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 16 }];
-  XLSX.utils.book_append_sheet(wb, ws, "Orçamento");
+  ws["!cols"] = [{ wch: 24 }, { wch: 42 }, { wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 16 }];
+  ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
 
+  // ── Fórmulas ──
+  for (let r = firstItem; r <= lastItem; r++) {
+    const a = "F" + r;
+    if (ws[a]) ws[a].f = `D${r}*E${r}`;
+  }
+  ws["F" + subtotalRow] = { t: "n", f: `SUM(F${firstItem}:F${lastItem})`, v: data.totais.valorComBdi };
+  ws["F" + admRow] = { t: "n", f: `F${subtotalRow}*${data.totais.adm}/100`, v: data.totais.valorAdministracao };
+  ws["F" + totalRow] = { t: "n", f: `F${subtotalRow}+F${admRow}`, v: data.totais.valorTotal };
+  if (data.totais.area > 0) {
+    ws["F" + (areaRow + 1)] = { t: "n", f: `F${subtotalRow}/F${areaRow}`, v: data.totais.custoM2SemAdm };
+    ws["F" + (areaRow + 2)] = { t: "n", f: `F${totalRow}/F${areaRow}`, v: data.totais.custoM2ComAdm };
+  }
+
+  // ── Estilos ──
+  if (ws["A1"]) ws["A1"].s = ST_TITLE;
+  for (const a of ["A3", "A4", "D3", "D4"]) if (ws[a]) ws[a].s = ST_LABEL;
+  // cabeçalho da tabela (linha 6 = índice 5)
+  dressSheet(ws, { headerRow: 5, firstDataRow: 6, lastDataRow: lastItem - 1, ncols: 6, currencyCols: [4, 5] });
+  // formato moeda na coluna Quantidade? não — só E/F. Aplica número na quantidade (col 3)
+  for (let r = firstItem; r <= lastItem; r++) {
+    const q = "D" + r; if (ws[q]) ws[q].s = { ...(ws[q].s || {}), numFmt: FMT_NUM };
+  }
+  // linhas de fechamento (label em E negrito, valor em F moeda)
+  for (const r of [subtotalRow, admRow, areaRow, areaRow + 1, areaRow + 2]) {
+    const e = "E" + r, f = "F" + r;
+    if (ws[e]) ws[e].s = { ...ST_LABEL, alignment: { horizontal: "right" } };
+    if (ws[f]) ws[f].s = { ...(ws[f].s || {}), numFmt: FMT_MOEDA, font: { bold: true } };
+  }
+  // VALOR TOTAL destacado (âmbar)
+  if (ws["E" + totalRow]) ws["E" + totalRow].s = { ...ST_TOTAL, alignment: { horizontal: "right" } };
+  if (ws["F" + totalRow]) ws["F" + totalRow].s = { ...ST_TOTAL, numFmt: FMT_MOEDA };
+
+  XLSX.utils.book_append_sheet(wb, ws, "Orçamento");
   const nomeArq = `Orcamento_${data.obraNome.replace(/[^a-z0-9]/gi, "_")}_${data.nome.replace(/[^a-z0-9]/gi, "_")}.xlsx`;
   XLSX.writeFile(wb, nomeArq);
 }

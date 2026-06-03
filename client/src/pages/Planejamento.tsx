@@ -12,7 +12,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
 import { ClipboardList, Plus, Trash2, ArrowLeft, FileDown, FileSpreadsheet, CalendarRange } from "lucide-react";
-import * as XLSX from "xlsx";
+import * as XLSX from "xlsx-js-style";
+import { planilhaSimples } from "@/lib/exportUtils";
 import { getPDFConfig } from "@/lib/pdfExport";
 import { PageHeader } from "@/components/PageHeader";
 
@@ -25,22 +26,22 @@ function exportarExcel(nome: string, d: any) {
   // EAP
   const eap = [["Código", "Nível", "Descrição", "Responsável"],
     ...(d.eap || []).map((e: any) => [e.codigo, e.nivel, e.descricao, e.responsavel])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(eap), "EAP");
+  XLSX.utils.book_append_sheet(wb, planilhaSimples(eap, [12, 8, 50, 24]), "EAP");
   // Cronograma
   const cron = [["ID", "Atividade", "Fase", "Predecessora", "Duração (dias)", "Início", "Fim", "Crítico", "Folga"],
     ...(d.cronograma?.atividades || []).map((a: any) => [a.id, a.descricao, a.fase, a.predecessoras, a.duracaoDias, a.inicio, a.fim, a.critico ? "Sim" : "Não", a.folgaDias])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cron), "Cronograma");
+  XLSX.utils.book_append_sheet(wb, planilhaSimples(cron, [8, 40, 18, 14, 14, 14, 14, 10, 8]), "Cronograma");
   // Recursos
   const mo = [["Função", "Quantidade", "Regime", "Turnos"],
     ...(d.recursos?.maoDeObra || []).map((m: any) => [m.funcao, m.quantidade, m.regime, m.turnos])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(mo), "Mão de Obra");
+  XLSX.utils.book_append_sheet(wb, planilhaSimples(mo, [28, 12, 18, 20]), "Mão de Obra");
   const eq = [["Equipamento", "Método", "Período"],
     ...(d.recursos?.equipamentos || []).map((e: any) => [e.nome, e.metodo, e.periodo])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(eq), "Equipamentos");
+  XLSX.utils.book_append_sheet(wb, planilhaSimples(eq, [30, 24, 20]), "Equipamentos");
   // Curva S
   const cs = [["Mês", "% no mês", "% acumulado", "Valor acumulado (R$)"],
     ...(d.recursos?.curvaS || []).map((c: any) => [c.mes, c.percentualMes, c.percentualAcumulado, c.valorAcumulado])];
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(cs), "Curva S");
+  XLSX.utils.book_append_sheet(wb, planilhaSimples(cs, [12, 12, 14, 22], [3]), "Curva S");
   XLSX.writeFile(wb, `Planejamento_${nome.replace(/[^a-z0-9]/gi, "_")}.xlsx`);
 }
 

@@ -176,7 +176,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
           <Card><CardContent className="pt-5 space-y-4">
             <h3 className="font-semibold flex items-center gap-2"><CloudSun className="w-4 h-4 text-primary" /> Informações Básicas</h3>
             <div className="grid grid-cols-2 md:grid-cols-12 gap-3">
-              <div className="space-y-1.5 md:col-span-2">
+              <div className="space-y-1.5 md:col-span-3">
                 <Label htmlFor="data">Data *</Label>
                 <Input id="data" type="date" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} required />
               </div>

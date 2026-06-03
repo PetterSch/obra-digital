@@ -165,7 +165,7 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
           Novo Diário
         </Button>
       </DialogTrigger>
-      <DialogContent className="!max-w-5xl w-[96vw] max-h-[94vh] overflow-y-auto">
+      <DialogContent className="!max-w-[1500px] w-[98vw] max-h-[96vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Criar Novo Diário de Obra</DialogTitle>
           <DialogDescription>Preencha as informações do diário</DialogDescription>

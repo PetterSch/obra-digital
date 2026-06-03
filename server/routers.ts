@@ -355,6 +355,20 @@ export const appRouter = router({
         return db.createAtividade(input);
       }),
 
+    update: engineerProcedure
+      .input(z.object({
+        id: z.number(),
+        descricao: z.string().min(1).optional(),
+        local: z.string().optional(),
+        status: z.enum(["nao_iniciada", "em_andamento", "concluida"]).optional(),
+        percentualConcluido: z.number().optional(),
+        prioridade: z.enum(["baixa", "media", "alta"]).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...data } = input;
+        return db.updateAtividade(id, data);
+      }),
+
     delete: engineerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {

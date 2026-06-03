@@ -318,6 +318,12 @@ export async function deleteAtividade(id: number) {
   return db.delete(atividades).where(eq(atividades.id, id));
 }
 
+export async function updateAtividade(id: number, data: Partial<typeof atividades.$inferInsert>) {
+  const db = await getDb();
+  if (!db) return;
+  return db.update(atividades).set(data).where(eq(atividades.id, id));
+}
+
 // ============= MÃO DE OBRA =============
 
 export async function getMaoDeObraByDiarioId(diarioId: number) {

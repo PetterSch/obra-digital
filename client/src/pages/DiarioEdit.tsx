@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { trpc } from "@/lib/trpc";
 import { fmtDataBR, dataISO } from "@/lib/data";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Save, X, Plus, Trash2, Upload } from "lucide-react";
+import { ArrowLeft, Save, X, Plus, Trash2, Upload, Pencil } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { MaoDeObraSelector } from "@/components/MaoDeObraSelector";
@@ -51,6 +52,11 @@ export default function DiarioEdit() {
   const [novaAtiv, setNovaAtiv] = useState({ descricao: "", local: "", status: "em_andamento", percentualConcluido: "" });
   const addAtiv = trpc.atividades.create.useMutation({ onSuccess: () => { setNovaAtiv({ descricao: "", local: "", status: "em_andamento", percentualConcluido: "" }); utils.atividades.listByDiario.invalidate({ diarioId: diarioId! }); }, onError: (e) => toast.error(e.message) });
   const delAtiv = trpc.atividades.delete.useMutation({ onSuccess: () => utils.atividades.listByDiario.invalidate({ diarioId: diarioId! }) });
+  const [editAtiv, setEditAtiv] = useState<any | null>(null);
+  const updAtiv = trpc.atividades.update.useMutation({
+    onSuccess: () => { toast.success("Atividade atualizada!"); setEditAtiv(null); utils.atividades.listByDiario.invalidate({ diarioId: diarioId! }); },
+    onError: (e) => toast.error(e.message || "Erro ao atualizar atividade"),
+  });
 
   // ── Mão de obra (presença por equipe) ──
   const { data: resumo } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
@@ -153,7 +159,13 @@ export default function DiarioEdit() {
                     <div className="min-w-0"><p className="font-medium text-sm truncate">{a.descricao}</p>
                       <p className="text-xs text-muted-foreground">{a.local ? `📍 ${a.local} · ` : ""}{(a.status || "").replace(/_/g, " ")} · {a.percentualConcluido ?? 0}%</p>
                     </div>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => delAtiv.mutate({ id: a.id })}><Trash2 className="w-4 h-4" /></Button>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar atividade"
+                        onClick={() => setEditAtiv({ id: a.id, descricao: a.descricao || "", local: a.local || "", status: a.status || "em_andamento", percentualConcluido: a.percentualConcluido != null ? String(a.percentualConcluido) : "" })}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="Excluir atividade" onClick={() => delAtiv.mutate({ id: a.id })}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
                   </div>
                 ))}
             </CardContent></Card>
@@ -177,6 +189,48 @@ export default function DiarioEdit() {
                 <Plus className="w-4 h-4" /> Adicionar
               </Button>
             </CardContent></Card>
+
+            <Dialog open={!!editAtiv} onOpenChange={(o) => { if (!o) setEditAtiv(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Editar atividade</DialogTitle></DialogHeader>
+                {editAtiv && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Descrição *</Label>
+                      <Input value={editAtiv.descricao} onChange={(e) => setEditAtiv({ ...editAtiv, descricao: e.target.value })} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Local</Label>
+                      <Input value={editAtiv.local} onChange={(e) => setEditAtiv({ ...editAtiv, local: e.target.value })} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Status</Label>
+                        <Select value={editAtiv.status} onValueChange={(v) => setEditAtiv({ ...editAtiv, status: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="nao_iniciada">Não iniciada</SelectItem>
+                            <SelectItem value="em_andamento">Em andamento</SelectItem>
+                            <SelectItem value="concluida">Concluída</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">% concluído</Label>
+                        <Input type="number" min={0} max={100} value={editAtiv.percentualConcluido} onChange={(e) => setEditAtiv({ ...editAtiv, percentualConcluido: e.target.value })} />
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button className="flex-1 gap-1.5" disabled={!editAtiv.descricao || updAtiv.isPending}
+                        onClick={() => updAtiv.mutate({ id: editAtiv.id, descricao: editAtiv.descricao, local: editAtiv.local || undefined, status: editAtiv.status as any, percentualConcluido: editAtiv.percentualConcluido !== "" ? parseInt(editAtiv.percentualConcluido) : undefined })}>
+                        <Save className="w-4 h-4" /> {updAtiv.isPending ? "Salvando..." : "Salvar"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setEditAtiv(null)}>Cancelar</Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Mão de obra */}

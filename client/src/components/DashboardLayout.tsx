@@ -68,6 +68,7 @@ export default function DashboardLayout({
     return saved ? parseInt(saved, 10) : DEFAULT_WIDTH;
   });
   const { loading, user } = useAuth();
+  const [, navigate] = useLocation();
 
   // Sincroniza a config da empresa (servidor → local) para os PDFs de todos os usuários
   const { data: empresaConfig } = trpc.empresa.get.useQuery(undefined, { enabled: !!user });

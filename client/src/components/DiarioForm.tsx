@@ -176,11 +176,11 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
           <Card><CardContent className="pt-5 space-y-4">
             <h3 className="font-semibold flex items-center gap-2"><CloudSun className="w-4 h-4 text-primary" /> Informações Básicas</h3>
             <div className="grid grid-cols-2 md:grid-cols-12 gap-3">
-              <div className="space-y-1.5 md:col-span-4">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="data">Data *</Label>
                 <Input id="data" type="date" value={formData.data} onChange={(e) => setFormData({ ...formData, data: e.target.value })} required />
               </div>
-              <div className="space-y-1.5 md:col-span-4">
+              <div className="space-y-1.5 md:col-span-2">
                 <Label htmlFor="clima">Clima</Label>
                 <select id="clima" value={formData.clima} onChange={(e) => setFormData({ ...formData, clima: e.target.value })}
                   className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
@@ -232,11 +232,11 @@ export function DiarioForm({ obraId, onSuccess }: DiarioFormProps) {
                     placeholder="Descrição da atividade" />
                 </div>
                 <div className="grid grid-cols-2 sm:grid-cols-12 gap-3">
-                  <div className="space-y-1.5 sm:col-span-6">
+                  <div className="space-y-1.5 sm:col-span-3">
                     <Label className="text-xs">Local</Label>
                     <Input value={ativ.local} onChange={(e) => { const n = [...atividades]; n[idx].local = e.target.value; setAtividades(n); }} placeholder="Ex: Térreo" />
                   </div>
-                  <div className="space-y-1.5 sm:col-span-4">
+                  <div className="space-y-1.5 sm:col-span-3">
                     <Label className="text-xs">Status</Label>
                     <select value={ativ.status} onChange={(e) => { const n = [...atividades]; n[idx].status = e.target.value; setAtividades(n); }}
                       className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">

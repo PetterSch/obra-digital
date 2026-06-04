@@ -1134,6 +1134,49 @@ Gere um resumo executivo profissional em português que:
       .mutation(async ({ input }) => { await db.deletePlanejamento(input.id); return { success: true }; }),
   }),
 
+  // ============= PROTOCOLOS DE ENVIO =============
+  protocolos: router({
+    listByObra: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getProtocolosByObra(input.obraId)),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => db.getProtocoloById(input.id)),
+
+    create: engineerProcedure
+      .input(z.object({
+        obraId: z.number(),
+        numero: z.string().optional(),
+        observacao: z.string().optional(),
+        notas: z.array(z.object({
+          fornecedor: z.string().optional(), ordemCompra: z.string().optional(),
+          pedido: z.string().optional(), nf: z.string().optional(),
+          dataEnvio: z.string().optional(), venc1: z.string().optional(),
+          venc2: z.string().optional(), venc3: z.string().optional(),
+        })).default([]),
+      }))
+      .mutation(async ({ input }) => db.createProtocolo(input)),
+
+    update: engineerProcedure
+      .input(z.object({
+        id: z.number(),
+        numero: z.string().optional(),
+        observacao: z.string().optional(),
+        notas: z.array(z.object({
+          fornecedor: z.string().optional(), ordemCompra: z.string().optional(),
+          pedido: z.string().optional(), nf: z.string().optional(),
+          dataEnvio: z.string().optional(), venc1: z.string().optional(),
+          venc2: z.string().optional(), venc3: z.string().optional(),
+        })).default([]),
+      }))
+      .mutation(async ({ input }) => { const { id, ...d } = input; await db.updateProtocolo(id, d); return { success: true }; }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deleteProtocolo(input.id); return { success: true }; }),
+  }),
+
   // ============= CONFIG DA EMPRESA (compartilhada) =============
   empresa: router({
     // Todos os usuários autenticados leem (para usar nos PDFs)

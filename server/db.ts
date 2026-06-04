@@ -201,6 +201,23 @@ export async function runMigrations() {
       if (db) await db.execute(sql.raw(`ALTER TABLE orcamentos ADD COLUMN ${col}`));
     } catch { /* já existe */ }
   }
+
+  // Protocolos de envio (notas/boletos enviados)
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS protocolos (
+        id INT AUTO_INCREMENT PRIMARY KEY, obraId INT NOT NULL,
+        numero VARCHAR(100), observacao TEXT,
+        criadoEm TIMESTAMP DEFAULT NOW()
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS protocolo_notas (
+        id INT AUTO_INCREMENT PRIMARY KEY, protocoloId INT NOT NULL,
+        fornecedor VARCHAR(255), ordemCompra VARCHAR(100), pedido VARCHAR(100), nf VARCHAR(100),
+        dataEnvio DATE, venc1 DATE, venc2 DATE, venc3 DATE, ordem INT DEFAULT 0
+      )`);
+    }
+  } catch { /* já existe */ }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -1105,4 +1122,63 @@ export async function deletePlanejamento(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.execute(sql`DELETE FROM planejamentos WHERE id = ${id}`);
+}
+
+// ============= PROTOCOLOS DE ENVIO =============
+type ProtocoloNotaInput = { fornecedor?: string; ordemCompra?: string; pedido?: string; nf?: string; dataEnvio?: string; venc1?: string; venc2?: string; venc3?: string };
+
+export async function getProtocolosByObra(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT p.id, p.numero, p.observacao, p.criadoEm,
+      (SELECT COUNT(*) FROM protocolo_notas n WHERE n.protocoloId = p.id) AS totalNotas
+    FROM protocolos p WHERE p.obraId = ${obraId} ORDER BY p.id DESC`);
+  return (r[0] ?? r) as any[];
+}
+
+export async function getProtocoloById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const ph: any = await db.execute(sql`SELECT * FROM protocolos WHERE id = ${id} LIMIT 1`);
+  const protocolo = (ph[0] ?? ph)[0];
+  if (!protocolo) return null;
+  const nr: any = await db.execute(sql`SELECT * FROM protocolo_notas WHERE protocoloId = ${id} ORDER BY ordem, id`);
+  const notas = (nr[0] ?? nr) as any[];
+  return { ...protocolo, notas };
+}
+
+export async function createProtocolo(data: { obraId: number; numero?: string; observacao?: string; notas: ProtocoloNotaInput[] }) {
+  const db = await getDb();
+  if (!db) return { id: 0 };
+  const res: any = await db.execute(sql`INSERT INTO protocolos (obraId, numero, observacao) VALUES (${data.obraId}, ${data.numero ?? null}, ${data.observacao ?? null})`);
+  const id = (res[0]?.insertId ?? res.insertId) as number;
+  await inserirNotas(id, data.notas);
+  return { id };
+}
+
+export async function updateProtocolo(id: number, data: { numero?: string; observacao?: string; notas: ProtocoloNotaInput[] }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`UPDATE protocolos SET numero = ${data.numero ?? null}, observacao = ${data.observacao ?? null} WHERE id = ${id}`);
+  await db.execute(sql`DELETE FROM protocolo_notas WHERE protocoloId = ${id}`);
+  await inserirNotas(id, data.notas);
+}
+
+async function inserirNotas(protocoloId: number, notas: ProtocoloNotaInput[]) {
+  const db = await getDb();
+  if (!db) return;
+  let ordem = 0;
+  for (const n of notas || []) {
+    await db.execute(sql`INSERT INTO protocolo_notas (protocoloId, fornecedor, ordemCompra, pedido, nf, dataEnvio, venc1, venc2, venc3, ordem)
+      VALUES (${protocoloId}, ${n.fornecedor ?? null}, ${n.ordemCompra ?? null}, ${n.pedido ?? null}, ${n.nf ?? null},
+        ${n.dataEnvio || null}, ${n.venc1 || null}, ${n.venc2 || null}, ${n.venc3 || null}, ${ordem++})`);
+  }
+}
+
+export async function deleteProtocolo(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`DELETE FROM protocolo_notas WHERE protocoloId = ${id}`);
+  await db.execute(sql`DELETE FROM protocolos WHERE id = ${id}`);
 }

@@ -15,6 +15,7 @@ import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, C
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { ActionPanel } from "@/components/ActionPanel";
+import { ProtocolosTab } from "@/components/ProtocolosTab";
 import { toast } from "sonner";
 import { Spinner } from "@/components/ui/spinner";
 import { DiarioForm } from "@/components/DiarioForm";
@@ -167,7 +168,7 @@ export default function ObraDetail() {
             <TabsTrigger value="colaboradores" className="flex-1">Equipes & Colaboradores</TabsTrigger>
             <TabsTrigger value="pendencias" className="flex-1">Pendências ({pendencias.length})</TabsTrigger>
             <TabsTrigger value="materiais" className="flex-1">Materiais</TabsTrigger>
-            <TabsTrigger value="info" className="flex-1">Informações</TabsTrigger>
+            <TabsTrigger value="protocolos" className="flex-1">Protocolos de Envio</TabsTrigger>
           </TabsList>
 
           <TabsContent value="diarios" className="space-y-4">
@@ -259,38 +260,8 @@ export default function ObraDetail() {
             <MovimentacaoMateriais obraId={obra.id} />
           </TabsContent>
 
-          <TabsContent value="info" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Informações da Obra</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Data de Início</p>
-                    <p className="font-semibold">{new Date(obra.dataInicio).toLocaleDateString("pt-BR")}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Data Prevista de Término</p>
-                    <p className="font-semibold">{new Date(obra.dataPrevistTermino).toLocaleDateString("pt-BR")}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">CEP</p>
-                    <p className="font-semibold">{obra.cep}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">CREA</p>
-                    <p className="font-semibold">{obra.crea || "Não informado"}</p>
-                  </div>
-                </div>
-                {obra.descricao && (
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">Descrição</p>
-                    <p className="font-semibold">{obra.descricao}</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          <TabsContent value="protocolos" className="space-y-4">
+            <ProtocolosTab obraId={obra.id} />
           </TabsContent>
         </Tabs>
         <ActionPanel title="Ações & Relatórios" actions={[

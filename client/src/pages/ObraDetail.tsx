@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2, Building2, FileText, BarChart3, CalendarRange } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2, Building2, FileText, BarChart3, CalendarRange, CalendarCheck } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { ActionPanel } from "@/components/ActionPanel";
@@ -347,6 +347,7 @@ export default function ObraDetail() {
           { icon: FileText, label: "Resumos periódicos", description: "Semanal, quinzenal, mensal", onClick: () => navigate(`/obras/${obraId}/resumos`) },
           { icon: BarChart3, label: "Relatório completo", description: "Diários do período", onClick: () => navigate(`/relatorios/${obraId}`) },
           { icon: CalendarRange, label: "Cronograma", description: "Linha do tempo da obra", onClick: () => navigate(`/obras/${obraId}/cronograma`) },
+          { icon: CalendarCheck, label: "Calendário de Presença", description: "Presença das equipes por mês", onClick: () => navigate(`/obras/${obraId}/presenca`) },
           { icon: Edit, label: "Editar obra", description: "Dados cadastrais", onClick: () => navigate(`/obras/${obraId}/edit`) },
         ]} />
         </div>

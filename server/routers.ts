@@ -604,6 +604,16 @@ export const appRouter = router({
       }),
 
     // Substitui toda a mão de obra (presenças) de um diário de uma vez (usado na edição)
+    calendario: protectedProcedure
+      .input(z.object({ obraId: z.number(), ano: z.number(), mes: z.number() }))
+      .query(async ({ input }) => {
+        const mm = String(input.mes).padStart(2, "0");
+        const inicio = `${input.ano}-${mm}-01`;
+        const lastDay = new Date(input.ano, input.mes, 0).getDate();
+        const fim = `${input.ano}-${mm}-${String(lastDay).padStart(2, "0")}`;
+        return db.getPresencaCalendario(input.obraId, inicio, fim);
+      }),
+
     setForDiario: engineerProcedure
       .input(z.object({
         diarioId: z.number(),

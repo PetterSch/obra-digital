@@ -499,6 +499,54 @@ export async function deletePresencaByDiario(diarioId: number) {
   return db.delete(presenca).where(eq(presenca.diarioId, diarioId));
 }
 
+// Calendário de presença por equipe/operário num período (mês)
+export async function getPresencaCalendario(obraId: number, inicio: string, fim: string) {
+  const db = await getDb();
+  if (!db) return { equipes: [], dias: [] };
+  const ds = await db.select({ id: diarios.id, data: diarios.data })
+    .from(diarios)
+    .where(and(eq(diarios.obraId, obraId), gte(diarios.data, inicio as any), lte(diarios.data, fim as any)));
+  if (ds.length === 0) return { equipes: [], dias: [] };
+  const diarioIds = ds.map((d) => d.id);
+  const dataById = new Map(ds.map((d) => [d.id, d.data]));
+  const fmt = (d: any) => (d instanceof Date ? d.toISOString().slice(0, 10) : String(d).slice(0, 10));
+
+  const pres = await db.select({
+      diarioId: presenca.diarioId, colaboradorId: presenca.colaboradorId, presente: presenca.presente,
+      equipeId: colaboradores.equipeId,
+    })
+    .from(presenca)
+    .innerJoin(colaboradores, eq(presenca.colaboradorId, colaboradores.id))
+    .where(inArray(presenca.diarioId, diarioIds));
+
+  const diasMap = new Map<string, Record<number, { presentes: number; operarios: number[] }>>();
+  for (const p of pres) {
+    if (p.presente === false) continue;
+    const dataStr = fmt(dataById.get(p.diarioId));
+    let dia = diasMap.get(dataStr);
+    if (!dia) { dia = {}; diasMap.set(dataStr, dia); }
+    let pe = dia[p.equipeId];
+    if (!pe) { pe = { presentes: 0, operarios: [] }; dia[p.equipeId] = pe; }
+    pe.presentes += 1; pe.operarios.push(p.colaboradorId);
+  }
+  const dias = Array.from(diasMap.entries()).map(([data, porEquipe]) => ({ data, porEquipe }));
+
+  const equipeIds = Array.from(new Set(pres.map((p) => p.equipeId)));
+  let equipesOut: any[] = [];
+  if (equipeIds.length) {
+    const eqs = await db.select({ id: equipes.id, nome: equipes.nome, empresa: equipes.empresa })
+      .from(equipes).where(inArray(equipes.id, equipeIds));
+    const cols = await db.select({ id: colaboradores.id, equipeId: colaboradores.equipeId, nome: colaboradores.nome, funcao: colaboradores.funcao, ativo: colaboradores.ativo })
+      .from(colaboradores).where(inArray(colaboradores.equipeId, equipeIds));
+    equipesOut = eqs.map((e) => {
+      const cs = cols.filter((c) => c.equipeId === e.id);
+      const ativos = cs.filter((c) => c.ativo !== false);
+      return { ...e, totalColaboradores: (ativos.length || cs.length), colaboradores: cs.map((c) => ({ id: c.id, nome: c.nome, funcao: c.funcao })) };
+    });
+  }
+  return { equipes: equipesOut, dias };
+}
+
 // Resumo de mão de obra do diário, agrupado por equipe/empresa (para PDF)
 export async function getMaoDeObraResumoByDiario(diarioId: number) {
   const db = await getDb();

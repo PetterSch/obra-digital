@@ -25,6 +25,7 @@ import Relatorios from "./pages/Relatorios";
 import AdminPanel from "./pages/AdminPanel";
 import SugestoesLLM from "./pages/SugestoesLLM";
 import Cronograma from "./pages/Cronograma";
+import Presenca from "./pages/Presenca";
 import ConfiguracaoEmpresa from "./pages/ConfiguracaoEmpresa";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Spinner } from "./components/ui/spinner";
@@ -69,6 +70,7 @@ function Router() {
       <Route path={"/colaboradores"} component={Colaboradores} />
       <Route path={"/sugestoes-llm"} component={SugestoesLLM} />
       <Route path={"/obras/:obraId/cronograma"} component={Cronograma} />
+      <Route path={"/obras/:obraId/presenca"} component={Presenca} />
       <Route path={"/client"} component={ClientObras} />
       <Route path={"/client/obras/:id"} component={ClientPanel} />
       <Route path={"/configuracoes/empresa"} component={ConfiguracaoEmpresa} />

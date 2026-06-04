@@ -26,22 +26,26 @@ export function StatCard({ label, value, icon: Icon, tone = "neutral", hint, tre
   return (
     <div
       onClick={onClick}
-      className={`rounded-2xl border bg-card p-5 transition-shadow ${onClick ? "cursor-pointer hover:shadow-md" : ""}`}
+      className={`rounded-2xl border bg-card p-4 transition-shadow ${onClick ? "cursor-pointer hover:shadow-md" : ""}`}
     >
-      <div className="flex items-start justify-between">
-        <div className={`flex h-11 w-11 items-center justify-center rounded-xl ${t.box}`}>
-          <Icon className="h-5 w-5" />
+      <div className="flex items-center gap-3">
+        <div className={`flex h-9 w-9 items-center justify-center rounded-lg shrink-0 ${t.box}`}>
+          <Icon className="h-4 w-4" />
         </div>
-        {trend && (
-          <span className={`flex items-center gap-1 text-xs font-medium ${trend.dir === "up" ? "text-emerald-600" : "text-red-600"}`}>
-            {trend.dir === "up" ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
-            {trend.text}
-          </span>
-        )}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-xs font-medium text-muted-foreground truncate">{label}</span>
+            {trend && (
+              <span className={`flex items-center gap-1 text-xs font-medium shrink-0 ${trend.dir === "up" ? "text-emerald-600" : "text-red-600"}`}>
+                {trend.dir === "up" ? <TrendingUp className="h-3.5 w-3.5" /> : <TrendingDown className="h-3.5 w-3.5" />}
+                {trend.text}
+              </span>
+            )}
+          </div>
+          <div className={`text-xl font-bold tracking-tight leading-tight truncate ${t.value}`}>{value}</div>
+          {hint && <div className="text-[11px] text-muted-foreground/70 truncate">{hint}</div>}
+        </div>
       </div>
-      <div className={`mt-4 text-3xl font-bold tracking-tight ${t.value}`}>{value}</div>
-      <div className="mt-1 text-sm font-medium text-muted-foreground">{label}</div>
-      {hint && <div className="mt-0.5 text-xs text-muted-foreground/70">{hint}</div>}
     </div>
   );
 }

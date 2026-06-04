@@ -15,6 +15,12 @@ import * as XLSX from "xlsx-js-style";
 type Item = { descricao: string; unidade: string; quantidade: string; observacao: string };
 const itemVazio = (): Item => ({ descricao: "", unidade: "", quantidade: "", observacao: "" });
 const STATUS_LABEL: Record<string, string> = { aberto: "Aberto", enviado: "Enviado", parcial: "Recebido parcial", recebido: "Recebido", cancelado: "Cancelado" };
+// Unidades comuns de compra (sugestões — campo continua de digitação livre)
+const UNIDADES = [
+  "UND", "PÇ", "CX", "SC 50kg", "SC 25kg", "SC 20kg", "SC 15kg", "KG", "T",
+  "M", "M²", "M³", "L", "GL", "BARRA", "RL", "PAR", "JG", "MILHEIRO",
+  "VB", "LATA 18L", "BALDE", "TB", "FD", "DZ", "PALETE", "VIAGEM", "CAÇAMBA",
+];
 const STATUS_COR: Record<string, string> = { aberto: "bg-amber-100 text-amber-700", enviado: "bg-blue-100 text-blue-700", parcial: "bg-violet-100 text-violet-700", recebido: "bg-green-100 text-green-700", cancelado: "bg-gray-100 text-gray-600" };
 
 export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNome?: string }) {
@@ -178,6 +184,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="!max-w-4xl w-[96vw] max-h-[92vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader><DialogTitle>{editId ? "Editar pedido" : "Novo pedido de compra"}</DialogTitle></DialogHeader>
+          <datalist id="unidades-compra">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
           <div className="space-y-4 min-w-0">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Nº do pedido</Label><Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 001/2026" /></div>
@@ -204,7 +211,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                     {itens.map((it, i) => (
                       <tr key={i} className="border-b last:border-0">
                         <td className="p-1"><Input className={cellCls} value={it.descricao} onChange={(e) => setItem(i, "descricao", e.target.value)} placeholder="Ex: Cimento CP-II 50kg" /></td>
-                        <td className="p-1"><Input className={cellCls} value={it.unidade} onChange={(e) => setItem(i, "unidade", e.target.value)} placeholder="sc, m³, un" /></td>
+                        <td className="p-1"><Input list="unidades-compra" className={cellCls} value={it.unidade} onChange={(e) => setItem(i, "unidade", e.target.value)} placeholder="UND, SC 50kg..." /></td>
                         <td className="p-1"><Input type="number" step="0.01" className={cellCls} value={it.quantidade} onChange={(e) => setItem(i, "quantidade", e.target.value)} placeholder="0" /></td>
                         <td className="p-1"><Input className={cellCls} value={it.observacao} onChange={(e) => setItem(i, "observacao", e.target.value)} placeholder="marca, especificação..." /></td>
                         <td className="p-1 text-center"><Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" disabled={itens.length === 1} onClick={() => setItens((a) => a.filter((_, idx) => idx !== i))}><X className="w-4 h-4" /></Button></td>

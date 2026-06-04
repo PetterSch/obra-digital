@@ -66,6 +66,62 @@ function fmt(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
+// ── Índices de produtividade (produção média por dia, por frente de trabalho) ──
+// Usados para estimar a duração de cada tarefa a partir da quantidade do orçamento.
+function normalizar(s: string): string {
+  return (s || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+type RegraProd = { kw: string[]; prod: number; un?: string };
+// A ordem importa: regras mais específicas primeiro.
+const PRODUTIVIDADE: RegraProd[] = [
+  { kw: ["CONTRAPISO", "CONTRA PISO"], prod: 50 },
+  { kw: ["PISO CIMENTADO"], prod: 45 },
+  { kw: ["PISO DE CONCRETO", "LASTRO DE CONCRETO"], prod: 35 },
+  { kw: ["PISO INTERTRAVADO"], prod: 30 },
+  { kw: ["REVESTIMENTOS CERAMICOS DE PISO", "PORCELANATO", "REVESTIMENTOS VINILICOS", "PISO VINILICO"], prod: 20 },
+  { kw: ["RODAPE"], prod: 80 },
+  { kw: ["LADRILHO", "AZULEJO", "CERAMICA DE PAREDE", "REVESTIMENTOS CERAMICOS DE PAREDE", "PASTILHA"], prod: 17 },
+  { kw: ["MARCACAO ALVENARIA"], prod: 60 },
+  { kw: ["ALVENARIA", "TIJOLO", "BLOCOS DE CONCRETO", "BLOCO DE CONCRETO"], prod: 15 },
+  { kw: ["DIVISORIA DE GESSO", "DRYWALL", "DRY WALL"], prod: 25 },
+  { kw: ["CHAPISCO"], prod: 80 },
+  { kw: ["REBOCO", "EMBOCO", "MASSA UNICA", "REGULARIZACAO", "GESSO COLA"], prod: 25 },
+  { kw: ["FORRO DE GESSO", "FORRO", "GESSO LISO"], prod: 25 },
+  { kw: ["TABICA", "SANCA", "REBAIXO DE GESSO"], prod: 30 },
+  { kw: ["PINTURA", "MASSA CORRIDA", "MASSA ACRILICA", "TEXTURA", "SELADOR", "GRAFIATO", "VERNIZ"], prod: 50 },
+  { kw: ["IMPERMEABILIZACAO", "MANTA ASFALTICA", "PROTECAO DE SUPERFICIE"], prod: 30 },
+  { kw: ["FORMA EM CHAPA", "FORMA DE TABUAS", "FORMA ", "ESCORAMENTO"], prod: 25 },
+  { kw: ["ARMADURA", "ARMACAO", "CA-50", "CA-60"], prod: 180 },
+  { kw: ["LANCAMENTO E APLICACAO DE CONCRETO"], prod: 25 },
+  { kw: ["CONCRETO"], prod: 20 },
+  { kw: ["ESCAVACAO MECANICA", "ESCAVACAO MECANIZADA"], prod: 100 },
+  { kw: ["ESCAVACAO MANUAL", "ESCAVACAO DE VALAS"], prod: 4 },
+  { kw: ["ATERRO", "REATERRO", "COMPACTACAO", "APILOAMENTO", "RASPAGEM"], prod: 30 },
+  { kw: ["FUNDACAO EM ESTACAS", "HELICE CONTINUA", "ESTACA"], prod: 80 },
+  { kw: ["TELHA", "ESTRUTURA DE MADEIRA PARA TELHADO", "ESTRUTURA METALICA PARA TELHADO", "COBERTURA EM POLICARBONATO"], prod: 30 },
+  { kw: ["CALHA", "RUFO", "CHAPIM", "PINGADEIRA", "FRISOS", "JUNTA DE DILATACAO"], prod: 40 },
+  { kw: ["BANCADA", "SOLEIRA", "PEITORIL", "FILETE", "GRANITO", "MARMORE"], prod: 8 },
+  { kw: ["LIMPEZA"], prod: 200 },
+  { kw: ["GRAMA", "PAISAG", "JARDIM"], prod: 80 },
+  { kw: ["MEIO FIO", "MEIO-FIO", "CAPA ASFALTICA"], prod: 50 },
+  { kw: ["PORTA", "JANELA", "ESQUADRIA", "GUARDA-CORPO", "CORRIMAO", "PORTAO", "GRADIL", "BRISE", "VIDRO"], prod: 5 },
+  { kw: ["CUBA", "TORNEIRA", "MISTURADOR", "BACIA SANITARIA", "LAVATORIO", "TANQUE", "CHUVEIRO", "DUCHA", "VALVULA", "SIFAO", "REGISTRO"], prod: 8 },
+];
+// estimativa de dias para um item (null = sem índice → usa fallback por custo)
+function estimarDiasItem(descricao: string, unidade: string, quantidade: number): number | null {
+  if (!quantidade || quantidade <= 0) return null;
+  const un = (unidade || "").toLowerCase();
+  // serviços medidos por verba/mês não têm produtividade por m²/kg
+  if (un === "vb" || un === "mes" || un === "mês") return null;
+  const d = normalizar(descricao);
+  for (const r of PRODUTIVIDADE) {
+    if (r.kw.some((k) => d.includes(normalizar(k)))) {
+      return Math.max(1, Math.ceil(quantidade / r.prod));
+    }
+  }
+  return null;
+}
+
 export interface PlanejamentoDados {
   origem: "orcamento" | "branco";
   prazoTotalDias: number;
@@ -243,7 +299,20 @@ export function gerarPlanejamento(opts: {
     custoCat[cat] = porCat[cat].reduce((s, it) => s + it.quantidade * it.precoUnitario, 0);
   }
   const custoTotalItens = Object.values(custoCat).reduce((a, b) => a + b, 0) || 1;
-  const PRAZO_BASE = Math.max(60, categorias.length * 12); // dias
+  const PRAZO_BASE = Math.max(60, categorias.length * 12); // dias (fallback p/ itens sem índice)
+
+  // Duração de cada categoria via índices de produtividade (soma das tarefas);
+  // se nenhum item tiver índice, cai no fallback proporcional ao custo.
+  const durCat: Record<string, number> = {};
+  for (const cat of categorias) {
+    let dias = 0; let temIndice = false;
+    for (const it of porCat[cat]) {
+      const d = estimarDiasItem(it.descricao, it.unidade || "", it.quantidade);
+      if (d != null) { dias += d; temIndice = true; }
+    }
+    if (!temIndice) dias = Math.max(3, Math.round(PRAZO_BASE * (custoCat[cat] / custoTotalItens)) || 5);
+    durCat[cat] = Math.min(240, Math.max(2, dias));
+  }
 
   // ordena categorias pela fase macro
   const catsOrdenadas = [...categorias].sort((a, b) => {
@@ -252,42 +321,55 @@ export function gerarPlanejamento(opts: {
     return fa - fb;
   });
 
+  // fases na ordem em que aparecem
+  const fasesPresentes = [...new Set(catsOrdenadas.map((c) => FASE_MACRO[c] || "Acabamentos"))];
+
   const atividades: PlanejamentoDados["cronograma"]["atividades"] = [];
   let cursor = new Date(inicio);
   let idx = 0;
-  let prevId = "";
-  for (const cat of catsOrdenadas) {
-    idx++;
-    const dur = Math.max(3, Math.round(PRAZO_BASE * (custoCat[cat] / custoTotalItens)) || 5);
-    const ini = new Date(cursor);
-    const fim = addDias(ini, dur - 1);
-    atividades.push({
-      id: `A${idx}`,
-      descricao: cat,
-      fase: FASE_MACRO[cat] || "Acabamentos",
-      predecessoras: prevId,
-      duracaoDias: dur,
-      inicio: fmt(ini),
-      fim: fmt(fim),
-      critico: true,        // V1: sequência linear = tudo crítico
-      folgaDias: 0,
-    });
-    prevId = `A${idx}`;
-    cursor = addDias(fim, 1);
+  let prevFaseCriticaId = "";
+  for (const fase of fasesPresentes) {
+    const catsFase = catsOrdenadas.filter((c) => (FASE_MACRO[c] || "Acabamentos") === fase);
+    const faseInicio = new Date(cursor);
+    let faseMaxFim = new Date(cursor);
+    let criticaId = ""; let maxDur = -1;
+    for (const cat of catsFase) {
+      idx++;
+      const id = `A${idx}`;
+      const dur = durCat[cat];
+      const ini = new Date(faseInicio);              // tarefas da mesma fase começam juntas
+      const fim = addDias(ini, dur - 1);
+      atividades.push({
+        id, descricao: cat, fase,
+        predecessoras: prevFaseCriticaId,            // depende da fase anterior
+        duracaoDias: dur,
+        inicio: fmt(ini), fim: fmt(fim),
+        critico: false, folgaDias: 0,
+      });
+      if (fim > faseMaxFim) faseMaxFim = fim;
+      if (dur > maxDur) { maxDur = dur; criticaId = id; }
+    }
+    // marca a tarefa mais longa da fase como crítica
+    const crit = atividades.find((a) => a.id === criticaId);
+    if (crit) crit.critico = true;
+    prevFaseCriticaId = criticaId;
+    cursor = addDias(faseMaxFim, 1);
   }
   const prazoTotalDias = atividades.length > 0
-    ? Math.round((new Date(atividades[atividades.length - 1].fim).getTime() - inicio.getTime()) / 86400000) + 1
+    ? Math.round((new Date(atividades.reduce((m, a) => a.fim > m ? a.fim : m, atividades[0].fim)).getTime() - inicio.getTime()) / 86400000) + 1
     : PRAZO_BASE;
 
   // Marcos
   const marcos: PlanejamentoDados["cronograma"]["marcos"] = [];
   if (atividades.length > 0) {
+    const maxFimFase = (f: string) => atividades.filter(a => a.fase === f).reduce((m, a) => a.fim > m ? a.fim : m, "");
+    const fimGeral = atividades.reduce((m, a) => a.fim > m ? a.fim : m, atividades[0].fim);
     marcos.push({ descricao: "Início da obra", data: atividades[0].inicio });
-    const fundacoes = atividades.filter(a => a.fase === "Fundações").pop();
-    if (fundacoes) marcos.push({ descricao: "Conclusão das fundações", data: fundacoes.fim });
-    const estrutura = atividades.filter(a => a.fase === "Estrutura").pop();
-    if (estrutura) marcos.push({ descricao: "Conclusão da estrutura", data: estrutura.fim });
-    marcos.push({ descricao: "Entrega da obra", data: atividades[atividades.length - 1].fim });
+    const fFund = maxFimFase("Fundações");
+    if (fFund) marcos.push({ descricao: "Conclusão das fundações", data: fFund });
+    const fEst = maxFimFase("Estrutura");
+    if (fEst) marcos.push({ descricao: "Conclusão da estrutura", data: fEst });
+    marcos.push({ descricao: "Entrega da obra", data: fimGeral });
   }
 
   // ── RECURSOS ─────────────────────────────────────────────────────
@@ -365,7 +447,12 @@ Total de pacotes de trabalho (EAP): ${eap.length}
 Atividades no cronograma: ${atividades.length}
 
 Reserva de contingência recomendada: 5% a 10%.
-Indicadores de controle: SPI e CPI (Earned Value).`;
+Indicadores de controle: SPI e CPI (Earned Value).
+
+As durações das tarefas foram estimadas por ÍNDICES DE PRODUTIVIDADE (produção
+média diária por frente de trabalho — ex.: contrapiso 50 m²/dia, assentamento
+cerâmico/ladrilho 17 m²/dia, alvenaria 15 m²/dia, armação 180 kg/dia, concreto
+20 m³/dia). Ajuste as durações conforme o número de equipes/frentes de cada serviço.`;
 
   return {
     origem: opts.orcamento ? "orcamento" : "branco",

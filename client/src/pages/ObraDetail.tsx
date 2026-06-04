@@ -193,48 +193,26 @@ export default function ObraDetail() {
             ) : (
               <div className="space-y-2">
                 {diarios.map(diario => (
-                  <Card key={diario.id} className="cursor-pointer hover:shadow-md transition-shadow">
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <Calendar className="w-4 h-4 text-muted-foreground" />
-                          <div>
-                            <p className="font-medium">{fmtDataBR(diario.data)}</p>
-                            <p className="text-sm text-muted-foreground">{diario.clima || "Sem informação de clima"}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => navigate(`/obras/${obraId}/diario/${diario.id}`)}
-                          >
-                            <Eye className="w-4 h-4" />
-                            Ver
-                          </Button>
-                          <Button
-                            variant="default"
-                            size="sm"
-                            className="gap-2"
-                            onClick={() => navigate(`/obras/${obraId}/diario/${diario.id}?edit=true`)}
-                          >
-                            <Edit className="w-4 h-4" />
-                            Editar
-                          </Button>
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="gap-2 text-destructive hover:text-destructive"
-                            onClick={() => setDiarioToDelete(diario)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                            Deletar
-                          </Button>
-                        </div>
+                  <div key={diario.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-2.5 hover:shadow-sm transition-shadow">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Calendar className="w-4 h-4 text-muted-foreground shrink-0" />
+                      <div className="min-w-0">
+                        <p className="font-medium text-sm leading-tight">{fmtDataBR(diario.data)}</p>
+                        <p className="text-xs text-muted-foreground capitalize">{diario.clima || "Sem informação de clima"}</p>
                       </div>
-                    </CardContent>
-                  </Card>
+                    </div>
+                    <div className="flex gap-1.5 shrink-0">
+                      <Button variant="outline" size="sm" className="gap-1.5 h-8" onClick={() => navigate(`/obras/${obraId}/diario/${diario.id}`)}>
+                        <Eye className="w-4 h-4" /> Ver
+                      </Button>
+                      <Button variant="default" size="sm" className="gap-1.5 h-8" onClick={() => navigate(`/obras/${obraId}/diario/${diario.id}/edit`)}>
+                        <Edit className="w-4 h-4" /> Editar
+                      </Button>
+                      <Button variant="outline" size="sm" className="gap-1.5 h-8 text-destructive hover:text-destructive" onClick={() => setDiarioToDelete(diario)}>
+                        <Trash2 className="w-4 h-4" /> Deletar
+                      </Button>
+                    </div>
+                  </div>
                 ))}
               </div>
             )}

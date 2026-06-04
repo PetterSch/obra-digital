@@ -149,24 +149,15 @@ export default function ObraDetail() {
         </div>
 
         {/* Progresso */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Progresso da Obra</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">{obra.percentualAndamento}% concluído</span>
-              </div>
-              <div className="w-full bg-muted rounded-full h-3">
-                <div
-                  className="bg-blue-600 h-3 rounded-full transition-all"
-                  style={{ width: `${obra.percentualAndamento}%` }}
-                />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border bg-card p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-semibold">Progresso da Obra</span>
+            <span className="text-sm font-bold text-blue-600">{obra.percentualAndamento}%</span>
+          </div>
+          <div className="w-full bg-muted rounded-full h-2.5">
+            <div className="bg-blue-600 h-2.5 rounded-full transition-all" style={{ width: `${obra.percentualAndamento}%` }} />
+          </div>
+        </div>
 
         {/* Tabs */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">

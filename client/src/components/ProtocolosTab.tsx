@@ -32,6 +32,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
   const [observacao, setObservacao] = useState("");
   const [notas, setNotas] = useState<Nota[]>([notaVazia()]);
   const [delId, setDelId] = useState<number | null>(null);
+  const [statusFiltro, setStatusFiltro] = useState("todos");
 
   const inval = () => utils.protocolos.listByObra.invalidate({ obraId });
   const createMut = trpc.protocolos.create.useMutation({ onSuccess: () => { toast.success("Protocolo salvo!"); setOpen(false); inval(); }, onError: (e) => toast.error(e.message) });
@@ -106,6 +107,34 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
     w.document.write(html); w.document.close();
   };
 
+  const listaFiltrada = statusFiltro === "todos"
+    ? (lista as any[])
+    : (lista as any[]).filter((p) => String(p.statuses || "").split(",").includes(statusFiltro));
+
+  const exportarTudo = async () => {
+    const alvo = listaFiltrada;
+    if (alvo.length === 0) { toast.error("Nenhum protocolo para exportar"); return; }
+    const rows: any[][] = [];
+    for (const p of alvo) {
+      const full: any = await utils.protocolos.getById.fetch({ id: p.id });
+      for (const n of (full?.notas || [])) {
+        if (statusFiltro !== "todos" && n.status !== statusFiltro) continue;
+        rows.push([`${full?.numero || "#" + p.id}`, ...linhaNota(n)]);
+      }
+    }
+    const aoa = [["Protocolo", ...COLS], ...rows];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 12 }, { wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+    for (let c = 0; c < COLS.length + 1; c++) {
+      const a = XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[a]) ws[a].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E3A5F" } } };
+    }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Consolidado");
+    XLSX.writeFile(wb, `Protocolos_${(obraNome || "obra").replace(/[^a-z0-9]/gi, "_")}${statusFiltro !== "todos" ? "_" + statusFiltro : ""}.xlsx`);
+    toast.success(`${rows.length} nota(s) exportada(s)!`);
+  };
+
   const exportarExcel = async (p: any) => {
     const full: any = await utils.protocolos.getById.fetch({ id: p.id });
     const aoa = [COLS, ...(full?.notas || []).map(linhaNota)];
@@ -123,21 +152,31 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h3 className="text-lg font-semibold">Protocolos de Envio</h3>
-        <Button size="sm" className="gap-1.5" onClick={abrirNovo}><Plus className="w-4 h-4" /> Novo Protocolo</Button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)} className="h-9 px-3 border border-input rounded-md bg-background text-sm">
+            <option value="todos">Todos os status</option>
+            <option value="enviado">Enviado</option>
+            <option value="em_analise">Em análise</option>
+            <option value="pago">Pago</option>
+            <option value="recusado">Recusado</option>
+          </select>
+          <Button size="sm" variant="outline" className="gap-1.5" disabled={listaFiltrada.length === 0} onClick={exportarTudo}><FileSpreadsheet className="w-4 h-4" /> Exportar tudo</Button>
+          <Button size="sm" className="gap-1.5" onClick={abrirNovo}><Plus className="w-4 h-4" /> Novo Protocolo</Button>
+        </div>
       </div>
 
       {isLoading ? (
         <div className="flex justify-center py-10"><Spinner /></div>
-      ) : (lista as any[]).length === 0 ? (
+      ) : listaFiltrada.length === 0 ? (
         <Card><CardContent className="py-10 text-center text-muted-foreground">
           <FileText className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          Nenhum protocolo de envio. Clique em <b>Novo Protocolo</b>.
+          {(lista as any[]).length === 0 ? <>Nenhum protocolo de envio. Clique em <b>Novo Protocolo</b>.</> : "Nenhum protocolo com esse status."}
         </CardContent></Card>
       ) : (
         <div className="space-y-2">
-          {(lista as any[]).map((p) => (
+          {listaFiltrada.map((p) => (
             <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-2.5">
               <div className="flex items-center gap-3 min-w-0">
                 <FileText className="w-4 h-4 text-primary shrink-0" />

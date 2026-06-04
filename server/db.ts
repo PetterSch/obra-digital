@@ -1136,7 +1136,8 @@ export async function getProtocolosByObra(obraId: number) {
   if (!db) return [];
   const r: any = await db.execute(sql`
     SELECT p.id, p.numero, p.observacao, p.criadoEm,
-      (SELECT COUNT(*) FROM protocolo_notas n WHERE n.protocoloId = p.id) AS totalNotas
+      (SELECT COUNT(*) FROM protocolo_notas n WHERE n.protocoloId = p.id) AS totalNotas,
+      (SELECT GROUP_CONCAT(DISTINCT n.status) FROM protocolo_notas n WHERE n.protocoloId = p.id) AS statuses
     FROM protocolos p WHERE p.obraId = ${obraId} ORDER BY p.id DESC`);
   return (r[0] ?? r) as any[];
 }

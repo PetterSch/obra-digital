@@ -217,7 +217,8 @@ export default function Presenca() {
                 const pct = e.totalColaboradores ? Math.min(100, Math.round((media / e.totalColaboradores) * 100)) : 0;
                 const sel = equipeSel === String(e.id);
                 return (
-                  <button key={e.id} onClick={() => { setEquipeSel(String(e.id)); setOperarioSel(""); }}
+                  <button key={e.id} onClick={() => { setEquipeSel(sel ? "" : String(e.id)); setOperarioSel(""); }}
+                    title={sel ? "Clique para desselecionar" : "Clique para ver no calendário"}
                     className={`text-left rounded-xl border bg-card p-3 transition-all hover:shadow-sm ${sel ? "ring-2 ring-primary border-primary/40" : ""}`}>
                     <p className="font-medium text-xs truncate" title={e.nome}>{e.nome}</p>
                     <div className="mt-1.5 flex items-baseline gap-1">
@@ -237,9 +238,10 @@ export default function Presenca() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <label className="text-sm font-medium">Equipe</label>
-                  <Select value={equipeSel} onValueChange={(v) => { setEquipeSel(v); setOperarioSel(""); }}>
+                  <Select value={equipeSel || "__none"} onValueChange={(v) => { setEquipeSel(v === "__none" ? "" : v); setOperarioSel(""); }}>
                     <SelectTrigger><SelectValue placeholder="Selecione uma equipe" /></SelectTrigger>
                     <SelectContent>
+                      <SelectItem value="__none">Todas as equipes (geral)</SelectItem>
                       {equipes.map((e) => <SelectItem key={e.id} value={String(e.id)}>{e.nome}</SelectItem>)}
                     </SelectContent>
                   </Select>

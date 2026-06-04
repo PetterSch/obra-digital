@@ -43,6 +43,11 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
     return String(max + 1).padStart(2, "0");
   };
   const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setObservacao(""); setNotas([notaVazia()]); setOpen(true); };
+  const [verData, setVerData] = useState<any | null>(null);
+  const verProtocolo = async (id: number) => {
+    const p: any = await utils.protocolos.getById.fetch({ id });
+    if (p) setVerData(p);
+  };
   const abrirEdicao = async (id: number) => {
     const p: any = await utils.protocolos.getById.fetch({ id });
     if (!p) return;
@@ -210,13 +215,13 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
         <div className="space-y-2">
           {listaFiltrada.map((p) => (
             <div key={p.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-2.5">
-              <div className="flex items-center gap-3 min-w-0">
+              <button className="flex items-center gap-3 min-w-0 text-left group" onClick={() => verProtocolo(p.id)} title="Clique para visualizar">
                 <FileText className="w-4 h-4 text-primary shrink-0" />
                 <div className="min-w-0">
-                  <p className="font-medium text-sm leading-tight">Protocolo {p.numero ? `nº ${p.numero}` : `#${p.id}`}</p>
+                  <p className="font-medium text-sm leading-tight group-hover:text-primary group-hover:underline transition-colors">Protocolo {p.numero ? `nº ${p.numero}` : `#${p.id}`}</p>
                   <p className="text-xs text-muted-foreground">{p.totalNotas} nota(s) · {fmtDataBR(p.criadoEm)}{p.observacao ? ` · ${p.observacao}` : ""}</p>
                 </div>
-              </div>
+              </button>
               <div className="flex gap-1 shrink-0">
                 <Button variant="ghost" size="icon" className="h-8 w-8" title="Exportar PDF" onClick={() => exportarPDF(p)}><FileDown className="w-4 h-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" title="Exportar Excel" onClick={() => exportarExcel(p)}><FileSpreadsheet className="w-4 h-4" /></Button>
@@ -311,6 +316,55 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
               </Button>
             </div>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Visualização (somente leitura) */}
+      <Dialog open={!!verData} onOpenChange={(o) => { if (!o) setVerData(null); }}>
+        <DialogContent className="!max-w-4xl w-[96vw] max-h-[92vh] overflow-y-auto overflow-x-hidden">
+          <DialogHeader>
+            <DialogTitle>Protocolo {verData?.numero ? `nº ${verData.numero}` : `#${verData?.id}`}</DialogTitle>
+          </DialogHeader>
+          {verData && (
+            <div className="space-y-3 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
+                <span>{(verData.notas || []).length} nota(s)</span>
+                <span>· Criado em {fmtDataBR(verData.criadoEm)}</span>
+                {verData.observacao && <span>· {verData.observacao}</span>}
+                <span className="ml-auto flex gap-1.5">
+                  <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => exportarPDF(verData)}><FileDown className="w-3.5 h-3.5" /> PDF</Button>
+                  <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => exportarExcel(verData)}><FileSpreadsheet className="w-3.5 h-3.5" /> Excel</Button>
+                  <Button size="sm" className="gap-1.5 h-8" onClick={() => { const id = verData.id; setVerData(null); abrirEdicao(id); }}><Pencil className="w-3.5 h-3.5" /> Editar</Button>
+                </span>
+              </div>
+              <div className="overflow-x-auto rounded-lg border">
+                <table className="w-full text-sm" style={{ minWidth: 900 }}>
+                  <thead><tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    {["Fornecedor", "Nº OC", "Nº Pedido", "Nº NF", "Data envio", "Pagamento", "Vencimentos", "Status"].map((c) => <th key={c} className="text-left p-2">{c}</th>)}
+                  </tr></thead>
+                  <tbody>
+                    {(verData.notas || []).map((n: any) => {
+                      const vencs = [n.venc1, n.venc2, n.venc3].filter(Boolean).map((d: string) => fmtDataBR(d));
+                      const cond = { avista: "À vista", "28": "Boleto 28d", "28_56": "Boleto 28/56", "28_56_72": "Boleto 28/56/72" }[String(n.condicao)] || (vencs.length ? `${vencs.length}x` : "À vista");
+                      return (
+                        <tr key={n.id} className="border-t">
+                          <td className="p-2">{n.fornecedor || "—"}</td>
+                          <td className="p-2">{n.ordemCompra || "—"}</td>
+                          <td className="p-2">{n.pedido || "—"}</td>
+                          <td className="p-2">{n.nf || "—"}</td>
+                          <td className="p-2">{n.dataEnvio ? fmtDataBR(n.dataEnvio) : "—"}</td>
+                          <td className="p-2">{cond}</td>
+                          <td className="p-2">{vencs.length ? vencs.join(" · ") : "—"}</td>
+                          <td className="p-2">{STATUS_LABEL[n.status] || n.status || "—"}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex justify-end"><Button variant="outline" onClick={() => setVerData(null)}>Fechar</Button></div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
 

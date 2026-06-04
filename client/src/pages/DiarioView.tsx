@@ -268,30 +268,28 @@ export default function DiarioView() {
             <TabsTrigger value="fotos" className="flex-1 text-xs sm:text-sm">Fotos</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="atividades" className="space-y-3 mt-4">
+          <TabsContent value="atividades" className="space-y-2 mt-4">
             {atividades.length === 0 ? (
               <Card><CardContent className="py-8 text-center text-muted-foreground">Nenhuma atividade registrada</CardContent></Card>
             ) : atividades.map((ativ) => (
-              <Card key={ativ.id}>
-                <CardContent className="pt-4 pb-4">
-                  <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium">{ativ.descricao}</p>
-                      {ativ.local && <p className="text-sm text-muted-foreground mt-0.5">📍 {ativ.local}</p>}
-                    </div>
-                    <div className="flex flex-wrap gap-2 shrink-0">
-                      {ativ.status && (
-                        <Badge variant="outline" className={STATUS_COLORS[ativ.status] ?? ""}>
-                          {ativ.status.replace(/_/g, " ")}
-                        </Badge>
-                      )}
-                      {ativ.percentualConcluido != null && (
-                        <Badge variant="outline" className="bg-gray-50">{ativ.percentualConcluido}%</Badge>
-                      )}
-                    </div>
+              <div key={ativ.id} className="rounded-xl border bg-card px-4 py-2.5">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-medium text-sm leading-tight">{ativ.descricao}</p>
+                    {ativ.local && <p className="text-xs text-muted-foreground mt-0.5">📍 {ativ.local}</p>}
                   </div>
-                </CardContent>
-              </Card>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {ativ.status && (
+                      <Badge variant="outline" className={`text-xs ${STATUS_COLORS[ativ.status] ?? ""}`}>
+                        {ativ.status.replace(/_/g, " ")}
+                      </Badge>
+                    )}
+                    {ativ.percentualConcluido != null && (
+                      <Badge variant="outline" className="text-xs bg-muted/50">{ativ.percentualConcluido}%</Badge>
+                    )}
+                  </div>
+                </div>
+              </div>
             ))}
           </TabsContent>
 

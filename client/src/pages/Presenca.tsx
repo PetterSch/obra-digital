@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useLocation, useRoute } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { PageHeader } from "@/components/PageHeader";
-import { StatCard } from "@/components/StatCard";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -83,20 +82,27 @@ export default function Presenca() {
   const totalCadastrados = equipes.reduce((s, e) => s + (e.totalColaboradores || 0), 0);
 
   // Monta HTML do calendário (para o PDF)
-  const calendarioHTML = (eqId: number, opId: number | null) => {
-    let html = `<table style="width:100%;border-collapse:separate;border-spacing:4px;table-layout:fixed">
-      <thead><tr>${DIAS_SEMANA.map(d => `<th style="font-size:10px;color:#666;padding:2px">${d}</th>`).join("")}</tr></thead><tbody><tr>`;
+  const calendarioHTML = (eqId: number | null, opId: number | null) => {
+    let html = `<table style="width:100%;max-width:480px;border-collapse:separate;border-spacing:4px;table-layout:fixed">
+      <thead><tr>${DIAS_SEMANA.map(d => `<th style="font-size:9px;color:#888;padding:2px">${d}</th>`).join("")}</tr></thead><tbody><tr>`;
     let col = 0;
     for (let i = 0; i < primeiroDia; i++) { html += `<td></td>`; col++; }
     for (let d = 1; d <= totalDias; d++) {
       const dataStr = `${ano}-${z2(mes)}-${z2(d)}`;
       const reg = dias.find((x) => x.data === dataStr);
-      const pe = reg?.porEquipe?.[eqId];
-      const presente = pe ? (opId ? pe.operarios.includes(opId) : pe.presentes > 0) : false;
-      const bg = presente ? "#10b981" : "#f1f1f1";
-      const cor = presente ? "#fff" : "#999";
-      const sub = presente && !opId ? `<div style="font-size:8px">${pe.presentes}</div>` : "";
-      html += `<td style="background:${bg};color:${cor};text-align:center;padding:6px 2px;border-radius:6px;font-size:11px;-webkit-print-color-adjust:exact;print-color-adjust:exact">${d}${sub}</td>`;
+      let presente = false, num = 0;
+      if (eqId == null) {
+        const eqsDia = reg ? Object.keys(reg.porEquipe || {}) : [];
+        presente = eqsDia.length > 0; num = eqsDia.length;
+      } else {
+        const pe = reg?.porEquipe?.[eqId];
+        presente = pe ? (opId ? pe.operarios.includes(opId) : pe.presentes > 0) : false;
+        num = pe?.presentes || 0;
+      }
+      const bg = presente ? "#10b981" : "#f3f3f3";
+      const cor = presente ? "#fff" : "#aaa";
+      const sub = presente && !opId ? `<div style="font-size:8px;font-weight:400">${num}</div>` : "";
+      html += `<td style="background:${bg};color:${cor};text-align:center;padding:7px 2px;border-radius:6px;font-size:11px;font-weight:600;-webkit-print-color-adjust:exact;print-color-adjust:exact">${d}${sub}</td>`;
       col++;
       if (col % 7 === 0) html += `</tr><tr>`;
     }
@@ -117,9 +123,12 @@ export default function Presenca() {
     }).join("");
     const tituloCal = equipeAtual
       ? `Calendário — ${equipeAtual.nome}${operarioSel ? " · " + (operarios.find((o: any) => String(o.id) === operarioSel)?.nome || "") : ""}`
-      : "";
-    const calHtml = equipeAtual ? `<h2 style="font-size:14px;color:#1e3a5f;margin:18px 0 8px">${tituloCal}</h2>${calendarioHTML(Number(equipeSel), operarioSel ? Number(operarioSel) : null)}
-      <p style="font-size:10px;color:#666;margin-top:6px"><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px"></span> Presente &nbsp; <span style="display:inline-block;width:10px;height:10px;background:#f1f1f1;border-radius:2px"></span> Sem registro</p>` : "";
+      : "Calendário — Dias com equipes em obra";
+    const legendaCal = equipeAtual
+      ? (operarioSel ? "Verde = operário presente" : "Verde = equipe presente (nº = presentes)")
+      : "Verde = houve equipe(s) em obra (nº = equipes no dia)";
+    const calHtml = `<h2 style="font-size:13px;color:#1e3a5f;margin:18px 0 8px">${tituloCal}</h2>${calendarioHTML(equipeAtual ? Number(equipeSel) : null, operarioSel ? Number(operarioSel) : null)}
+      <p style="font-size:10px;color:#666;margin-top:6px"><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px"></span> ${legendaCal} &nbsp; <span style="display:inline-block;width:10px;height:10px;background:#f3f3f3;border-radius:2px"></span> Sem registro</p>`;
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Presença</title>
       <style>*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
       body{font-family:Arial,sans-serif;padding:32px;color:#1a1a1a}@page{margin:1.5cm}</style></head><body>
@@ -191,38 +200,33 @@ export default function Presenca() {
           </CardContent></Card>
         ) : (
           <>
-            {/* Média geral da obra */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <StatCard label="Média geral da obra" value={mediaGeral.toFixed(1).replace(".0", "")} icon={Activity} tone="blue" hint="Média das equipes/dia" />
-              <StatCard label="Total cadastrados" value={totalCadastrados} icon={Users} tone="neutral" hint={`${equipes.length} equipe(s)`} />
-              <StatCard label="Dias com registro" value={dias.length} icon={CalendarCheck} tone="green" hint={`em ${MESES[mes - 1]}`} />
-            </div>
+            {/* Resumo compacto */}
+            <Card><CardContent className="py-3">
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-1.5 text-sm">
+                <span className="flex items-center gap-2"><Activity className="w-4 h-4 text-primary" /><span className="text-muted-foreground">Média geral:</span> <b>{mediaGeral.toFixed(1).replace(".0", "")}</b></span>
+                <span className="flex items-center gap-2"><Users className="w-4 h-4 text-muted-foreground" /><span className="text-muted-foreground">Cadastrados:</span> <b>{totalCadastrados}</b> <span className="text-muted-foreground">· {equipes.length} equipes</span></span>
+                <span className="flex items-center gap-2"><CalendarCheck className="w-4 h-4 text-emerald-600" /><span className="text-muted-foreground">Dias com registro:</span> <b>{dias.length}</b></span>
+              </div>
+            </CardContent></Card>
 
             {/* Médias por equipe */}
-            <p className="text-sm font-medium">Média de presença por equipe <span className="text-muted-foreground font-normal">— clique para ver no calendário</span></p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+            <p className="text-sm font-medium">Média por equipe <span className="text-muted-foreground font-normal">— clique para ver no calendário</span></p>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
               {equipes.map((e) => {
                 const media = mediaEquipe(e.id);
                 const pct = e.totalColaboradores ? Math.min(100, Math.round((media / e.totalColaboradores) * 100)) : 0;
                 const sel = equipeSel === String(e.id);
                 return (
                   <button key={e.id} onClick={() => { setEquipeSel(String(e.id)); setOperarioSel(""); }}
-                    className={`text-left rounded-2xl border bg-card p-4 transition-all hover:shadow-md ${sel ? "ring-2 ring-primary border-primary/40 shadow-sm" : ""}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <p className="font-semibold text-sm truncate">{e.nome}</p>
-                        <p className="text-xs text-muted-foreground truncate">{e.empresa || "—"}</p>
-                      </div>
-                      <span className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"><UserCheck className="h-4 w-4" /></span>
+                    className={`text-left rounded-xl border bg-card p-3 transition-all hover:shadow-sm ${sel ? "ring-2 ring-primary border-primary/40" : ""}`}>
+                    <p className="font-medium text-xs truncate" title={e.nome}>{e.nome}</p>
+                    <div className="mt-1.5 flex items-baseline gap-1">
+                      <span className="text-lg font-bold tracking-tight">{media.toFixed(1).replace(".0", "")}</span>
+                      <span className="text-xs text-muted-foreground">/ {e.totalColaboradores}</span>
                     </div>
-                    <div className="mt-3 flex items-end gap-1.5">
-                      <span className="text-2xl font-bold tracking-tight">{media.toFixed(1).replace(".0", "")}</span>
-                      <span className="text-sm text-muted-foreground mb-0.5">de {e.totalColaboradores} presentes</span>
+                    <div className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500" style={{ width: pct + "%" }} />
                     </div>
-                    <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                      <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: pct + "%" }} />
-                    </div>
-                    <p className="mt-1 text-[11px] text-muted-foreground">{pct}% de presença média</p>
                   </button>
                 );
               })}
@@ -259,10 +263,11 @@ export default function Presenca() {
                 <p className="text-sm text-muted-foreground text-center py-8">Selecione uma equipe (acima ou nos cartões) para ver os dias de presença.</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-7 gap-2 mb-2">
-                    {DIAS_SEMANA.map((d, i) => <div key={d} className={`text-center text-[11px] font-semibold uppercase tracking-wide py-1 ${i === 0 || i === 6 ? "text-muted-foreground/50" : "text-muted-foreground"}`}>{d}</div>)}
+                  <div className="max-w-md">
+                  <div className="grid grid-cols-7 gap-1.5 mb-1.5">
+                    {DIAS_SEMANA.map((d, i) => <div key={d} className={`text-center text-[10px] font-semibold uppercase tracking-wide ${i === 0 || i === 6 ? "text-muted-foreground/40" : "text-muted-foreground"}`}>{d}</div>)}
                   </div>
-                  <div className="grid grid-cols-7 gap-2">
+                  <div className="grid grid-cols-7 gap-1.5">
                     {celulas.map((dia, i) => {
                       if (dia === null) return <div key={i} />;
                       const { presente, qtd } = diaPresente(dia);
@@ -272,18 +277,19 @@ export default function Presenca() {
                       const fds = dow === 0 || dow === 6;
                       return (
                         <div key={i}
-                          className={`relative aspect-square rounded-xl border flex flex-col items-center justify-center text-sm transition-all
-                            ${presente ? shadeDia(qtd) + " font-semibold shadow-sm" : fds ? "bg-muted/40 text-muted-foreground/60 border-transparent" : "bg-background text-muted-foreground border-border/70"}
-                            ${ehHoje ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
+                          className={`relative aspect-square rounded-lg border flex items-center justify-center text-xs transition-all
+                            ${presente ? shadeDia(qtd) + " font-semibold" : fds ? "bg-muted/40 text-muted-foreground/50 border-transparent" : "bg-background text-muted-foreground/80 border-border/60"}
+                            ${ehHoje ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}`}>
                           <span>{dia}</span>
                           {presente && !operarioSel && (
-                            <span className="absolute bottom-1 inline-flex items-center justify-center min-w-[16px] px-1 h-4 rounded-full bg-white/25 text-[10px] font-bold leading-none">{qtd}</span>
+                            <span className="absolute -top-1 -right-1 inline-flex items-center justify-center min-w-[15px] px-1 h-[15px] rounded-full bg-foreground text-background text-[9px] font-bold leading-none shadow">{qtd}</span>
                           )}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground flex-wrap">
+                  </div>
+                  <div className="flex items-center gap-4 mt-3 text-[11px] text-muted-foreground flex-wrap">
                     {operarioSel ? (
                       <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded bg-emerald-500" /> Operário presente</span>
                     ) : (

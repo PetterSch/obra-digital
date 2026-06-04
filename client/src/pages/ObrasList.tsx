@@ -244,42 +244,36 @@ export default function ObrasList() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredObras.map(obra => (
-              <Card key={obra.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => navigate(`/obras/${obra.id}`)}>
-                <CardHeader>
-                  <CardTitle className="line-clamp-2">{obra.nome}</CardTitle>
-                  <CardDescription>{obra.codigo}</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <MapPin className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{obra.cidade}, {obra.estado}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Calendar className="w-4 h-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      {new Date(obra.dataInicio).toLocaleDateString("pt-BR")} - {new Date(obra.dataPrevistTermino).toLocaleDateString("pt-BR")}
-                    </span>
-                  </div>
-                  <div className="pt-2">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-medium">Progresso</span>
-                      <span className="text-xs font-medium">{obra.percentualAndamento}%</span>
+              <Card key={obra.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/obras/${obra.id}`)}>
+                <CardContent className="p-4 space-y-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <h3 className="font-semibold text-base leading-tight line-clamp-2">{obra.nome}</h3>
+                      {obra.codigo && <p className="text-xs text-muted-foreground mt-0.5">{obra.codigo}</p>}
                     </div>
-                    <div className="w-full bg-muted rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${obra.percentualAndamento}%` }}
-                      />
-                    </div>
-                  </div>
-                  <div className="flex gap-2 pt-2">
-                    <span className={`text-xs px-2 py-1 rounded-full ${
+                    <span className={`shrink-0 text-[11px] px-2 py-0.5 rounded-full font-semibold capitalize ${
                       obra.status === "em_andamento" ? "bg-blue-100 text-blue-700" :
                       obra.status === "finalizada" ? "bg-green-100 text-green-700" :
                       "bg-amber-100 text-amber-700"
                     }`}>
-                      {obra.status}
+                      {(obra.status || "").replace(/_/g, " ")}
                     </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <MapPin className="w-3.5 h-3.5 shrink-0" />{obra.cidade}, {obra.estado}
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Calendar className="w-3.5 h-3.5 shrink-0" />
+                    {new Date(obra.dataInicio).toLocaleDateString("pt-BR")} - {new Date(obra.dataPrevistTermino).toLocaleDateString("pt-BR")}
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs font-medium">Progresso</span>
+                      <span className="text-xs font-bold text-blue-600">{obra.percentualAndamento}%</span>
+                    </div>
+                    <div className="w-full bg-muted rounded-full h-2">
+                      <div className="bg-blue-600 h-2 rounded-full transition-all" style={{ width: `${obra.percentualAndamento}%` }} />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

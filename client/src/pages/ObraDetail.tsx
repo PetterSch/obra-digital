@@ -122,49 +122,30 @@ export default function ObraDetail() {
         </div>
 
         {/* Info Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Cliente</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-semibold">{obra.cliente}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Localização</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-semibold text-sm">{obra.cidade}, {obra.estado}</p>
-              <p className="text-xs text-muted-foreground">{obra.endereco}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Responsável</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="font-semibold text-sm">{obra.responsavelTecnico}</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium">Status</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <span className={`inline-block px-2 py-1 rounded-full text-xs font-semibold ${
-                obra.status === "em_andamento" ? "bg-blue-100 text-blue-700" :
-                obra.status === "finalizada" ? "bg-green-100 text-green-700" :
-                "bg-amber-100 text-amber-700"
-              }`}>
-                {obra.status}
-              </span>
-            </CardContent>
-          </Card>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="rounded-2xl border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">Cliente</p>
+            <p className="font-semibold text-sm mt-1">{obra.cliente}</p>
+          </div>
+          <div className="rounded-2xl border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">Localização</p>
+            <p className="font-semibold text-sm mt-1">{obra.cidade}, {obra.estado}</p>
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{obra.endereco}</p>
+          </div>
+          <div className="rounded-2xl border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">Responsável</p>
+            <p className="font-semibold text-sm mt-1">{obra.responsavelTecnico}</p>
+          </div>
+          <div className="rounded-2xl border bg-card p-4">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/70">Status</p>
+            <span className={`inline-block mt-1.5 px-2 py-0.5 rounded-full text-xs font-semibold capitalize ${
+              obra.status === "em_andamento" ? "bg-blue-100 text-blue-700" :
+              obra.status === "finalizada" ? "bg-green-100 text-green-700" :
+              "bg-amber-100 text-amber-700"
+            }`}>
+              {(obra.status || "").replace(/_/g, " ")}
+            </span>
+          </div>
         </div>
 
         {/* Progresso */}

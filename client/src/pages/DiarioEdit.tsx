@@ -135,7 +135,7 @@ export default function DiarioEdit() {
                 <textarea value={header.observacoesGerais} onChange={(e) => setHeader({ ...header, observacoesGerais: e.target.value })} rows={4} className="w-full px-3 py-2 border border-input rounded-md bg-background" placeholder="Descreva as observações gerais do dia..." />
               </div>
               <Button className="gap-2" disabled={updateHeader.isPending}
-                onClick={() => updateHeader.mutate({ id: diarioId!, clima: (header.clima || undefined) as any, temperatura: header.temperatura || undefined, umidade: header.umidade ? parseInt(header.umidade) : undefined, observacoesGerais: header.observacoesGerais || undefined })}>
+                onClick={() => updateHeader.mutate({ id: diarioId!, clima: (header.clima || undefined) as any, temperatura: header.temperatura || undefined, umidade: header.umidade ? parseInt(header.umidade) : undefined, observacoesGerais: header.observacoesGerais ?? "" })}>
                 <Save className="w-4 h-4" /> {updateHeader.isPending ? "Salvando..." : "Salvar informações"}
               </Button>
             </div>

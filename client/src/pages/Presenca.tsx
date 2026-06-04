@@ -224,6 +224,7 @@ export default function Presenca() {
                     <div className="mt-1.5 flex items-baseline gap-1">
                       <span className="text-lg font-bold tracking-tight">{media.toFixed(1).replace(".0", "")}</span>
                       <span className="text-xs text-muted-foreground">/ {e.totalColaboradores}</span>
+                      <span className="ml-auto text-xs font-semibold text-emerald-600">{pct}%</span>
                     </div>
                     <div className="mt-1.5 h-1 w-full rounded-full bg-muted overflow-hidden">
                       <div className="h-full rounded-full bg-emerald-500" style={{ width: pct + "%" }} />

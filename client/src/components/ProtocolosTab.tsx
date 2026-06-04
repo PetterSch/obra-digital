@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, FileText, X, FileDown, FileSpreadsheet } from "lucide-react";
+import { Plus, Trash2, Pencil, FileText, X, FileDown, FileSpreadsheet, Search } from "lucide-react";
 import { fmtDataBR } from "@/lib/data";
 import { getPDFConfig } from "@/lib/pdfExport";
 import * as XLSX from "xlsx-js-style";
@@ -28,6 +28,9 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
   const [notas, setNotas] = useState<Nota[]>([notaVazia()]);
   const [delId, setDelId] = useState<number | null>(null);
   const [statusFiltro, setStatusFiltro] = useState("todos");
+  const [busca, setBusca] = useState("");
+  const buscando = busca.trim().length >= 2;
+  const { data: resultados = [] } = trpc.protocolos.buscar.useQuery({ obraId, termo: busca.trim() }, { enabled: buscando });
 
   const inval = () => utils.protocolos.listByObra.invalidate({ obraId });
   const createMut = trpc.protocolos.create.useMutation({ onSuccess: () => { toast.success("Protocolo salvo!"); setOpen(false); inval(); }, onError: (e) => toast.error(e.message) });
@@ -164,7 +167,39 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
         </div>
       </div>
 
-      {isLoading ? (
+      {/* Busca por qualquer campo das notas */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+        <Input className="pl-9" placeholder="Pesquisar por fornecedor, Nº OC, pedido, NF, status, nº do protocolo..." value={busca} onChange={(e) => setBusca(e.target.value)} />
+        {busca && <button onClick={() => setBusca("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"><X className="w-4 h-4" /></button>}
+      </div>
+
+      {buscando ? (
+        <Card><CardContent className="py-3">
+          <p className="text-xs text-muted-foreground mb-2">{(resultados as any[]).length} resultado(s) para "{busca.trim()}"</p>
+          {(resultados as any[]).length === 0 ? (
+            <p className="text-sm text-muted-foreground py-4 text-center">Nenhuma nota encontrada.</p>
+          ) : (
+            <div className="space-y-1.5">
+              {(resultados as any[]).map((r) => (
+                <div key={r.id} className="flex items-center justify-between gap-2 rounded-lg border bg-muted/20 px-3 py-2">
+                  <div className="min-w-0 text-sm flex items-center gap-2 flex-wrap">
+                    <span className="font-medium">{r.fornecedor || "—"}</span>
+                    {r.nf && <span className="text-xs text-muted-foreground">NF {r.nf}</span>}
+                    {r.ordemCompra && <span className="text-xs text-muted-foreground">· OC {r.ordemCompra}</span>}
+                    {r.pedido && <span className="text-xs text-muted-foreground">· Pedido {r.pedido}</span>}
+                    {r.status && <span className="text-[11px] px-1.5 py-0 rounded-full bg-muted text-muted-foreground">{STATUS_LABEL[r.status] || r.status}</span>}
+                    <span className="text-xs text-primary font-medium">Protocolo {r.protocoloNumero ? `nº ${r.protocoloNumero}` : `#${r.protocoloId}`}</span>
+                  </div>
+                  <Button size="sm" variant="outline" className="gap-1.5 shrink-0 h-8" onClick={() => abrirEdicao(r.protocoloId)}>
+                    <FileText className="w-3.5 h-3.5" /> Ver protocolo
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent></Card>
+      ) : isLoading ? (
         <div className="flex justify-center py-10"><Spinner /></div>
       ) : listaFiltrada.length === 0 ? (
         <Card><CardContent className="py-10 text-center text-muted-foreground">

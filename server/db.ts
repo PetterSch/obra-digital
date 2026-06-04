@@ -1183,6 +1183,21 @@ async function inserirNotas(protocoloId: number, notas: ProtocoloNotaInput[]) {
   }
 }
 
+export async function buscarNotasProtocolo(obraId: number, termo: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const like = `%${termo}%`;
+  const r: any = await db.execute(sql`
+    SELECT n.id, n.fornecedor, n.ordemCompra, n.pedido, n.nf, n.dataEnvio, n.status, n.condicao,
+      n.venc1, n.venc2, n.venc3, p.id AS protocoloId, p.numero AS protocoloNumero
+    FROM protocolo_notas n JOIN protocolos p ON n.protocoloId = p.id
+    WHERE p.obraId = ${obraId} AND (
+      n.fornecedor LIKE ${like} OR n.ordemCompra LIKE ${like} OR n.pedido LIKE ${like}
+      OR n.nf LIKE ${like} OR n.status LIKE ${like} OR p.numero LIKE ${like})
+    ORDER BY p.id DESC LIMIT 100`);
+  return (r[0] ?? r) as any[];
+}
+
 export async function deleteProtocolo(id: number) {
   const db = await getDb();
   if (!db) return;

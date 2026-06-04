@@ -1144,6 +1144,10 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({ id: z.number() }))
       .query(async ({ input }) => db.getProtocoloById(input.id)),
 
+    buscar: protectedProcedure
+      .input(z.object({ obraId: z.number(), termo: z.string() }))
+      .query(async ({ input }) => db.buscarNotasProtocolo(input.obraId, input.termo)),
+
     create: engineerProcedure
       .input(z.object({
         obraId: z.number(),

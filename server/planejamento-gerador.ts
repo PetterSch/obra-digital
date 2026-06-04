@@ -127,7 +127,7 @@ export interface PlanejamentoDados {
   prazoTotalDias: number;
   eap: Array<{ codigo: string; nivel: number; descricao: string; responsavel: string }>;
   cronograma: {
-    atividades: Array<{ id: string; descricao: string; fase: string; predecessoras: string; duracaoDias: number; inicio: string; fim: string; critico: boolean; folgaDias: number }>;
+    atividades: Array<{ id: string; descricao: string; fase: string; predecessoras: string; duracaoDias: number; duracaoBase?: number; equipes?: number; inicio: string; fim: string; critico: boolean; folgaDias: number }>;
     marcos: Array<{ descricao: string; data: string }>;
   };
   recursos: {
@@ -342,7 +342,7 @@ export function gerarPlanejamento(opts: {
       atividades.push({
         id, descricao: cat, fase,
         predecessoras: prevFaseCriticaId,            // depende da fase anterior
-        duracaoDias: dur,
+        duracaoDias: dur, duracaoBase: dur, equipes: 1,
         inicio: fmt(ini), fim: fmt(fim),
         critico: false, folgaDias: 0,
       });

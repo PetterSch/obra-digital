@@ -381,8 +381,8 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
           <Card><CardContent className="p-0 overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="bg-muted/40 text-xs uppercase text-muted-foreground">
-                <th className="text-left p-2 pl-3 w-14">ID</th><th className="text-left p-2">Atividade</th><th className="text-left p-2 w-32">Fase</th>
-                <th className="text-center p-2 w-16">Dur.</th><th className="text-left p-2 w-24">Pred.</th><th className="text-left p-2 w-36">Início</th><th className="text-left p-2 w-36">Fim</th><th className="text-center p-2 w-16">Folga</th><th className="w-10"></th>
+                <th className="text-left p-2 pl-3 w-14">ID</th><th className="text-left p-2">Atividade</th><th className="text-left p-2 w-28">Fase</th>
+                <th className="text-center p-2 w-16" title="Equipes / frentes de trabalho">Equipes</th><th className="text-center p-2 w-16">Dur.</th><th className="text-left p-2 w-20">Pred.</th><th className="text-left p-2 w-32">Início</th><th className="text-left p-2 w-32">Fim</th><th className="text-center p-2 w-14">Folga</th><th className="w-10"></th>
               </tr></thead>
               <tbody>
                 {(dados.cronograma?.atividades || []).map((a: any, i: number) => (
@@ -390,7 +390,15 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
                     <td className="p-1 pl-3"><Input className={cellCls} value={a.id ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "id", ev.target.value))} /></td>
                     <td className="p-1"><Input className={cellCls} value={a.descricao ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "descricao", ev.target.value))} /></td>
                     <td className="p-1"><Input className={cellCls} value={a.fase ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "fase", ev.target.value))} /></td>
-                    <td className="p-1"><Input type="number" min={0} className={cellCls + " text-center"} value={a.duracaoDias ?? 0} onChange={ev => setAtiv(arr => edit(arr, i, "duracaoDias", parseInt(ev.target.value) || 0))} /></td>
+                    <td className="p-1"><Input type="number" min={1} className={cellCls + " text-center"} value={a.equipes ?? 1} title="Nº de equipes/frentes — divide a duração"
+                      onChange={ev => setAtiv(arr => arr.map((x, idx) => {
+                        if (idx !== i) return x;
+                        const base = x.duracaoBase ?? x.duracaoDias ?? 0;
+                        const eq = Math.max(1, parseInt(ev.target.value) || 1);
+                        return { ...x, duracaoBase: base, equipes: eq, duracaoDias: Math.max(1, Math.ceil(base / eq)) };
+                      }))} /></td>
+                    <td className="p-1"><Input type="number" min={0} className={cellCls + " text-center"} value={a.duracaoDias ?? 0}
+                      onChange={ev => setAtiv(arr => arr.map((x, idx) => idx === i ? { ...x, duracaoDias: parseInt(ev.target.value) || 0, duracaoBase: (parseInt(ev.target.value) || 0) * (x.equipes ?? 1) } : x))} /></td>
                     <td className="p-1"><Input className={cellCls} placeholder="ex: 1,2" value={a.predecessoras ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "predecessoras", ev.target.value))} /></td>
                     <td className="p-1"><div className="flex items-center gap-1">
                       <Input type="date" className={cellCls} value={a.inicio ?? ""} onChange={ev => setAtiv(arr => edit(arr, i, "inicio", ev.target.value).map((x, idx) => idx === i ? { ...x, travado: true } : x))} />

@@ -224,6 +224,22 @@ export async function runMigrations() {
       if (db) await db.execute(sql.raw(`ALTER TABLE protocolo_notas ADD COLUMN ${col}`));
     } catch { /* já existe */ }
   }
+
+  // Pedidos de compra (materiais)
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS pedidos_compra (
+        id INT AUTO_INCREMENT PRIMARY KEY, obraId INT NOT NULL,
+        numero VARCHAR(100), solicitante VARCHAR(255), observacao TEXT, status VARCHAR(20),
+        criadoEm TIMESTAMP DEFAULT NOW()
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS pedido_itens (
+        id INT AUTO_INCREMENT PRIMARY KEY, pedidoId INT NOT NULL,
+        descricao VARCHAR(500), unidade VARCHAR(20), quantidade DECIMAL(12,2), observacao VARCHAR(500), ordem INT DEFAULT 0
+      )`);
+    }
+  } catch { /* já existe */ }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -1203,4 +1219,76 @@ export async function deleteProtocolo(id: number) {
   if (!db) return;
   await db.execute(sql`DELETE FROM protocolo_notas WHERE protocoloId = ${id}`);
   await db.execute(sql`DELETE FROM protocolos WHERE id = ${id}`);
+}
+
+// ============= PEDIDOS DE COMPRA =============
+type PedidoItemInput = { descricao?: string; unidade?: string; quantidade?: number; observacao?: string };
+
+export async function getPedidosByObra(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT p.id, p.numero, p.solicitante, p.observacao, p.status, p.criadoEm,
+      (SELECT COUNT(*) FROM pedido_itens i WHERE i.pedidoId = p.id) AS totalItens
+    FROM pedidos_compra p WHERE p.obraId = ${obraId} ORDER BY p.id DESC`);
+  return (r[0] ?? r) as any[];
+}
+
+export async function getPedidoById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const ph: any = await db.execute(sql`SELECT * FROM pedidos_compra WHERE id = ${id} LIMIT 1`);
+  const pedido = (ph[0] ?? ph)[0];
+  if (!pedido) return null;
+  const ir: any = await db.execute(sql`SELECT * FROM pedido_itens WHERE pedidoId = ${id} ORDER BY ordem, id`);
+  return { ...pedido, itens: (ir[0] ?? ir) as any[] };
+}
+
+async function inserirPedidoItens(pedidoId: number, itens: PedidoItemInput[]) {
+  const db = await getDb();
+  if (!db) return;
+  let ordem = 0;
+  for (const it of itens || []) {
+    await db.execute(sql`INSERT INTO pedido_itens (pedidoId, descricao, unidade, quantidade, observacao, ordem)
+      VALUES (${pedidoId}, ${it.descricao ?? null}, ${it.unidade ?? null}, ${it.quantidade ?? null}, ${it.observacao ?? null}, ${ordem++})`);
+  }
+}
+
+export async function createPedido(data: { obraId: number; numero?: string; solicitante?: string; observacao?: string; status?: string; itens: PedidoItemInput[] }) {
+  const db = await getDb();
+  if (!db) return { id: 0 };
+  const res: any = await db.execute(sql`INSERT INTO pedidos_compra (obraId, numero, solicitante, observacao, status)
+    VALUES (${data.obraId}, ${data.numero ?? null}, ${data.solicitante ?? null}, ${data.observacao ?? null}, ${data.status ?? "aberto"})`);
+  const id = (res[0]?.insertId ?? res.insertId) as number;
+  await inserirPedidoItens(id, data.itens);
+  return { id };
+}
+
+export async function updatePedido(id: number, data: { numero?: string; solicitante?: string; observacao?: string; status?: string; itens: PedidoItemInput[] }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`UPDATE pedidos_compra SET numero = ${data.numero ?? null}, solicitante = ${data.solicitante ?? null}, observacao = ${data.observacao ?? null}, status = ${data.status ?? null} WHERE id = ${id}`);
+  await db.execute(sql`DELETE FROM pedido_itens WHERE pedidoId = ${id}`);
+  await inserirPedidoItens(id, data.itens);
+}
+
+export async function deletePedido(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`DELETE FROM pedido_itens WHERE pedidoId = ${id}`);
+  await db.execute(sql`DELETE FROM pedidos_compra WHERE id = ${id}`);
+}
+
+export async function buscarItensPedido(obraId: number, termo: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const like = `%${termo}%`;
+  const r: any = await db.execute(sql`
+    SELECT i.id, i.descricao, i.unidade, i.quantidade, i.observacao,
+      p.id AS pedidoId, p.numero AS pedidoNumero, p.status AS pedidoStatus
+    FROM pedido_itens i JOIN pedidos_compra p ON i.pedidoId = p.id
+    WHERE p.obraId = ${obraId} AND (
+      i.descricao LIKE ${like} OR i.observacao LIKE ${like} OR p.numero LIKE ${like} OR p.solicitante LIKE ${like})
+    ORDER BY p.id DESC LIMIT 100`);
+  return (r[0] ?? r) as any[];
 }

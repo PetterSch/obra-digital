@@ -21,9 +21,7 @@ import { Spinner } from "@/components/ui/spinner";
 import { DiarioForm } from "@/components/DiarioForm";
 import EquipesColaboradores from "@/pages/Colaboradores";
 import { PendenciasForm } from "@/components/PendenciasForm";
-import { MateriaisForm } from "@/components/MateriaisForm";
-import { MaterialesList } from "@/components/MaterialesList";
-import { MovimentacaoMateriais } from "@/components/MovimentacaoMateriais";
+import { PedidosCompraTab } from "@/components/PedidosCompraTab";
 
 export default function ObraDetail() {
   const { user } = useAuth();
@@ -167,7 +165,7 @@ export default function ObraDetail() {
             <TabsTrigger value="diarios" className="flex-1">Diários ({diarios.length})</TabsTrigger>
             <TabsTrigger value="colaboradores" className="flex-1">Equipes & Colaboradores</TabsTrigger>
             <TabsTrigger value="pendencias" className="flex-1">Pendências ({pendencias.length})</TabsTrigger>
-            <TabsTrigger value="materiais" className="flex-1">Materiais</TabsTrigger>
+            <TabsTrigger value="materiais" className="flex-1">Pedido de Compra</TabsTrigger>
             <TabsTrigger value="protocolos" className="flex-1">Protocolos de Envio</TabsTrigger>
           </TabsList>
 
@@ -252,12 +250,7 @@ export default function ObraDetail() {
           </TabsContent>
 
           <TabsContent value="materiais" className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Materiais</h3>
-              <MateriaisForm obraId={obra.id} onSuccess={() => refetch()} />
-            </div>
-            <MaterialesList obraId={obra.id} />
-            <MovimentacaoMateriais obraId={obra.id} />
+            <PedidosCompraTab obraId={obra.id} obraNome={obra.nome} />
           </TabsContent>
 
           <TabsContent value="protocolos" className="space-y-4">

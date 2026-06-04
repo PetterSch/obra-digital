@@ -68,6 +68,17 @@ export default function Presenca() {
     return { presente: pe.presentes > 0, qtd: pe.presentes };
   };
 
+  const totalEq = equipeAtual?.totalColaboradores || 0;
+  const hojeStr = `${hoje.getFullYear()}-${z2(hoje.getMonth() + 1)}-${z2(hoje.getDate())}`;
+  const shadeDia = (qtd: number) => {
+    if (operarioSel) return "bg-emerald-500 text-white border-emerald-600";
+    const r = totalEq ? qtd / totalEq : 1;
+    if (r >= 0.9) return "bg-emerald-600 text-white border-emerald-700";
+    if (r >= 0.6) return "bg-emerald-500 text-white border-emerald-600";
+    if (r >= 0.3) return "bg-emerald-400 text-white border-emerald-500";
+    return "bg-emerald-200 text-emerald-900 border-emerald-300";
+  };
+
   const mediaGeral = equipes.length ? equipes.reduce((s, e) => s + mediaEquipe(e.id), 0) / equipes.length : 0;
   const totalCadastrados = equipes.reduce((s, e) => s + (e.totalColaboradores || 0), 0);
 
@@ -188,20 +199,31 @@ export default function Presenca() {
             </div>
 
             {/* Médias por equipe */}
-            <p className="text-sm font-medium text-muted-foreground">Média de presença por equipe (clique para ver no calendário)</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <p className="text-sm font-medium">Média de presença por equipe <span className="text-muted-foreground font-normal">— clique para ver no calendário</span></p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {equipes.map((e) => {
                 const media = mediaEquipe(e.id);
+                const pct = e.totalColaboradores ? Math.min(100, Math.round((media / e.totalColaboradores) * 100)) : 0;
+                const sel = equipeSel === String(e.id);
                 return (
-                  <StatCard
-                    key={e.id}
-                    label={e.nome}
-                    value={`${media.toFixed(1).replace(".0", "")} de ${e.totalColaboradores}`}
-                    icon={UserCheck}
-                    tone={equipeSel === String(e.id) ? "green" : "neutral"}
-                    hint={`Média de presença · ${e.empresa || ""}`}
-                    onClick={() => { setEquipeSel(String(e.id)); setOperarioSel(""); }}
-                  />
+                  <button key={e.id} onClick={() => { setEquipeSel(String(e.id)); setOperarioSel(""); }}
+                    className={`text-left rounded-2xl border bg-card p-4 transition-all hover:shadow-md ${sel ? "ring-2 ring-primary border-primary/40 shadow-sm" : ""}`}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{e.nome}</p>
+                        <p className="text-xs text-muted-foreground truncate">{e.empresa || "—"}</p>
+                      </div>
+                      <span className="shrink-0 flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400"><UserCheck className="h-4 w-4" /></span>
+                    </div>
+                    <div className="mt-3 flex items-end gap-1.5">
+                      <span className="text-2xl font-bold tracking-tight">{media.toFixed(1).replace(".0", "")}</span>
+                      <span className="text-sm text-muted-foreground mb-0.5">de {e.totalColaboradores} presentes</span>
+                    </div>
+                    <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                      <div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: pct + "%" }} />
+                    </div>
+                    <p className="mt-1 text-[11px] text-muted-foreground">{pct}% de presença média</p>
+                  </button>
                 );
               })}
             </div>
@@ -237,24 +259,45 @@ export default function Presenca() {
                 <p className="text-sm text-muted-foreground text-center py-8">Selecione uma equipe (acima ou nos cartões) para ver os dias de presença.</p>
               ) : (
                 <>
-                  <div className="grid grid-cols-7 gap-1.5 mb-1.5">
-                    {DIAS_SEMANA.map((d) => <div key={d} className="text-center text-xs font-semibold text-muted-foreground py-1">{d}</div>)}
+                  <div className="grid grid-cols-7 gap-2 mb-2">
+                    {DIAS_SEMANA.map((d, i) => <div key={d} className={`text-center text-[11px] font-semibold uppercase tracking-wide py-1 ${i === 0 || i === 6 ? "text-muted-foreground/50" : "text-muted-foreground"}`}>{d}</div>)}
                   </div>
-                  <div className="grid grid-cols-7 gap-1.5">
+                  <div className="grid grid-cols-7 gap-2">
                     {celulas.map((dia, i) => {
                       if (dia === null) return <div key={i} />;
                       const { presente, qtd } = diaPresente(dia);
+                      const dataStr = `${ano}-${z2(mes)}-${z2(dia)}`;
+                      const ehHoje = dataStr === hojeStr;
+                      const dow = (primeiroDia + (dia - 1)) % 7;
+                      const fds = dow === 0 || dow === 6;
                       return (
-                        <div key={i} className={`aspect-square rounded-lg border flex flex-col items-center justify-center text-sm ${presente ? "bg-emerald-500 text-white border-emerald-600 font-semibold" : "bg-muted/30 text-muted-foreground"}`}>
+                        <div key={i}
+                          className={`relative aspect-square rounded-xl border flex flex-col items-center justify-center text-sm transition-all
+                            ${presente ? shadeDia(qtd) + " font-semibold shadow-sm" : fds ? "bg-muted/40 text-muted-foreground/60 border-transparent" : "bg-background text-muted-foreground border-border/70"}
+                            ${ehHoje ? "ring-2 ring-primary ring-offset-2 ring-offset-background" : ""}`}>
                           <span>{dia}</span>
-                          {presente && !operarioSel && <span className="text-[10px] opacity-90">{qtd}</span>}
+                          {presente && !operarioSel && (
+                            <span className="absolute bottom-1 inline-flex items-center justify-center min-w-[16px] px-1 h-4 rounded-full bg-white/25 text-[10px] font-bold leading-none">{qtd}</span>
+                          )}
                         </div>
                       );
                     })}
                   </div>
-                  <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground">
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-emerald-500" /> {operarioSel ? "Operário presente" : "Equipe presente (nº = presentes)"}</span>
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-3 h-3 rounded bg-muted" /> Sem registro</span>
+                  <div className="flex items-center gap-4 mt-4 text-xs text-muted-foreground flex-wrap">
+                    {operarioSel ? (
+                      <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded bg-emerald-500" /> Operário presente</span>
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        Presença:
+                        <span className="inline-block w-3.5 h-3.5 rounded bg-emerald-200" />
+                        <span className="inline-block w-3.5 h-3.5 rounded bg-emerald-400" />
+                        <span className="inline-block w-3.5 h-3.5 rounded bg-emerald-500" />
+                        <span className="inline-block w-3.5 h-3.5 rounded bg-emerald-600" />
+                        baixa → alta (nº = presentes)
+                      </span>
+                    )}
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded border bg-background" /> Sem registro</span>
+                    <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded ring-2 ring-primary" /> Hoje</span>
                   </div>
                 </>
               )}

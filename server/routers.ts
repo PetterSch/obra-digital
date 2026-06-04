@@ -1153,7 +1153,7 @@ Gere um resumo executivo profissional em português que:
           fornecedor: z.string().optional(), ordemCompra: z.string().optional(),
           pedido: z.string().optional(), nf: z.string().optional(),
           dataEnvio: z.string().optional(), venc1: z.string().optional(),
-          venc2: z.string().optional(), venc3: z.string().optional(),
+          venc2: z.string().optional(), venc3: z.string().optional(), status: z.string().optional(),
         })).default([]),
       }))
       .mutation(async ({ input }) => db.createProtocolo(input)),
@@ -1167,7 +1167,7 @@ Gere um resumo executivo profissional em português que:
           fornecedor: z.string().optional(), ordemCompra: z.string().optional(),
           pedido: z.string().optional(), nf: z.string().optional(),
           dataEnvio: z.string().optional(), venc1: z.string().optional(),
-          venc2: z.string().optional(), venc3: z.string().optional(),
+          venc2: z.string().optional(), venc3: z.string().optional(), status: z.string().optional(),
         })).default([]),
       }))
       .mutation(async ({ input }) => { const { id, ...d } = input; await db.updateProtocolo(id, d); return { success: true }; }),

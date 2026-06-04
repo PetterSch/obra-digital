@@ -214,9 +214,13 @@ export async function runMigrations() {
       await db.execute(sql`CREATE TABLE IF NOT EXISTS protocolo_notas (
         id INT AUTO_INCREMENT PRIMARY KEY, protocoloId INT NOT NULL,
         fornecedor VARCHAR(255), ordemCompra VARCHAR(100), pedido VARCHAR(100), nf VARCHAR(100),
-        dataEnvio DATE, venc1 DATE, venc2 DATE, venc3 DATE, ordem INT DEFAULT 0
+        dataEnvio DATE, venc1 DATE, venc2 DATE, venc3 DATE, status VARCHAR(20), ordem INT DEFAULT 0
       )`);
     }
+  } catch { /* já existe */ }
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE protocolo_notas ADD COLUMN status VARCHAR(20)`);
   } catch { /* já existe */ }
 }
 
@@ -1125,7 +1129,7 @@ export async function deletePlanejamento(id: number) {
 }
 
 // ============= PROTOCOLOS DE ENVIO =============
-type ProtocoloNotaInput = { fornecedor?: string; ordemCompra?: string; pedido?: string; nf?: string; dataEnvio?: string; venc1?: string; venc2?: string; venc3?: string };
+type ProtocoloNotaInput = { fornecedor?: string; ordemCompra?: string; pedido?: string; nf?: string; dataEnvio?: string; venc1?: string; venc2?: string; venc3?: string; status?: string };
 
 export async function getProtocolosByObra(obraId: number) {
   const db = await getDb();
@@ -1170,9 +1174,9 @@ async function inserirNotas(protocoloId: number, notas: ProtocoloNotaInput[]) {
   if (!db) return;
   let ordem = 0;
   for (const n of notas || []) {
-    await db.execute(sql`INSERT INTO protocolo_notas (protocoloId, fornecedor, ordemCompra, pedido, nf, dataEnvio, venc1, venc2, venc3, ordem)
+    await db.execute(sql`INSERT INTO protocolo_notas (protocoloId, fornecedor, ordemCompra, pedido, nf, dataEnvio, venc1, venc2, venc3, status, ordem)
       VALUES (${protocoloId}, ${n.fornecedor ?? null}, ${n.ordemCompra ?? null}, ${n.pedido ?? null}, ${n.nf ?? null},
-        ${n.dataEnvio || null}, ${n.venc1 || null}, ${n.venc2 || null}, ${n.venc3 || null}, ${ordem++})`);
+        ${n.dataEnvio || null}, ${n.venc1 || null}, ${n.venc2 || null}, ${n.venc3 || null}, ${n.status ?? null}, ${ordem++})`);
   }
 }
 

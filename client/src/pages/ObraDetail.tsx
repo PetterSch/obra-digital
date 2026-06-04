@@ -261,7 +261,7 @@ export default function ObraDetail() {
           </TabsContent>
 
           <TabsContent value="protocolos" className="space-y-4">
-            <ProtocolosTab obraId={obra.id} />
+            <ProtocolosTab obraId={obra.id} obraNome={obra.nome} />
           </TabsContent>
         </Tabs>
         <ActionPanel title="Ações & Relatórios" actions={[

@@ -7,11 +7,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, FileText, X } from "lucide-react";
+import { Plus, Trash2, Pencil, FileText, X, FileDown, FileSpreadsheet } from "lucide-react";
 import { fmtDataBR } from "@/lib/data";
+import { getPDFConfig } from "@/lib/pdfExport";
+import * as XLSX from "xlsx-js-style";
 
-type Nota = { fornecedor: string; ordemCompra: string; pedido: string; nf: string; dataEnvio: string; venc1: string; venc2: string; venc3: string };
-const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", dataEnvio: "", venc1: "", venc2: "", venc3: "" });
+type Nota = { fornecedor: string; ordemCompra: string; pedido: string; nf: string; dataEnvio: string; venc1: string; venc2: string; venc3: string; status: string };
+const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", dataEnvio: "", venc1: "", venc2: "", venc3: "", status: "enviado" });
 
 function addDiasISO(iso: string, dias: number): string {
   if (!iso) return "";
@@ -21,7 +23,7 @@ function addDiasISO(iso: string, dias: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function ProtocolosTab({ obraId }: { obraId: number }) {
+export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?: string }) {
   const utils = trpc.useUtils();
   const { data: lista = [], isLoading } = trpc.protocolos.listByObra.useQuery({ obraId });
   const [open, setOpen] = useState(false);
@@ -45,6 +47,7 @@ export function ProtocolosTab({ obraId }: { obraId: number }) {
       fornecedor: n.fornecedor || "", ordemCompra: n.ordemCompra || "", pedido: n.pedido || "", nf: n.nf || "",
       dataEnvio: n.dataEnvio ? String(n.dataEnvio).slice(0, 10) : "",
       venc1: n.venc1 ? String(n.venc1).slice(0, 10) : "", venc2: n.venc2 ? String(n.venc2).slice(0, 10) : "", venc3: n.venc3 ? String(n.venc3).slice(0, 10) : "",
+      status: n.status || "enviado",
     })) : [notaVazia()]);
     setOpen(true);
   };
@@ -69,6 +72,49 @@ export function ProtocolosTab({ obraId }: { obraId: number }) {
   };
 
   const cellCls = "h-9 text-sm";
+  const STATUS_LABEL: Record<string, string> = { enviado: "Enviado", em_analise: "Em análise", pago: "Pago", recusado: "Recusado" };
+  const linhaNota = (n: any) => [n.fornecedor || "—", n.ordemCompra || "—", n.pedido || "—", n.nf || "—",
+    n.dataEnvio ? fmtDataBR(n.dataEnvio) : "—", n.venc1 ? fmtDataBR(n.venc1) : "—", n.venc2 ? fmtDataBR(n.venc2) : "—", n.venc3 ? fmtDataBR(n.venc3) : "—",
+    STATUS_LABEL[n.status] || n.status || "—"];
+  const COLS = ["Fornecedor", "Nº OC", "Nº Pedido", "Nº NF", "Data envio", "Venc. 28d", "Venc. 56d", "Venc. 72d", "Status"];
+
+  const exportarPDF = async (p: any) => {
+    const full: any = await utils.protocolos.getById.fetch({ id: p.id });
+    const cfg = getPDFConfig(); const empresa = cfg.empresaNome || "Obra Digital";
+    const rows = (full?.notas || []).map(linhaNota);
+    const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Protocolo</title>
+      <style>*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
+      body{font-family:Arial,sans-serif;padding:28px;color:#1a1a1a}@page{margin:1.2cm}</style></head><body>
+      <div style="border-bottom:3px solid #1e3a5f;padding-bottom:10px;margin-bottom:16px">
+        <div style="font-size:11px;color:#B45309;font-weight:700">${empresa}</div>
+        <h1 style="color:#1e3a5f;font-size:19px">Protocolo de Envio ${full?.numero ? "nº " + full.numero : "#" + p.id}</h1>
+        <div style="color:#666;font-size:12px">${obraNome || ""}${full?.observacao ? " · " + full.observacao : ""}</div>
+      </div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px">
+        <thead><tr>${COLS.map(c => `<th style="background:#1e3a5f;color:#fff;padding:5px;text-align:left">${c}</th>`).join("")}</tr></thead>
+        <tbody>${rows.map((r: any[]) => `<tr>${r.map((c) => `<td style="padding:5px;border-bottom:1px solid #eee">${c}</td>`).join("")}</tr>`).join("")}</tbody>
+      </table>
+      <p style="font-size:10px;color:#888;margin-top:10px">${rows.length} nota(s) · gerado em ${new Date().toLocaleDateString("pt-BR")}</p>
+      <script>window.onload=()=>window.print();window.onafterprint=()=>window.close();</script></body></html>`;
+    const w = window.open("", "_blank");
+    if (!w) { toast.error("Permita pop-ups para exportar PDF"); return; }
+    w.document.write(html); w.document.close();
+  };
+
+  const exportarExcel = async (p: any) => {
+    const full: any = await utils.protocolos.getById.fetch({ id: p.id });
+    const aoa = [COLS, ...(full?.notas || []).map(linhaNota)];
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    ws["!cols"] = [{ wch: 28 }, { wch: 12 }, { wch: 12 }, { wch: 12 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+    for (let c = 0; c < COLS.length; c++) {
+      const a = XLSX.utils.encode_cell({ r: 0, c });
+      if (ws[a]) ws[a].s = { font: { bold: true, color: { rgb: "FFFFFF" } }, fill: { fgColor: { rgb: "1E3A5F" } } };
+    }
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Protocolo");
+    XLSX.writeFile(wb, `Protocolo_${full?.numero || p.id}_${(obraNome || "obra").replace(/[^a-z0-9]/gi, "_")}.xlsx`);
+    toast.success("Excel gerado!");
+  };
 
   return (
     <div className="space-y-3">
@@ -95,7 +141,9 @@ export function ProtocolosTab({ obraId }: { obraId: number }) {
                   <p className="text-xs text-muted-foreground">{p.totalNotas} nota(s) · {fmtDataBR(p.criadoEm)}{p.observacao ? ` · ${p.observacao}` : ""}</p>
                 </div>
               </div>
-              <div className="flex gap-1.5 shrink-0">
+              <div className="flex gap-1 shrink-0">
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Exportar PDF" onClick={() => exportarPDF(p)}><FileDown className="w-4 h-4" /></Button>
+                <Button variant="ghost" size="icon" className="h-8 w-8" title="Exportar Excel" onClick={() => exportarExcel(p)}><FileSpreadsheet className="w-4 h-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar" onClick={() => abrirEdicao(p.id)}><Pencil className="w-4 h-4" /></Button>
                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="Excluir" onClick={() => setDelId(p.id)}><Trash2 className="w-4 h-4" /></Button>
               </div>
@@ -137,6 +185,7 @@ export function ProtocolosTab({ obraId }: { obraId: number }) {
                       <th className="text-left p-1.5 w-36">Venc. 28d</th>
                       <th className="text-left p-1.5 w-36">Venc. 56d</th>
                       <th className="text-left p-1.5 w-36">Venc. 72d</th>
+                      <th className="text-left p-1.5 w-28">Status</th>
                       <th className="w-8"></th>
                     </tr>
                   </thead>
@@ -151,6 +200,14 @@ export function ProtocolosTab({ obraId }: { obraId: number }) {
                         <td className="p-1"><Input type="date" className={cellCls} value={n.venc1} onChange={(e) => setNota(i, "venc1", e.target.value)} /></td>
                         <td className="p-1"><Input type="date" className={cellCls} value={n.venc2} onChange={(e) => setNota(i, "venc2", e.target.value)} /></td>
                         <td className="p-1"><Input type="date" className={cellCls} value={n.venc3} onChange={(e) => setNota(i, "venc3", e.target.value)} /></td>
+                        <td className="p-1">
+                          <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm" value={n.status} onChange={(e) => setNota(i, "status", e.target.value)}>
+                            <option value="enviado">Enviado</option>
+                            <option value="em_analise">Em análise</option>
+                            <option value="pago">Pago</option>
+                            <option value="recusado">Recusado</option>
+                          </select>
+                        </td>
                         <td className="p-1 text-center">
                           <Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" disabled={notas.length === 1} onClick={() => setNotas((a) => a.filter((_, idx) => idx !== i))}><X className="w-4 h-4" /></Button>
                         </td>

@@ -28,9 +28,9 @@ function exportarExcel(nome: string, d: any) {
     ...(d.eap || []).map((e: any) => [e.codigo, e.nivel, e.descricao, e.responsavel])];
   XLSX.utils.book_append_sheet(wb, planilhaSimples(eap, [12, 8, 50, 24]), "EAP");
   // Cronograma
-  const cron = [["ID", "Atividade", "Fase", "Predecessora", "Duração (dias)", "Início", "Fim", "Crítico", "Folga"],
-    ...(d.cronograma?.atividades || []).map((a: any) => [a.id, a.descricao, a.fase, a.predecessoras, a.duracaoDias, a.inicio, a.fim, a.critico ? "Sim" : "Não", a.folgaDias])];
-  XLSX.utils.book_append_sheet(wb, planilhaSimples(cron, [8, 40, 18, 14, 14, 14, 14, 10, 8]), "Cronograma");
+  const cron = [["ID", "Atividade", "Fase", "Equipes", "Predecessora", "Duração (dias)", "Início", "Fim", "Crítico", "Folga"],
+    ...(d.cronograma?.atividades || []).map((a: any) => [a.id, a.descricao, a.fase, a.equipes ?? 1, a.predecessoras, a.duracaoDias, a.inicio, a.fim, a.critico ? "Sim" : "Não", a.folgaDias])];
+  XLSX.utils.book_append_sheet(wb, planilhaSimples(cron, [8, 40, 18, 10, 14, 14, 14, 14, 10, 8]), "Cronograma");
   // Recursos
   const mo = [["Função", "Quantidade", "Regime", "Turnos"],
     ...(d.recursos?.maoDeObra || []).map((m: any) => [m.funcao, m.quantidade, m.regime, m.turnos])];
@@ -123,7 +123,7 @@ function exportarPDF(nome: string, d: any) {
   </div>
   ${sec("Resumo Executivo", linha(d.resumoExecutivo))}
   ${sec("1. EAP — Estrutura Analítica do Projeto", tabela(["Código", "Descrição", "Responsável"], (d.eap || []).map((e: any) => [e.codigo, (e.nivel === 1 ? "<b>" + e.descricao + "</b>" : "&nbsp;&nbsp;" + e.descricao), e.responsavel])))}
-  ${sec("2. Cronograma de Obras", tabela(["ID", "Atividade", "Fase", "Dur.", "Pred.", "Início", "Fim", "Folga"], (d.cronograma?.atividades || []).map((a: any) => [a.id, a.descricao, a.fase, a.duracaoDias + "d", a.predecessoras || "—", fmtData(a.inicio), fmtData(a.fim), a.critico ? "<b style='color:#dc2626'>crítica</b>" : (a.folgaDias ?? 0) + "d"])))}
+  ${sec("2. Cronograma de Obras", tabela(["ID", "Atividade", "Fase", "Equipes", "Dur.", "Pred.", "Início", "Fim", "Folga"], (d.cronograma?.atividades || []).map((a: any) => [a.id, a.descricao, a.fase, a.equipes ?? 1, a.duracaoDias + "d", a.predecessoras || "—", fmtData(a.inicio), fmtData(a.fim), a.critico ? "<b style='color:#dc2626'>crítica</b>" : (a.folgaDias ?? 0) + "d"])))}
   ${sec("2.1 Gráfico de Gantt", ganttHTMLPdf(d.cronograma?.atividades || []))}
   ${(d.cronograma?.marcos?.length ? sec("2.2 Marcos Contratuais", tabela(["Marco", "Data"], d.cronograma.marcos.map((m: any) => [m.descricao, fmtData(m.data)]))) : "")}
   ${sec("3. Planejamento de Recursos", tabela(["Função", "Qtd", "Regime", "Turnos"], (d.recursos?.maoDeObra || []).map((m: any) => [m.funcao, m.quantidade, m.regime, m.turnos]))

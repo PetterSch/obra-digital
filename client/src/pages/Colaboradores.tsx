@@ -296,22 +296,18 @@ function EquipeCard({
                 </button>
               </div>
             ) : (
-              <div className="grid gap-2">
+              <div className="grid gap-1.5">
                 {/* Ativos */}
                 {ativos.map((c: any) => (
                   <div
                     key={c.id}
-                    className="flex items-center justify-between rounded-lg border bg-muted/30 px-3 py-2.5"
+                    className="flex items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-1.5"
                   >
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm leading-tight">{c.nome}</p>
-                      <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <Badge variant="secondary" className="text-xs px-1.5 py-0">
-                          {c.funcao}
-                        </Badge>
-                        {c.cpf && <span className="text-xs text-muted-foreground">CPF: {c.cpf}</span>}
-                        {c.dataAdmissao && <span className="text-xs text-muted-foreground">Admissão: {fmtData(c.dataAdmissao)}</span>}
-                      </div>
+                    <div className="min-w-0 flex items-center gap-2 flex-wrap">
+                      <span className="font-medium text-sm">{c.nome}</span>
+                      <Badge variant="secondary" className="text-[11px] px-1.5 py-0">{c.funcao}</Badge>
+                      {c.cpf && <span className="text-xs text-muted-foreground">CPF {c.cpf}</span>}
+                      {c.dataAdmissao && <span className="text-xs text-muted-foreground">· Adm. {fmtData(c.dataAdmissao)}</span>}
                     </div>
                     <div className="flex items-center gap-1 shrink-0 ml-2">
                       <Button

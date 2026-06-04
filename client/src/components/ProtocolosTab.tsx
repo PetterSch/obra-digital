@@ -38,7 +38,12 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
   const updateMut = trpc.protocolos.update.useMutation({ onSuccess: () => { toast.success("Protocolo atualizado!"); setOpen(false); inval(); }, onError: (e) => toast.error(e.message) });
   const deleteMut = trpc.protocolos.delete.useMutation({ onSuccess: () => { toast.success("Protocolo excluído"); setDelId(null); inval(); }, onError: (e) => toast.error(e.message) });
 
-  const abrirNovo = () => { setEditId(null); setNumero(""); setObservacao(""); setNotas([notaVazia()]); setOpen(true); };
+  const proximoNumero = () => {
+    const nums = (lista as any[]).map((p) => parseInt(String(p.numero ?? "").replace(/\D/g, ""), 10)).filter((n) => !isNaN(n));
+    const max = nums.length ? Math.max(...nums) : 0;
+    return String(max + 1).padStart(2, "0");
+  };
+  const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setObservacao(""); setNotas([notaVazia()]); setOpen(true); };
   const abrirEdicao = async (id: number) => {
     const p: any = await utils.protocolos.getById.fetch({ id });
     if (!p) return;

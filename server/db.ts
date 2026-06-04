@@ -214,14 +214,16 @@ export async function runMigrations() {
       await db.execute(sql`CREATE TABLE IF NOT EXISTS protocolo_notas (
         id INT AUTO_INCREMENT PRIMARY KEY, protocoloId INT NOT NULL,
         fornecedor VARCHAR(255), ordemCompra VARCHAR(100), pedido VARCHAR(100), nf VARCHAR(100),
-        dataEnvio DATE, venc1 DATE, venc2 DATE, venc3 DATE, status VARCHAR(20), ordem INT DEFAULT 0
+        dataEnvio DATE, venc1 DATE, venc2 DATE, venc3 DATE, status VARCHAR(20), condicao VARCHAR(20), ordem INT DEFAULT 0
       )`);
     }
   } catch { /* já existe */ }
-  try {
-    const db = await getDb();
-    if (db) await db.execute(sql`ALTER TABLE protocolo_notas ADD COLUMN status VARCHAR(20)`);
-  } catch { /* já existe */ }
+  for (const col of ["status VARCHAR(20)", "condicao VARCHAR(20)"]) {
+    try {
+      const db = await getDb();
+      if (db) await db.execute(sql.raw(`ALTER TABLE protocolo_notas ADD COLUMN ${col}`));
+    } catch { /* já existe */ }
+  }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -1129,7 +1131,7 @@ export async function deletePlanejamento(id: number) {
 }
 
 // ============= PROTOCOLOS DE ENVIO =============
-type ProtocoloNotaInput = { fornecedor?: string; ordemCompra?: string; pedido?: string; nf?: string; dataEnvio?: string; venc1?: string; venc2?: string; venc3?: string; status?: string };
+type ProtocoloNotaInput = { fornecedor?: string; ordemCompra?: string; pedido?: string; nf?: string; dataEnvio?: string; venc1?: string; venc2?: string; venc3?: string; status?: string; condicao?: string };
 
 export async function getProtocolosByObra(obraId: number) {
   const db = await getDb();
@@ -1175,9 +1177,9 @@ async function inserirNotas(protocoloId: number, notas: ProtocoloNotaInput[]) {
   if (!db) return;
   let ordem = 0;
   for (const n of notas || []) {
-    await db.execute(sql`INSERT INTO protocolo_notas (protocoloId, fornecedor, ordemCompra, pedido, nf, dataEnvio, venc1, venc2, venc3, status, ordem)
+    await db.execute(sql`INSERT INTO protocolo_notas (protocoloId, fornecedor, ordemCompra, pedido, nf, dataEnvio, venc1, venc2, venc3, status, condicao, ordem)
       VALUES (${protocoloId}, ${n.fornecedor ?? null}, ${n.ordemCompra ?? null}, ${n.pedido ?? null}, ${n.nf ?? null},
-        ${n.dataEnvio || null}, ${n.venc1 || null}, ${n.venc2 || null}, ${n.venc3 || null}, ${n.status ?? null}, ${ordem++})`);
+        ${n.dataEnvio || null}, ${n.venc1 || null}, ${n.venc2 || null}, ${n.venc3 || null}, ${n.status ?? null}, ${n.condicao ?? null}, ${ordem++})`);
   }
 }
 

@@ -12,16 +12,11 @@ import { fmtDataBR } from "@/lib/data";
 import { getPDFConfig } from "@/lib/pdfExport";
 import * as XLSX from "xlsx-js-style";
 
-type Nota = { fornecedor: string; ordemCompra: string; pedido: string; nf: string; dataEnvio: string; venc1: string; venc2: string; venc3: string; status: string };
-const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", dataEnvio: "", venc1: "", venc2: "", venc3: "", status: "enviado" });
+type Nota = { fornecedor: string; ordemCompra: string; pedido: string; nf: string; dataEnvio: string; venc1: string; venc2: string; venc3: string; status: string; condicao: string };
+const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", dataEnvio: "", venc1: "", venc2: "", venc3: "", status: "enviado", condicao: "avista" });
 
-function addDiasISO(iso: string, dias: number): string {
-  if (!iso) return "";
-  const d = new Date(iso + "T12:00:00");
-  if (isNaN(d.getTime())) return "";
-  d.setDate(d.getDate() + dias);
-  return d.toISOString().slice(0, 10);
-}
+// quantidade de datas de vencimento por condição de pagamento
+const VENC_QTD: Record<string, number> = { avista: 0, "28": 1, "28_56": 2, "28_56_72": 3 };
 
 export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?: string }) {
   const utils = trpc.useUtils();
@@ -54,18 +49,20 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
       dataEnvio: n.dataEnvio ? String(n.dataEnvio).slice(0, 10) : "",
       venc1: n.venc1 ? String(n.venc1).slice(0, 10) : "", venc2: n.venc2 ? String(n.venc2).slice(0, 10) : "", venc3: n.venc3 ? String(n.venc3).slice(0, 10) : "",
       status: n.status || "enviado",
+      condicao: n.condicao || (n.venc3 ? "28_56_72" : n.venc2 ? "28_56" : n.venc1 ? "28" : "avista"),
     })) : [notaVazia()]);
     setOpen(true);
   };
 
   const setNota = (i: number, campo: keyof Nota, v: string) => setNotas((arr) => arr.map((n, idx) => {
     if (idx !== i) return n;
-    const upd = { ...n, [campo]: v };
-    // ao definir a data de envio, sugere vencimentos 28/56/72 se ainda vazios
-    if (campo === "dataEnvio" && v) {
-      if (!upd.venc1) upd.venc1 = addDiasISO(v, 28);
-      if (!upd.venc2) upd.venc2 = addDiasISO(v, 56);
-      if (!upd.venc3) upd.venc3 = addDiasISO(v, 72);
+    const upd: Nota = { ...n, [campo]: v };
+    // ao mudar a forma de pagamento, limpa as datas que não se aplicam
+    if (campo === "condicao") {
+      const qtd = VENC_QTD[v] ?? 0;
+      if (qtd < 1) upd.venc1 = "";
+      if (qtd < 2) upd.venc2 = "";
+      if (qtd < 3) upd.venc3 = "";
     }
     return upd;
   }));
@@ -218,7 +215,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                 <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setNotas((a) => [...a, notaVazia()])}><Plus className="w-4 h-4" /> Adicionar nota</Button>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ minWidth: 900 }}>
+                <table className="w-full text-sm" style={{ minWidth: 1080 }}>
                   <thead>
                     <tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">
                       <th className="text-left p-1.5">Fornecedor</th>
@@ -226,9 +223,10 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                       <th className="text-left p-1.5 w-24">Nº Pedido</th>
                       <th className="text-left p-1.5 w-24">Nº NF</th>
                       <th className="text-left p-1.5 w-36">Data envio</th>
-                      <th className="text-left p-1.5 w-36">Venc. 28d</th>
-                      <th className="text-left p-1.5 w-36">Venc. 56d</th>
-                      <th className="text-left p-1.5 w-36">Venc. 72d</th>
+                      <th className="text-left p-1.5 w-32">Pagamento</th>
+                      <th className="text-left p-1.5 w-32">Venc. 1</th>
+                      <th className="text-left p-1.5 w-32">Venc. 2</th>
+                      <th className="text-left p-1.5 w-32">Venc. 3</th>
                       <th className="text-left p-1.5 w-28">Status</th>
                       <th className="w-8"></th>
                     </tr>
@@ -241,9 +239,17 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                         <td className="p-1"><Input className={cellCls} value={n.pedido} onChange={(e) => setNota(i, "pedido", e.target.value)} /></td>
                         <td className="p-1"><Input className={cellCls} value={n.nf} onChange={(e) => setNota(i, "nf", e.target.value)} /></td>
                         <td className="p-1"><Input type="date" className={cellCls} value={n.dataEnvio} onChange={(e) => setNota(i, "dataEnvio", e.target.value)} /></td>
-                        <td className="p-1"><Input type="date" className={cellCls} value={n.venc1} onChange={(e) => setNota(i, "venc1", e.target.value)} /></td>
-                        <td className="p-1"><Input type="date" className={cellCls} value={n.venc2} onChange={(e) => setNota(i, "venc2", e.target.value)} /></td>
-                        <td className="p-1"><Input type="date" className={cellCls} value={n.venc3} onChange={(e) => setNota(i, "venc3", e.target.value)} /></td>
+                        <td className="p-1">
+                          <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm" value={n.condicao} onChange={(e) => setNota(i, "condicao", e.target.value)}>
+                            <option value="avista">À vista</option>
+                            <option value="28">Boleto 28d</option>
+                            <option value="28_56">Boleto 28/56</option>
+                            <option value="28_56_72">Boleto 28/56/72</option>
+                          </select>
+                        </td>
+                        <td className="p-1">{(VENC_QTD[n.condicao] ?? 0) >= 1 ? <Input type="date" className={cellCls} value={n.venc1} onChange={(e) => setNota(i, "venc1", e.target.value)} /> : <span className="text-muted-foreground text-xs pl-1">—</span>}</td>
+                        <td className="p-1">{(VENC_QTD[n.condicao] ?? 0) >= 2 ? <Input type="date" className={cellCls} value={n.venc2} onChange={(e) => setNota(i, "venc2", e.target.value)} /> : <span className="text-muted-foreground text-xs pl-1">—</span>}</td>
+                        <td className="p-1">{(VENC_QTD[n.condicao] ?? 0) >= 3 ? <Input type="date" className={cellCls} value={n.venc3} onChange={(e) => setNota(i, "venc3", e.target.value)} /> : <span className="text-muted-foreground text-xs pl-1">—</span>}</td>
                         <td className="p-1">
                           <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm" value={n.status} onChange={(e) => setNota(i, "status", e.target.value)}>
                             <option value="enviado">Enviado</option>
@@ -260,7 +266,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                   </tbody>
                 </table>
               </div>
-              <p className="text-[11px] text-muted-foreground mt-1.5">Ao preencher a <b>data de envio</b>, os vencimentos 28/56/72 dias são sugeridos automaticamente (você pode ajustar).</p>
+              <p className="text-[11px] text-muted-foreground mt-1.5">Escolha a <b>forma de pagamento</b>: <b>À vista</b> não exibe datas; <b>Boleto 28</b> exibe 1 data; <b>28/56</b> exibe 2; <b>28/56/72</b> exibe 3. As datas você preenche manualmente.</p>
             </div>
 
             <div className="flex justify-end gap-2 pt-1">

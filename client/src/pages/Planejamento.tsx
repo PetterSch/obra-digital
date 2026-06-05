@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import DashboardLayout from "@/components/DashboardLayout";
 import { Button } from "@/components/ui/button";
@@ -286,7 +286,8 @@ function Editor({ id, onBack }: { id: number; onBack: () => void }) {
     onSuccess: () => { toast.success("Planejamento salvo!"); utils.planejamento.getById.invalidate({ id }); },
   });
 
-  useEffect(() => { if (data?.dados) setDados(data.dados); }, [data]);
+  const dadosInit = useRef<number | null>(null);
+  useEffect(() => { if (data?.dados && dadosInit.current !== id) { setDados(data.dados); dadosInit.current = id; } }, [data, id]);
 
   if (isLoading || !dados) return <div className="flex justify-center py-10"><Spinner /></div>;
   const nome = data?.nome || "Planejamento";

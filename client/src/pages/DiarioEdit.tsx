@@ -13,7 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Spinner } from "@/components/ui/spinner";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { MaoDeObraSelector } from "@/components/MaoDeObraSelector";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 export default function DiarioEdit() {
@@ -31,16 +31,20 @@ export default function DiarioEdit() {
     user?.role === "admin" || user?.role === "engenheiro" || user?.role === "auxiliar" ||
     acesso?.permissao === "editar" || acesso?.permissao === "admin";
 
-  // ── Cabeçalho ──
+  // ── Cabeçalho ── (inicializa uma vez por diário; não sobrescreve edições em refetch)
   const [header, setHeader] = useState({ clima: "", temperatura: "", umidade: "", observacoesGerais: "" });
+  const headerInit = useRef<number | null>(null);
   useEffect(() => {
-    if (diario) setHeader({
-      clima: diario.clima ?? "",
-      temperatura: diario.temperatura != null ? String(diario.temperatura) : "",
-      umidade: diario.umidade != null ? String(diario.umidade) : "",
-      observacoesGerais: diario.observacoesGerais ?? "",
-    });
-  }, [diario]);
+    if (diario && headerInit.current !== diarioId) {
+      setHeader({
+        clima: diario.clima ?? "",
+        temperatura: diario.temperatura != null ? String(diario.temperatura) : "",
+        umidade: diario.umidade != null ? String(diario.umidade) : "",
+        observacoesGerais: diario.observacoesGerais ?? "",
+      });
+      headerInit.current = diarioId;
+    }
+  }, [diario, diarioId]);
 
   const updateHeader = trpc.diarios.update.useMutation({
     onSuccess: () => { toast.success("Informações salvas!"); utils.diarios.getById.invalidate({ id: diarioId! }); },
@@ -61,9 +65,13 @@ export default function DiarioEdit() {
   // ── Mão de obra (presença por equipe) ──
   const { data: resumo } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const [maoDeObra, setMaoDeObra] = useState<Array<{ equipeId: number; operariosPresentes: number[] }>>([]);
+  const maoInit = useRef<number | null>(null);
   useEffect(() => {
-    if (resumo) setMaoDeObra((resumo as any[]).map((g) => ({ equipeId: g.equipeId, operariosPresentes: g.operarios || [] })));
-  }, [resumo]);
+    if (resumo && maoInit.current !== diarioId) {
+      setMaoDeObra((resumo as any[]).map((g) => ({ equipeId: g.equipeId, operariosPresentes: g.operarios || [] })));
+      maoInit.current = diarioId;
+    }
+  }, [resumo, diarioId]);
   const saveMao = trpc.presenca.setForDiario.useMutation({
     onSuccess: () => { toast.success("Mão de obra salva!"); utils.presenca.resumoByDiario.invalidate({ diarioId: diarioId! }); },
     onError: (e) => toast.error(e.message || "Erro ao salvar mão de obra"),

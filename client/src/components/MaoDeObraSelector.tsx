@@ -108,8 +108,10 @@ function EquipeCard({
     onError: (err: any) => toast.error(err.message || "Erro ao remover operário"),
   });
 
+  // Inativos não aparecem para seleção (só se reativados)
+  const operariosAtivos = (operarios as any[]).filter((o) => o.ativo !== false);
   const presentes = item.operariosPresentes.length;
-  const total = operarios.length;
+  const total = operariosAtivos.length;
   const todosPresentes = total > 0 && presentes === total;
   const algumPresente = presentes > 0 && presentes < total;
 
@@ -171,7 +173,7 @@ function EquipeCard({
                 variant="outline"
                 size="sm"
                 className="h-7 gap-1 text-xs"
-                onClick={() => onSelectAll(item.equipeId, operarios.map((o) => o.id))}
+                onClick={() => onSelectAll(item.equipeId, operariosAtivos.map((o) => o.id))}
                 disabled={total === 0}
               >
                 <CheckSquare className="w-3.5 h-3.5" />
@@ -217,7 +219,7 @@ function EquipeCard({
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-              {operarios.map((op) => {
+              {operariosAtivos.map((op) => {
                 const presente = item.operariosPresentes.includes(op.id);
                 return (
                   <div
@@ -352,7 +354,7 @@ export function MaoDeObraSelector({ value, onChange }: MaoDeObraSelectorProps) {
     let presentes: number[] = [];
     try {
       const ops = await utils.colaboradores.listByEquipe.fetch({ equipeId });
-      presentes = (ops as any[]).map((o) => o.id);
+      presentes = (ops as any[]).filter((o) => o.ativo !== false).map((o) => o.id);
     } catch { /* sem operários ou erro: adiciona vazio */ }
     onChange([...value, { equipeId, operariosPresentes: presentes }]);
   };

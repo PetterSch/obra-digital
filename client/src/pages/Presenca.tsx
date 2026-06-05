@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Spinner } from "@/components/ui/spinner";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { trpc } from "@/lib/trpc";
 import { ChevronLeft, ChevronRight, CalendarCheck, Users, UserCheck, FileDown, FileSpreadsheet, Activity } from "lucide-react";
 import { getPDFConfig } from "@/lib/pdfExport";
@@ -25,6 +26,7 @@ export default function Presenca() {
   const [mes, setMes] = useState(hoje.getMonth() + 1); // 1-12
   const [equipeSel, setEquipeSel] = useState<string>("");
   const [operarioSel, setOperarioSel] = useState<string>("");
+  const [diaDetalhe, setDiaDetalhe] = useState<{ dia: number; nomes: { nome: string; funcao?: string }[] } | null>(null);
 
   const { data: obra } = trpc.obras.getById.useQuery({ id: obraId! }, { enabled: !!obraId });
   const { data, isLoading } = trpc.presenca.calendario.useQuery({ obraId: obraId!, ano, mes }, { enabled: !!obraId });
@@ -76,6 +78,20 @@ export default function Presenca() {
     if (r >= 0.6) return "bg-emerald-500 text-white border-emerald-600";
     if (r >= 0.3) return "bg-emerald-400 text-white border-emerald-500";
     return "bg-emerald-200 text-emerald-900 border-emerald-300";
+  };
+
+  const abrirDia = (dia: number) => {
+    if (!equipeSel) return;
+    const dataStr = `${ano}-${z2(mes)}-${z2(dia)}`;
+    const reg = dias.find((d) => d.data === dataStr);
+    const pe = reg?.porEquipe?.[Number(equipeSel)];
+    if (!pe || !pe.operarios?.length) return;
+    const mapaNome = new Map((equipeAtual?.colaboradores || []).map((c: any) => [c.id, c]));
+    let ids: number[] = pe.operarios;
+    if (operarioSel) ids = ids.filter((id) => id === Number(operarioSel));
+    const nomes = ids.map((id) => { const c: any = mapaNome.get(id); return { nome: c?.nome || `Operário #${id}`, funcao: c?.funcao }; })
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+    setDiaDetalhe({ dia, nomes });
   };
 
   const mediaGeral = equipes.length ? equipes.reduce((s, e) => s + mediaEquipe(e.id), 0) / equipes.length : 0;
@@ -280,8 +296,10 @@ export default function Presenca() {
                       const fds = dow === 0 || dow === 6;
                       return (
                         <div key={i}
+                          onClick={() => presente && abrirDia(dia)}
+                          title={presente ? "Ver presentes do dia" : ""}
                           className={`relative aspect-square rounded-lg border flex items-center justify-center text-xs transition-all
-                            ${presente ? shadeDia(qtd) + " font-semibold" : fds ? "bg-muted/40 text-muted-foreground/50 border-transparent" : "bg-background text-muted-foreground/80 border-border/60"}
+                            ${presente ? shadeDia(qtd) + " font-semibold cursor-pointer hover:ring-2 hover:ring-emerald-700" : fds ? "bg-muted/40 text-muted-foreground/50 border-transparent" : "bg-background text-muted-foreground/80 border-border/60"}
                             ${ehHoje ? "ring-2 ring-primary ring-offset-1 ring-offset-background" : ""}`}>
                           <span>{dia}</span>
                           {presente && !operarioSel && (
@@ -307,6 +325,7 @@ export default function Presenca() {
                     )}
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded border bg-background" /> Sem registro</span>
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded ring-2 ring-primary" /> Hoje</span>
+                    <span className="italic">Clique num dia em verde para ver os presentes.</span>
                   </div>
                 </>
               )}
@@ -314,6 +333,32 @@ export default function Presenca() {
           </>
         )}
       </div>
+
+      {/* Presentes do dia */}
+      <Dialog open={!!diaDetalhe} onOpenChange={(o) => { if (!o) setDiaDetalhe(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>
+              Presentes em {diaDetalhe ? `${z2(diaDetalhe.dia)}/${z2(mes)}/${ano}` : ""}
+              {equipeAtual ? ` · ${equipeAtual.nome}` : ""}
+            </DialogTitle>
+          </DialogHeader>
+          {diaDetalhe && (
+            <div className="space-y-1.5">
+              <p className="text-sm text-muted-foreground">{diaDetalhe.nomes.length} presente(s)</p>
+              <div className="max-h-[60vh] overflow-y-auto space-y-1">
+                {diaDetalhe.nomes.map((n, i) => (
+                  <div key={i} className="flex items-center gap-2 rounded-lg border bg-muted/20 px-3 py-2">
+                    <UserCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span className="text-sm font-medium">{n.nome}</span>
+                    {n.funcao && <span className="text-xs text-muted-foreground ml-auto">{n.funcao}</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

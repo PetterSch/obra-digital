@@ -10,7 +10,6 @@ import { toast } from "sonner";
 import { Plus, Trash2, Pencil, ShoppingCart, X, FileDown, FileSpreadsheet, Search } from "lucide-react";
 import { fmtDataBR } from "@/lib/data";
 import { getPDFConfig } from "@/lib/pdfExport";
-import { INSUMOS } from "@/lib/insumos";
 import * as XLSX from "xlsx-js-style";
 
 type Item = { descricao: string; unidade: string; quantidade: string; observacao: string };
@@ -186,7 +185,6 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
         <DialogContent className="!max-w-4xl w-[96vw] max-h-[92vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader><DialogTitle>{editId ? "Editar pedido" : "Novo pedido de compra"}</DialogTitle></DialogHeader>
           <datalist id="unidades-compra">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
-          <datalist id="insumos-material">{INSUMOS.map((m) => <option key={m} value={m} />)}</datalist>
           <div className="space-y-4 min-w-0">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Nº do pedido</Label><Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 001/2026" /></div>
@@ -212,7 +210,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                   <tbody>
                     {itens.map((it, i) => (
                       <tr key={i} className="border-b last:border-0">
-                        <td className="p-1"><Input list="insumos-material" className={cellCls} value={it.descricao} onChange={(e) => setItem(i, "descricao", e.target.value)} placeholder="Ex: Cimento CP II-F-32 (saco 50kg)" /></td>
+                        <td className="p-1"><Input className={cellCls} value={it.descricao} onChange={(e) => setItem(i, "descricao", e.target.value)} placeholder="Ex: Cimento CP-II 50kg" /></td>
                         <td className="p-1"><Input list="unidades-compra" className={cellCls} value={it.unidade} onChange={(e) => setItem(i, "unidade", e.target.value)} placeholder="UND, SC 50kg..." /></td>
                         <td className="p-1"><Input type="number" step="0.01" className={cellCls} value={it.quantidade} onChange={(e) => setItem(i, "quantidade", e.target.value)} placeholder="0" /></td>
                         <td className="p-1"><Input className={cellCls} value={it.observacao} onChange={(e) => setItem(i, "observacao", e.target.value)} placeholder="marca, especificação..." /></td>

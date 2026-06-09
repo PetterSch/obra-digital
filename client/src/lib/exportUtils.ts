@@ -49,6 +49,7 @@ export interface ConsolidacaoData {
   principaisOcorrencias: string[];
   climaPredominate: string | null;
   maoDeObraTotal: number;
+  presencaEquipes?: Array<{ equipeNome: string; empresa?: string; mediaPresentes: number; diasComPresenca: number; totalColaboradores: number }>;
   equipamentosUtilizados: string[];
   materiaisMovimentados: Array<{ materialId: number; quantidade: number; movimentacoes: number }>;
   diarios?: Array<{
@@ -165,6 +166,20 @@ export function exportResumoToExcel(
   statsSheet["!cols"] = [{ wch: 36 }, { wch: 20 }];
   dressSheet(statsSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 10, ncols: 2 });
   XLSX.utils.book_append_sheet(workbook, statsSheet, "Estatísticas");
+
+  // ── Sheet: Média de presença por equipe ──────────────────────────
+  if (consolidacao.presencaEquipes && consolidacao.presencaEquipes.length > 0) {
+    const rows: unknown[][] = [
+      ["MÉDIA DE PRESENÇA POR EQUIPE"],
+      [],
+      ["Equipe", "Empresa", "Média de presentes/dia", "Cadastrados", "Dias trabalhados"],
+      ...consolidacao.presencaEquipes.map((e) => [e.equipeNome, e.empresa || "", e.mediaPresentes, e.totalColaboradores, e.diasComPresenca]),
+    ];
+    const presSheet = XLSX.utils.aoa_to_sheet(rows);
+    presSheet["!cols"] = [{ wch: 30 }, { wch: 28 }, { wch: 20 }, { wch: 14 }, { wch: 16 }];
+    dressSheet(presSheet, { headerRow: 2, firstDataRow: 3, lastDataRow: 2 + consolidacao.presencaEquipes.length, ncols: 5 });
+    XLSX.utils.book_append_sheet(workbook, presSheet, "Presença por Equipe");
+  }
 
   // ── Sheet 3: Diários detalhados ───────────────────────────────────
   if (consolidacao.diarios && consolidacao.diarios.length > 0) {

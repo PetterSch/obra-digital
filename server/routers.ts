@@ -1011,7 +1011,10 @@ Total de Ocorrências: ${consolidacao.totalOcorrencias}
 Total de Fotos: ${consolidacao.totalFotos}
 Clima Predominante: ${consolidacao.climaPredominate || "Não informado"}
 
-Principais Atividades Concluídas:
+Média de presença por equipe (média de operários presentes por dia trabalhado):
+${((consolidacao as any).presencaEquipes ?? []).map((e: any) => `- ${e.equipeNome} (${e.empresa || "-"}): média ${e.mediaPresentes} de ${e.totalColaboradores} cadastrados, em ${e.diasComPresenca} dia(s)`).join("\n") || "Sem registros de presença."}
+
+Atividades executadas no período (todas):
 ${(consolidacao.principaisAtividades ?? []).map((a: string, i: number) => `${i + 1}. ${a}`).join("\n")}
 
 Ocorrências de Alta Criticidade:
@@ -1034,11 +1037,16 @@ Gere um resumo executivo profissional em português que:
           partes.push(
             `Resumo ${tipoLabel} referente ao período de ${input.dataInicio} a ${input.dataFim}. ` +
             `No período foram registrados ${consolidacao.totalDiarios} diário(s) de obra, ` +
-            `totalizando ${consolidacao.totalAtividades} atividade(s) e ${consolidacao.maoDeObraTotal ?? 0} registro(s) de mão de obra. ` +
+            `totalizando ${consolidacao.totalAtividades} atividade(s) e ${consolidacao.maoDeObraTotal ?? 0} presença(s) de mão de obra. ` +
             `O clima predominante foi ${clima}.`
           );
+          const presEq = (consolidacao as any).presencaEquipes ?? [];
+          if (presEq.length) {
+            partes.push("\n\nMédia de presença por equipe:\n" +
+              presEq.map((e: any) => `• ${e.equipeNome}${e.empresa ? ` (${e.empresa})` : ""}: média de ${e.mediaPresentes} de ${e.totalColaboradores} cadastrado(s), em ${e.diasComPresenca} dia(s) trabalhado(s)`).join("\n"));
+          }
           if (consolidacao.principaisAtividades?.length) {
-            partes.push("\n\nPrincipais atividades executadas:\n" +
+            partes.push("\n\nAtividades executadas no período:\n" +
               consolidacao.principaisAtividades.map((a: string, i: number) => `${i + 1}. ${a}`).join("\n"));
           }
           if (consolidacao.totalOcorrencias > 0) {

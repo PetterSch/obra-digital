@@ -826,6 +826,40 @@ export async function getConsolidacaoPeriodo(obraId: number, dataInicio: Date, d
   const materiaisPeriodo = await db.select().from(movimentacaoMateriais)
     .where(inArray(movimentacaoMateriais.diarioId, diarioIds));
 
+  // Presença por equipe (média de presentes por dia)
+  const presencaPeriodo = await db.select({
+      diarioId: presenca.diarioId, presente: presenca.presente,
+      equipeId: colaboradores.equipeId, equipeNome: equipes.nome, empresa: equipes.empresa,
+    })
+    .from(presenca)
+    .innerJoin(colaboradores, eq(presenca.colaboradorId, colaboradores.id))
+    .innerJoin(equipes, eq(colaboradores.equipeId, equipes.id))
+    .where(inArray(presenca.diarioId, diarioIds));
+  const presentesValidos = presencaPeriodo.filter((p) => p.presente !== false);
+  const porEquipeMap = new Map<number, { equipeNome: string; empresa: string; porDia: Map<number, number> }>();
+  for (const p of presentesValidos) {
+    let e = porEquipeMap.get(p.equipeId);
+    if (!e) { e = { equipeNome: p.equipeNome, empresa: p.empresa, porDia: new Map() }; porEquipeMap.set(p.equipeId, e); }
+    e.porDia.set(p.diarioId, (e.porDia.get(p.diarioId) || 0) + 1);
+  }
+  const equipeIdsPres = Array.from(porEquipeMap.keys());
+  const totalColabPorEquipe = new Map<number, number>();
+  if (equipeIdsPres.length) {
+    const cols = await db.select({ equipeId: colaboradores.equipeId, ativo: colaboradores.ativo })
+      .from(colaboradores).where(inArray(colaboradores.equipeId, equipeIdsPres));
+    for (const c of cols) totalColabPorEquipe.set(c.equipeId, (totalColabPorEquipe.get(c.equipeId) || 0) + (c.ativo !== false ? 1 : 0));
+  }
+  const presencaEquipes = Array.from(porEquipeMap.entries()).map(([eqId, e]) => {
+    const dias = Array.from(e.porDia.values());
+    const media = dias.length ? dias.reduce((s, n) => s + n, 0) / dias.length : 0;
+    return {
+      equipeNome: e.equipeNome, empresa: e.empresa,
+      mediaPresentes: Math.round(media * 10) / 10,
+      diasComPresenca: dias.length,
+      totalColaboradores: totalColabPorEquipe.get(eqId) || 0,
+    };
+  }).sort((a, b) => b.mediaPresentes - a.mediaPresentes);
+
   // Calculate climate predominance
   const climaCounts = diariosPeriodo.reduce((acc, d) => {
     if (d.clima) {
@@ -860,16 +894,11 @@ export async function getConsolidacaoPeriodo(obraId: number, dataInicio: Date, d
     totalAtividades: atividadesPeriodo.length,
     totalOcorrencias: ocorrenciasPeriodo.length,
     totalFotos: midiasPeriodo.length,
-    principaisAtividades: atividadesPeriodo
-      .filter(a => a.status === "concluida")
-      .slice(0, 5)
-      .map(a => a.descricao),
-    principaisOcorrencias: ocorrenciasPeriodo
-      .filter(o => o.criticidade === "alta")
-      .slice(0, 5)
-      .map(o => o.descricao),
+    principaisAtividades: Array.from(new Set(atividadesPeriodo.map(a => a.descricao).filter(Boolean))),
+    principaisOcorrencias: Array.from(new Set(ocorrenciasPeriodo.map(o => o.descricao).filter(Boolean))),
     climaPredominate,
-    maoDeObraTotal: diariosPeriodo.reduce((sum, d) => sum + (d.responsavel ? 1 : 0), 0),
+    maoDeObraTotal: presentesValidos.length,
+    presencaEquipes,
     equipamentosUtilizados: equipamentosUnicos,
     materiaisMovimentados: materiaisResumido,
     diarios: diariosPeriodo,

@@ -42,9 +42,6 @@ const menuGroups: MenuGroup[] = [
     { icon: ClipboardList, label: "Planejamento", path: "/planejamento", count: "planejamentos" },
     { icon: FileText,      label: "Resumos",      path: "/resumos" },
   ]},
-  { label: "Inteligência", items: [
-    { icon: Zap, label: "Sugestões LLM", path: "/sugestoes-llm" },
-  ]},
   { label: "Cadastros", items: [
     { icon: Building2, label: "Minha Empresa", path: "/configuracoes/empresa", adminOnly: true },
   ]},

@@ -778,6 +778,26 @@ export async function deleteAcessoObra(acessoId: number) {
 
 // ============= CONSOLIDATION FOR PERIODIC SUMMARIES =============
 
+// Agrupa textos equivalentes (ignora maiúsculas/acentos/espaços/pontuação) para
+// evitar duplicidade da mesma atividade escrita de formas diferentes.
+function agruparTextos(itens: (string | null | undefined)[]): string[] {
+  const grupos = new Map<string, { count: number; forms: Map<string, number> }>();
+  for (const raw of itens) {
+    const desc = (raw || "").trim();
+    if (!desc) continue;
+    const key = desc.toUpperCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^A-Z0-9]+/g, " ").trim();
+    if (!key) continue;
+    let g = grupos.get(key);
+    if (!g) { g = { count: 0, forms: new Map() }; grupos.set(key, g); }
+    g.count++;
+    g.forms.set(desc, (g.forms.get(desc) || 0) + 1);
+  }
+  return Array.from(grupos.values()).map((g) => {
+    const formaMaisComum = Array.from(g.forms.entries()).sort((a, b) => b[1] - a[1])[0][0];
+    return g.count > 1 ? `${formaMaisComum} (${g.count}x)` : formaMaisComum;
+  });
+}
+
 export async function getConsolidacaoPeriodo(obraId: number, dataInicio: Date, dataFim: Date) {
   const db = await getDb();
   if (!db) return demo.demo_getConsolidacaoPeriodo(obraId, dataInicio, dataFim);
@@ -894,8 +914,8 @@ export async function getConsolidacaoPeriodo(obraId: number, dataInicio: Date, d
     totalAtividades: atividadesPeriodo.length,
     totalOcorrencias: ocorrenciasPeriodo.length,
     totalFotos: midiasPeriodo.length,
-    principaisAtividades: Array.from(new Set(atividadesPeriodo.map(a => a.descricao).filter(Boolean))),
-    principaisOcorrencias: Array.from(new Set(ocorrenciasPeriodo.map(o => o.descricao).filter(Boolean))),
+    principaisAtividades: agruparTextos(atividadesPeriodo.map(a => a.descricao)),
+    principaisOcorrencias: agruparTextos(ocorrenciasPeriodo.map(o => o.descricao)),
     climaPredominate,
     maoDeObraTotal: presentesValidos.length,
     presencaEquipes,

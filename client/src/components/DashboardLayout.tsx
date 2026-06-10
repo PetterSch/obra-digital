@@ -45,9 +45,11 @@ const menuGroups: MenuGroup[] = [
   { label: "Inteligência", items: [
     { icon: Zap, label: "Sugestões LLM", path: "/sugestoes-llm" },
   ]},
+  { label: "Cadastros", items: [
+    { icon: Building2, label: "Minha Empresa", path: "/configuracoes/empresa", adminOnly: true },
+  ]},
   { label: "Administração", items: [
-    { icon: UserCog,  label: "Usuários",      path: "/admin", adminOnly: true },
-    { icon: Settings, label: "Minha Empresa", path: "/configuracoes/empresa", adminOnly: true },
+    { icon: UserCog, label: "Usuários", path: "/admin", adminOnly: true },
   ]},
 ];
 

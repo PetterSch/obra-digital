@@ -153,6 +153,17 @@ export default function Presenca() {
       : "Verde = houve equipe(s) em obra (nº = equipes no dia)";
     const calHtml = `<h2 style="font-size:13px;color:#1e3a5f;margin:18px 0 8px">${tituloCal}</h2>${calendarioHTML(equipeAtual ? Number(equipeSel) : null, operarioSel ? Number(operarioSel) : null)}
       <p style="font-size:10px;color:#666;margin-top:6px"><span style="display:inline-block;width:10px;height:10px;background:#10b981;border-radius:2px"></span> ${legendaCal} &nbsp; <span style="display:inline-block;width:10px;height:10px;background:#f3f3f3;border-radius:2px"></span> Sem registro</p>`;
+    // Lista de funcionários × dias presentes (quando há equipe selecionada)
+    const colabHtml = (equipeAtual && presencaColab.length) ? `
+      <h2 style="font-size:13px;color:#1e3a5f;margin:18px 0 8px">Funcionários da equipe — dias presentes em ${MESES[mes - 1]}/${ano}</h2>
+      <table style="width:100%;border-collapse:collapse;font-size:11px">
+        <thead><tr>${["Funcionário", "Função", "Dias presentes"].map(c => `<th style="background:#1e3a5f;color:#fff;padding:5px;text-align:left">${c}</th>`).join("")}</tr></thead>
+        <tbody>${presencaColab.map((c: any) => `<tr>
+          <td style="padding:5px;border-bottom:1px solid #eee">${c.nome}</td>
+          <td style="padding:5px;border-bottom:1px solid #eee">${c.funcao || "—"}</td>
+          <td style="padding:5px;border-bottom:1px solid #eee;text-align:center;font-weight:700">${c.diasPresente} / ${dias.length}</td>
+        </tr>`).join("")}</tbody>
+      </table>` : "";
     const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Presença</title>
       <style>*{margin:0;padding:0;box-sizing:border-box;-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important}
       body{font-family:Arial,sans-serif;padding:32px;color:#1a1a1a}@page{margin:1.5cm}</style></head><body>
@@ -167,6 +178,7 @@ export default function Presenca() {
         <tbody>${linhasMedia}</tbody>
       </table>
       ${calHtml}
+      ${colabHtml}
       <script>window.onload=()=>window.print();window.onafterprint=()=>window.close();</script></body></html>`;
     const w = window.open("", "_blank");
     if (!w) { toast.error("Permita pop-ups para exportar PDF"); return; }

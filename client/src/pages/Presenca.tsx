@@ -97,6 +97,14 @@ export default function Presenca() {
   const mediaGeral = equipes.length ? equipes.reduce((s, e) => s + mediaEquipe(e.id), 0) / equipes.length : 0;
   const totalCadastrados = equipes.reduce((s, e) => s + (e.totalColaboradores || 0), 0);
 
+  // Dias presentes por colaborador da equipe selecionada
+  const presencaColab = equipeSel
+    ? (equipeAtual?.colaboradores || []).map((c: any) => ({
+        ...c,
+        diasPresente: dias.filter((d) => d.porEquipe?.[Number(equipeSel)]?.operarios?.includes(c.id)).length,
+      })).sort((a: any, b: any) => b.diasPresente - a.diasPresente || a.nome.localeCompare(b.nome))
+    : [];
+
   // Monta HTML do calendário (para o PDF)
   const calendarioHTML = (eqId: number | null, opId: number | null) => {
     let html = `<table style="width:100%;max-width:480px;border-collapse:separate;border-spacing:4px;table-layout:fixed">
@@ -281,8 +289,9 @@ export default function Presenca() {
               {!equipeSel ? (
                 <p className="text-sm text-muted-foreground text-center py-8">Selecione uma equipe (acima ou nos cartões) para ver os dias de presença.</p>
               ) : (
-                <>
-                  <div className="max-w-md">
+                <div className="flex flex-col lg:flex-row gap-6 items-start">
+                  {/* Calendário */}
+                  <div className="w-full lg:w-[400px] shrink-0">
                   <div className="grid grid-cols-7 gap-1.5 mb-1.5">
                     {DIAS_SEMANA.map((d, i) => <div key={d} className={`text-center text-[10px] font-semibold uppercase tracking-wide ${i === 0 || i === 6 ? "text-muted-foreground/40" : "text-muted-foreground"}`}>{d}</div>)}
                   </div>
@@ -309,8 +318,7 @@ export default function Presenca() {
                       );
                     })}
                   </div>
-                  </div>
-                  <div className="flex items-center gap-4 mt-3 text-[11px] text-muted-foreground flex-wrap">
+                  <div className="flex items-center gap-3 mt-3 text-[11px] text-muted-foreground flex-wrap">
                     {operarioSel ? (
                       <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded bg-emerald-500" /> Operário presente</span>
                     ) : (
@@ -320,14 +328,37 @@ export default function Presenca() {
                         <span className="inline-block w-3.5 h-3.5 rounded bg-emerald-400" />
                         <span className="inline-block w-3.5 h-3.5 rounded bg-emerald-500" />
                         <span className="inline-block w-3.5 h-3.5 rounded bg-emerald-600" />
-                        baixa → alta (nº = presentes)
+                        baixa → alta
                       </span>
                     )}
-                    <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded border bg-background" /> Sem registro</span>
                     <span className="flex items-center gap-1.5"><span className="inline-block w-3.5 h-3.5 rounded ring-2 ring-primary" /> Hoje</span>
-                    <span className="italic">Clique num dia em verde para ver os presentes.</span>
+                    <span className="italic">Clique num dia para ver os presentes.</span>
                   </div>
-                </>
+                  </div>
+
+                  {/* Lista de funcionários da equipe e dias presentes no mês */}
+                  <div className="flex-1 min-w-0 w-full">
+                    <p className="text-sm font-medium mb-2">Funcionários da equipe — dias presentes em {MESES[mes - 1]}</p>
+                    {presencaColab.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">Nenhum funcionário cadastrado nesta equipe.</p>
+                    ) : (
+                      <div className="space-y-1.5 max-h-[460px] overflow-y-auto pr-1">
+                        {presencaColab.map((c: any) => (
+                          <div key={c.id} className={`flex items-center justify-between gap-2 rounded-lg border px-3 py-2 ${operarioSel === String(c.id) ? "border-primary/50 bg-primary/5" : "bg-card"}`}>
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{c.nome}</p>
+                              {c.funcao && <p className="text-xs text-muted-foreground truncate">{c.funcao}</p>}
+                            </div>
+                            <div className="text-right shrink-0 whitespace-nowrap">
+                              <span className={`text-base font-bold ${c.diasPresente > 0 ? "text-emerald-600" : "text-muted-foreground/60"}`}>{c.diasPresente}</span>
+                              <span className="text-xs text-muted-foreground"> / {dias.length} dia(s)</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               )}
             </CardContent></Card>
           </>

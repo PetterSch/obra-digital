@@ -23,7 +23,6 @@ import ClientObras from "./pages/ClientObras";
 import ClientPanel from "./pages/ClientPanel";
 import Relatorios from "./pages/Relatorios";
 import AdminPanel from "./pages/AdminPanel";
-import SugestoesLLM from "./pages/SugestoesLLM";
 import Cronograma from "./pages/Cronograma";
 import Presenca from "./pages/Presenca";
 import ConfiguracaoEmpresa from "./pages/ConfiguracaoEmpresa";
@@ -68,7 +67,6 @@ function Router() {
       <Route path={"/admin"} component={AdminPanel} />
       <Route path={"/equipes"} component={EquipesManagement} />
       <Route path={"/colaboradores"} component={Colaboradores} />
-      <Route path={"/sugestoes-llm"} component={SugestoesLLM} />
       <Route path={"/obras/:obraId/cronograma"} component={Cronograma} />
       <Route path={"/obras/:obraId/presenca"} component={Presenca} />
       <Route path={"/client"} component={ClientObras} />

@@ -44,9 +44,7 @@ const menuGroups: MenuGroup[] = [
   ]},
   { label: "Cadastros", items: [
     { icon: Building2, label: "Minha Empresa", path: "/configuracoes/empresa", adminOnly: true },
-  ]},
-  { label: "Administração", items: [
-    { icon: UserCog, label: "Usuários", path: "/admin", adminOnly: true },
+    { icon: UserCog,   label: "Usuários",      path: "/admin", adminOnly: true },
   ]},
 ];
 

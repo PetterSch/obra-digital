@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings, UserCog, Calculator, ClipboardList } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings, UserCog, Calculator, ClipboardList, Tags, Package } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -43,8 +43,10 @@ const menuGroups: MenuGroup[] = [
     { icon: FileText,      label: "Resumos",      path: "/resumos" },
   ]},
   { label: "Cadastros", items: [
-    { icon: Building2, label: "Minha Empresa", path: "/configuracoes/empresa", adminOnly: true },
-    { icon: UserCog,   label: "Usuários",      path: "/admin", adminOnly: true },
+    { icon: Building2, label: "Minha Empresa",          path: "/configuracoes/empresa", adminOnly: true },
+    { icon: Tags,      label: "Categorias de Insumos",  path: "/cadastros/categorias-insumo" },
+    { icon: Package,   label: "Insumos",                path: "/cadastros/insumos" },
+    { icon: UserCog,   label: "Usuários",               path: "/admin", adminOnly: true },
   ]},
 ];
 

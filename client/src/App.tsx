@@ -26,6 +26,8 @@ import AdminPanel from "./pages/AdminPanel";
 import Cronograma from "./pages/Cronograma";
 import Presenca from "./pages/Presenca";
 import ConfiguracaoEmpresa from "./pages/ConfiguracaoEmpresa";
+import CategoriasInsumo from "./pages/CategoriasInsumo";
+import Insumos from "./pages/Insumos";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Spinner } from "./components/ui/spinner";
 
@@ -72,6 +74,8 @@ function Router() {
       <Route path={"/client"} component={ClientObras} />
       <Route path={"/client/obras/:id"} component={ClientPanel} />
       <Route path={"/configuracoes/empresa"} component={ConfiguracaoEmpresa} />
+      <Route path={"/cadastros/categorias-insumo"} component={CategoriasInsumo} />
+      <Route path={"/cadastros/insumos"} component={Insumos} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

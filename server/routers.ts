@@ -1236,6 +1236,32 @@ Gere um resumo executivo profissional em português que:
       .mutation(async ({ input }) => { await db.deletePedido(input.id); return { success: true }; }),
   }),
 
+  // ============= CADASTRO: CATEGORIAS DE INSUMOS =============
+  insumoCategorias: router({
+    list: protectedProcedure.query(async () => db.getInsumoCategorias()),
+    create: engineerProcedure.input(z.object({ nome: z.string().min(1) }))
+      .mutation(async ({ input }) => db.createInsumoCategoria(input.nome)),
+    update: engineerProcedure.input(z.object({ id: z.number(), nome: z.string().min(1) }))
+      .mutation(async ({ input }) => { await db.updateInsumoCategoria(input.id, input.nome); return { success: true }; }),
+    delete: engineerProcedure.input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deleteInsumoCategoria(input.id); return { success: true }; }),
+  }),
+
+  // ============= CADASTRO: INSUMOS =============
+  insumos: router({
+    list: protectedProcedure.query(async () => db.getInsumos()),
+    create: engineerProcedure.input(z.object({
+      categoriaId: z.number().optional(), codigo: z.string().optional(),
+      nome: z.string().min(1), unidade: z.string().optional(),
+    })).mutation(async ({ input }) => db.createInsumo(input)),
+    update: engineerProcedure.input(z.object({
+      id: z.number(), categoriaId: z.number().optional(), codigo: z.string().optional(),
+      nome: z.string().min(1).optional(), unidade: z.string().optional(), ativo: z.boolean().optional(),
+    })).mutation(async ({ input }) => { const { id, ...d } = input; await db.updateInsumo(id, d); return { success: true }; }),
+    delete: engineerProcedure.input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deleteInsumo(input.id); return { success: true }; }),
+  }),
+
   // ============= CONFIG DA EMPRESA (compartilhada) =============
   empresa: router({
     // Todos os usuários autenticados leem (para usar nos PDFs)

@@ -26,6 +26,7 @@ const STATUS_COR: Record<string, string> = { aberto: "bg-amber-100 text-amber-70
 export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNome?: string }) {
   const utils = trpc.useUtils();
   const { data: lista = [], isLoading } = trpc.pedidos.listByObra.useQuery({ obraId });
+  const { data: insumos = [] } = trpc.insumos.list.useQuery();
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [numero, setNumero] = useState("");
@@ -210,7 +211,22 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                   <tbody>
                     {itens.map((it, i) => (
                       <tr key={i} className="border-b last:border-0">
-                        <td className="p-1"><Input className={cellCls} value={it.descricao} onChange={(e) => setItem(i, "descricao", e.target.value)} placeholder="Ex: Cimento CP-II 50kg" /></td>
+                        <td className="p-1">
+                          <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm"
+                            value={(insumos as any[]).some((ins) => ins.nome === it.descricao) ? it.descricao : (it.descricao ? "__atual" : "")}
+                            onChange={(e) => {
+                              const ins = (insumos as any[]).find((x) => x.nome === e.target.value);
+                              setItens((arr) => arr.map((x, idx) => idx === i ? { ...x, descricao: e.target.value, unidade: ins?.unidade ? ins.unidade : x.unidade } : x));
+                            }}>
+                            <option value="" disabled>Selecione um insumo...</option>
+                            {it.descricao && !(insumos as any[]).some((ins) => ins.nome === it.descricao) && <option value="__atual" disabled>{it.descricao} (não cadastrado)</option>}
+                            {Object.entries((insumos as any[]).reduce((acc: any, ins: any) => { const c = ins.categoriaNome || "Sem categoria"; (acc[c] ??= []).push(ins); return acc; }, {})).map(([cat, items]: any) => (
+                              <optgroup key={cat} label={cat}>
+                                {items.map((ins: any) => <option key={ins.id} value={ins.nome}>{ins.codigo ? `${ins.codigo} - ` : ""}{ins.nome}</option>)}
+                              </optgroup>
+                            ))}
+                          </select>
+                        </td>
                         <td className="p-1"><Input list="unidades-compra" className={cellCls} value={it.unidade} onChange={(e) => setItem(i, "unidade", e.target.value)} placeholder="UND, SC 50kg..." /></td>
                         <td className="p-1"><Input type="number" step="0.01" className={cellCls} value={it.quantidade} onChange={(e) => setItem(i, "quantidade", e.target.value)} placeholder="0" /></td>
                         <td className="p-1"><Input className={cellCls} value={it.observacao} onChange={(e) => setItem(i, "observacao", e.target.value)} placeholder="marca, especificação..." /></td>

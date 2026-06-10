@@ -225,6 +225,20 @@ export async function runMigrations() {
     } catch { /* já existe */ }
   }
 
+  // Cadastro de insumos e categorias
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS insumo_categorias (
+        id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(255) NOT NULL, criadoEm TIMESTAMP DEFAULT NOW()
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS insumos (
+        id INT AUTO_INCREMENT PRIMARY KEY, categoriaId INT, codigo VARCHAR(50), nome VARCHAR(500) NOT NULL,
+        unidade VARCHAR(20), ativo BOOLEAN DEFAULT TRUE, criadoEm TIMESTAMP DEFAULT NOW()
+      )`);
+    }
+  } catch { /* já existe */ }
+
   // Pedidos de compra (materiais)
   try {
     const db = await getDb();
@@ -1346,4 +1360,61 @@ export async function buscarItensPedido(obraId: number, termo: string) {
       i.descricao LIKE ${like} OR i.observacao LIKE ${like} OR p.numero LIKE ${like} OR p.solicitante LIKE ${like})
     ORDER BY p.id DESC LIMIT 100`);
   return (r[0] ?? r) as any[];
+}
+
+// ============= CADASTRO: CATEGORIAS DE INSUMOS =============
+export async function getInsumoCategorias() {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`SELECT id, nome, criadoEm,
+    (SELECT COUNT(*) FROM insumos i WHERE i.categoriaId = c.id) AS totalInsumos
+    FROM insumo_categorias c ORDER BY c.nome`);
+  return (r[0] ?? r) as any[];
+}
+export async function createInsumoCategoria(nome: string) {
+  const db = await getDb();
+  if (!db) return { id: 0 };
+  const res: any = await db.execute(sql`INSERT INTO insumo_categorias (nome) VALUES (${nome})`);
+  return { id: (res[0]?.insertId ?? res.insertId) as number };
+}
+export async function updateInsumoCategoria(id: number, nome: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`UPDATE insumo_categorias SET nome = ${nome} WHERE id = ${id}`);
+}
+export async function deleteInsumoCategoria(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`DELETE FROM insumo_categorias WHERE id = ${id}`);
+}
+
+// ============= CADASTRO: INSUMOS =============
+export async function getInsumos() {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT i.id, i.categoriaId, i.codigo, i.nome, i.unidade, i.ativo, c.nome AS categoriaNome
+    FROM insumos i LEFT JOIN insumo_categorias c ON i.categoriaId = c.id
+    ORDER BY c.nome, i.nome`);
+  return (r[0] ?? r) as any[];
+}
+export async function createInsumo(data: { categoriaId?: number; codigo?: string; nome: string; unidade?: string }) {
+  const db = await getDb();
+  if (!db) return { id: 0 };
+  const res: any = await db.execute(sql`INSERT INTO insumos (categoriaId, codigo, nome, unidade)
+    VALUES (${data.categoriaId ?? null}, ${data.codigo ?? null}, ${data.nome}, ${data.unidade ?? null})`);
+  return { id: (res[0]?.insertId ?? res.insertId) as number };
+}
+export async function updateInsumo(id: number, data: { categoriaId?: number; codigo?: string; nome?: string; unidade?: string; ativo?: boolean }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`UPDATE insumos SET
+    categoriaId = ${data.categoriaId ?? null}, codigo = ${data.codigo ?? null},
+    nome = ${data.nome ?? null}, unidade = ${data.unidade ?? null}, ativo = ${data.ativo ?? true}
+    WHERE id = ${id}`);
+}
+export async function deleteInsumo(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`DELETE FROM insumos WHERE id = ${id}`);
 }

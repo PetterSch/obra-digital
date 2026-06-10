@@ -12,8 +12,9 @@ import { fmtDataBR } from "@/lib/data";
 import { getPDFConfig } from "@/lib/pdfExport";
 import * as XLSX from "xlsx-js-style";
 
-type Nota = { fornecedor: string; ordemCompra: string; pedido: string; nf: string; dataEnvio: string; venc1: string; venc2: string; venc3: string; status: string; condicao: string };
-const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", dataEnvio: "", venc1: "", venc2: "", venc3: "", status: "enviado", condicao: "avista" });
+type Nota = { fornecedor: string; ordemCompra: string; pedido: string; nf: string; valor: string; dataEnvio: string; venc1: string; venc2: string; venc3: string; status: string; condicao: string };
+const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", valor: "", dataEnvio: "", venc1: "", venc2: "", venc3: "", status: "enviado", condicao: "avista" });
+const brl = (n: any) => n != null && n !== "" ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
 
 // quantidade de datas de vencimento por condição de pagamento
 const VENC_QTD: Record<string, number> = { avista: 0, "28": 1, "28_56": 2, "28_56_72": 3 };
@@ -54,6 +55,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
     setEditId(id); setNumero(p.numero || ""); setObservacao(p.observacao || "");
     setNotas((p.notas || []).length ? (p.notas as any[]).map((n) => ({
       fornecedor: n.fornecedor || "", ordemCompra: n.ordemCompra || "", pedido: n.pedido || "", nf: n.nf || "",
+      valor: n.valor != null ? String(n.valor) : "",
       dataEnvio: n.dataEnvio ? String(n.dataEnvio).slice(0, 10) : "",
       venc1: n.venc1 ? String(n.venc1).slice(0, 10) : "", venc2: n.venc2 ? String(n.venc2).slice(0, 10) : "", venc3: n.venc3 ? String(n.venc3).slice(0, 10) : "",
       status: n.status || "enviado",
@@ -76,7 +78,8 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
   }));
 
   const salvar = () => {
-    const notasLimpas = notas.filter((n) => n.fornecedor || n.nf || n.ordemCompra || n.pedido);
+    const notasLimpas = notas.filter((n) => n.fornecedor || n.nf || n.ordemCompra || n.pedido)
+      .map((n) => ({ ...n, valor: n.valor !== "" && !isNaN(parseFloat(n.valor)) ? parseFloat(n.valor) : undefined }));
     const payload = { numero: numero || undefined, observacao: observacao || undefined, notas: notasLimpas };
     if (editId) updateMut.mutate({ id: editId, ...payload });
     else createMut.mutate({ obraId, ...payload });
@@ -84,10 +87,10 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
 
   const cellCls = "h-9 text-sm";
   const STATUS_LABEL: Record<string, string> = { enviado: "Enviado", em_analise: "Em análise", pago: "Pago", recusado: "Recusado" };
-  const linhaNota = (n: any) => [n.fornecedor || "—", n.ordemCompra || "—", n.pedido || "—", n.nf || "—",
+  const linhaNota = (n: any) => [n.fornecedor || "—", n.ordemCompra || "—", n.pedido || "—", n.nf || "—", brl(n.valor),
     n.dataEnvio ? fmtDataBR(n.dataEnvio) : "—", n.venc1 ? fmtDataBR(n.venc1) : "—", n.venc2 ? fmtDataBR(n.venc2) : "—", n.venc3 ? fmtDataBR(n.venc3) : "—",
     STATUS_LABEL[n.status] || n.status || "—"];
-  const COLS = ["Fornecedor", "Nº OC", "Nº Pedido", "Nº NF", "Data envio", "Venc. 28d", "Venc. 56d", "Venc. 72d", "Status"];
+  const COLS = ["Fornecedor", "Nº OC", "Nº Pedido", "Nº NF", "Valor (R$)", "Data envio", "Venc. 28d", "Venc. 56d", "Venc. 72d", "Status"];
 
   const exportarPDF = async (p: any) => {
     const full: any = await utils.protocolos.getById.fetch({ id: p.id });
@@ -255,13 +258,14 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                 <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setNotas((a) => [...a, notaVazia()])}><Plus className="w-4 h-4" /> Adicionar nota</Button>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ minWidth: 1080 }}>
+                <table className="w-full text-sm" style={{ minWidth: 1220 }}>
                   <thead>
                     <tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">
                       <th className="text-left p-1.5">Fornecedor</th>
                       <th className="text-left p-1.5 w-24">Nº OC</th>
                       <th className="text-left p-1.5 w-24">Nº Pedido</th>
                       <th className="text-left p-1.5 w-24">Nº NF</th>
+                      <th className="text-left p-1.5 w-28">Valor (R$)</th>
                       <th className="text-left p-1.5 w-36">Data envio</th>
                       <th className="text-left p-1.5 w-32">Pagamento</th>
                       <th className="text-left p-1.5 w-32">Venc. 1</th>
@@ -278,6 +282,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                         <td className="p-1"><Input className={cellCls} value={n.ordemCompra} onChange={(e) => setNota(i, "ordemCompra", e.target.value)} /></td>
                         <td className="p-1"><Input className={cellCls} value={n.pedido} onChange={(e) => setNota(i, "pedido", e.target.value)} /></td>
                         <td className="p-1"><Input className={cellCls} value={n.nf} onChange={(e) => setNota(i, "nf", e.target.value)} /></td>
+                        <td className="p-1"><Input type="number" step="0.01" className={cellCls} value={n.valor} onChange={(e) => setNota(i, "valor", e.target.value)} placeholder="0,00" /></td>
                         <td className="p-1"><Input type="date" className={cellCls} value={n.dataEnvio} onChange={(e) => setNota(i, "dataEnvio", e.target.value)} /></td>
                         <td className="p-1">
                           <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm" value={n.condicao} onChange={(e) => setNota(i, "condicao", e.target.value)}>
@@ -340,7 +345,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
               <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm" style={{ minWidth: 900 }}>
                   <thead><tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">
-                    {["Fornecedor", "Nº OC", "Nº Pedido", "Nº NF", "Data envio", "Pagamento", "Vencimentos", "Status"].map((c) => <th key={c} className="text-left p-2">{c}</th>)}
+                    {["Fornecedor", "Nº OC", "Nº Pedido", "Nº NF", "Valor", "Data envio", "Pagamento", "Vencimentos", "Status"].map((c) => <th key={c} className="text-left p-2">{c}</th>)}
                   </tr></thead>
                   <tbody>
                     {(verData.notas || []).map((n: any) => {
@@ -352,6 +357,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                           <td className="p-2">{n.ordemCompra || "—"}</td>
                           <td className="p-2">{n.pedido || "—"}</td>
                           <td className="p-2">{n.nf || "—"}</td>
+                          <td className="p-2 whitespace-nowrap">{brl(n.valor)}</td>
                           <td className="p-2">{n.dataEnvio ? fmtDataBR(n.dataEnvio) : "—"}</td>
                           <td className="p-2">{cond}</td>
                           <td className="p-2">{vencs.length ? vencs.join(" · ") : "—"}</td>

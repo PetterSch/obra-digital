@@ -1163,7 +1163,7 @@ Gere um resumo executivo profissional em português que:
         observacao: z.string().optional(),
         notas: z.array(z.object({
           fornecedor: z.string().optional(), ordemCompra: z.string().optional(),
-          pedido: z.string().optional(), nf: z.string().optional(),
+          pedido: z.string().optional(), nf: z.string().optional(), valor: z.number().optional(),
           dataEnvio: z.string().optional(), venc1: z.string().optional(),
           venc2: z.string().optional(), venc3: z.string().optional(), status: z.string().optional(), condicao: z.string().optional(),
         })).default([]),
@@ -1177,7 +1177,7 @@ Gere um resumo executivo profissional em português que:
         observacao: z.string().optional(),
         notas: z.array(z.object({
           fornecedor: z.string().optional(), ordemCompra: z.string().optional(),
-          pedido: z.string().optional(), nf: z.string().optional(),
+          pedido: z.string().optional(), nf: z.string().optional(), valor: z.number().optional(),
           dataEnvio: z.string().optional(), venc1: z.string().optional(),
           venc2: z.string().optional(), venc3: z.string().optional(), status: z.string().optional(), condicao: z.string().optional(),
         })).default([]),

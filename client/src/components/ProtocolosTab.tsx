@@ -13,7 +13,7 @@ import { getPDFConfig } from "@/lib/pdfExport";
 import * as XLSX from "xlsx-js-style";
 
 type Nota = { fornecedor: string; ordemCompra: string; pedido: string; nf: string; valor: string; dataEnvio: string; venc1: string; venc2: string; venc3: string; status: string; condicao: string };
-const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", valor: "", dataEnvio: "", venc1: "", venc2: "", venc3: "", status: "enviado", condicao: "avista" });
+const notaVazia = (): Nota => ({ fornecedor: "", ordemCompra: "", pedido: "", nf: "", valor: "", dataEnvio: "", venc1: "", venc2: "", venc3: "", status: "lancado_assistente", condicao: "avista" });
 const brl = (n: any) => n != null && n !== "" ? Number(n).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—";
 
 // quantidade de datas de vencimento por condição de pagamento
@@ -58,7 +58,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
       valor: n.valor != null ? String(n.valor) : "",
       dataEnvio: n.dataEnvio ? String(n.dataEnvio).slice(0, 10) : "",
       venc1: n.venc1 ? String(n.venc1).slice(0, 10) : "", venc2: n.venc2 ? String(n.venc2).slice(0, 10) : "", venc3: n.venc3 ? String(n.venc3).slice(0, 10) : "",
-      status: n.status || "enviado",
+      status: n.status || "lancado_assistente",
       condicao: n.condicao || (n.venc3 ? "28_56_72" : n.venc2 ? "28_56" : n.venc1 ? "28" : "avista"),
     })) : [notaVazia()]);
     setOpen(true);
@@ -86,7 +86,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
   };
 
   const cellCls = "h-9 text-sm";
-  const STATUS_LABEL: Record<string, string> = { enviado: "Enviado", em_analise: "Em análise", pago: "Pago", recusado: "Recusado" };
+  const STATUS_LABEL: Record<string, string> = { lancado_assistente: "Lançado no assistente", medicao: "Medição" };
   const linhaNota = (n: any) => [n.fornecedor || "—", n.ordemCompra || "—", n.pedido || "—", n.nf || "—", brl(n.valor),
     n.dataEnvio ? fmtDataBR(n.dataEnvio) : "—", n.venc1 ? fmtDataBR(n.venc1) : "—", n.venc2 ? fmtDataBR(n.venc2) : "—", n.venc3 ? fmtDataBR(n.venc3) : "—",
     STATUS_LABEL[n.status] || n.status || "—"];
@@ -165,10 +165,8 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
         <div className="flex items-center gap-2 flex-wrap">
           <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)} className="h-9 px-3 border border-input rounded-md bg-background text-sm">
             <option value="todos">Todos os status</option>
-            <option value="enviado">Enviado</option>
-            <option value="em_analise">Em análise</option>
-            <option value="pago">Pago</option>
-            <option value="recusado">Recusado</option>
+            <option value="lancado_assistente">Lançado no assistente</option>
+            <option value="medicao">Medição</option>
           </select>
           <Button size="sm" variant="outline" className="gap-1.5" disabled={listaFiltrada.length === 0} onClick={exportarTudo}><FileSpreadsheet className="w-4 h-4" /> Exportar tudo</Button>
           <Button size="sm" className="gap-1.5" onClick={abrirNovo}><Plus className="w-4 h-4" /> Novo Protocolo</Button>
@@ -297,10 +295,8 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                         <td className="p-1">{(VENC_QTD[n.condicao] ?? 0) >= 3 ? <Input type="date" className={cellCls} value={n.venc3} onChange={(e) => setNota(i, "venc3", e.target.value)} /> : <span className="text-muted-foreground text-xs pl-1">—</span>}</td>
                         <td className="p-1">
                           <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm" value={n.status} onChange={(e) => setNota(i, "status", e.target.value)}>
-                            <option value="enviado">Enviado</option>
-                            <option value="em_analise">Em análise</option>
-                            <option value="pago">Pago</option>
-                            <option value="recusado">Recusado</option>
+                            <option value="lancado_assistente">Lançado no assistente</option>
+            <option value="medicao">Medição</option>
                           </select>
                         </td>
                         <td className="p-1 text-center">

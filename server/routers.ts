@@ -511,6 +511,8 @@ export const appRouter = router({
     update: engineerProcedure
       .input(z.object({
         id: z.number(),
+        descricao: z.string().min(1).optional(),
+        tipo: z.enum(["atraso_material", "falta_equipe", "chuva", "problema_projeto", "acidente", "nao_conformidade", "interferencia", "outro"]).optional(),
         status: z.enum(["aberta", "em_andamento", "resolvida", "cancelada"]).optional(),
         criticidade: z.enum(["baixa", "media", "alta", "critica"]).optional(),
       }))
@@ -518,6 +520,10 @@ export const appRouter = router({
         const { id, ...data } = input;
         return db.updateOcorrencia(id, data);
       }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deleteOcorrencia(input.id); return { success: true }; }),
   }),
 
   // ============= COLABORADORES ROUTER =============

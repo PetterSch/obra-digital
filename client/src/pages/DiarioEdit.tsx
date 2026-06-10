@@ -62,6 +62,15 @@ export default function DiarioEdit() {
     onError: (e) => toast.error(e.message || "Erro ao atualizar atividade"),
   });
 
+  // ── Ocorrências ──
+  const { data: ocorrencias = [] } = trpc.ocorrencias.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
+  const [novaOcor, setNovaOcor] = useState({ descricao: "", tipo: "outro", criticidade: "baixa" });
+  const invalOcor = () => utils.ocorrencias.listByDiario.invalidate({ diarioId: diarioId! });
+  const addOcor = trpc.ocorrencias.create.useMutation({ onSuccess: () => { setNovaOcor({ descricao: "", tipo: "outro", criticidade: "baixa" }); invalOcor(); }, onError: (e) => toast.error(e.message) });
+  const delOcor = trpc.ocorrencias.delete.useMutation({ onSuccess: () => invalOcor() });
+  const [editOcor, setEditOcor] = useState<any | null>(null);
+  const updOcor = trpc.ocorrencias.update.useMutation({ onSuccess: () => { toast.success("Ocorrência atualizada!"); setEditOcor(null); invalOcor(); }, onError: (e) => toast.error(e.message) });
+
   // ── Mão de obra (presença por equipe) ──
   const { data: resumo } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const [maoDeObra, setMaoDeObra] = useState<Array<{ equipeId: number; operariosPresentes: number[] }>>([]);
@@ -152,9 +161,10 @@ export default function DiarioEdit() {
 
         {/* Seções */}
         <Tabs defaultValue="atividades" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="atividades">Atividades ({atividades.length})</TabsTrigger>
             <TabsTrigger value="mao-obra">Mão de Obra</TabsTrigger>
+            <TabsTrigger value="ocorrencias">Ocorrências ({ocorrencias.length})</TabsTrigger>
             <TabsTrigger value="fotos">Fotos ({fotos.length})</TabsTrigger>
           </TabsList>
 
@@ -250,6 +260,111 @@ export default function DiarioEdit() {
                 <Save className="w-4 h-4" /> {saveMao.isPending ? "Salvando..." : "Salvar mão de obra"}
               </Button>
             </CardContent></Card>
+          </TabsContent>
+
+          {/* Ocorrências */}
+          <TabsContent value="ocorrencias" className="space-y-3 mt-4">
+            <Card><CardContent className="pt-4 space-y-2">
+              {(ocorrencias as any[]).length === 0 ? <p className="text-sm text-muted-foreground">Nenhuma ocorrência. Adicione abaixo.</p> :
+                (ocorrencias as any[]).map((o: any) => (
+                  <div key={o.id} className="flex items-center justify-between gap-2 border rounded-lg px-3 py-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm">{o.descricao}</p>
+                      <p className="text-xs text-muted-foreground">{(o.tipo || "").replace(/_/g, " ")} · {(o.criticidade || "").replace(/_/g, " ")}</p>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar"
+                        onClick={() => setEditOcor({ id: o.id, descricao: o.descricao || "", tipo: o.tipo || "outro", criticidade: o.criticidade || "baixa" })}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="Excluir" onClick={() => delOcor.mutate({ id: o.id })}><Trash2 className="w-4 h-4" /></Button>
+                    </div>
+                  </div>
+                ))}
+            </CardContent></Card>
+            <Card><CardContent className="pt-4 space-y-3">
+              <p className="text-sm font-medium">Adicionar ocorrência</p>
+              <Input placeholder="Descrição *" value={novaOcor.descricao} onChange={(e) => setNovaOcor({ ...novaOcor, descricao: e.target.value })} />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <Select value={novaOcor.tipo} onValueChange={(v) => setNovaOcor({ ...novaOcor, tipo: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="atraso_material">Atraso de material</SelectItem>
+                    <SelectItem value="falta_equipe">Falta de equipe</SelectItem>
+                    <SelectItem value="chuva">Chuva</SelectItem>
+                    <SelectItem value="problema_projeto">Problema de projeto</SelectItem>
+                    <SelectItem value="acidente">Acidente</SelectItem>
+                    <SelectItem value="nao_conformidade">Não conformidade</SelectItem>
+                    <SelectItem value="interferencia">Interferência</SelectItem>
+                    <SelectItem value="outro">Outro</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Select value={novaOcor.criticidade} onValueChange={(v) => setNovaOcor({ ...novaOcor, criticidade: v })}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="baixa">Baixa</SelectItem>
+                    <SelectItem value="media">Média</SelectItem>
+                    <SelectItem value="alta">Alta</SelectItem>
+                    <SelectItem value="critica">Crítica</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button size="sm" className="gap-1.5" disabled={!novaOcor.descricao || addOcor.isPending}
+                onClick={() => addOcor.mutate({ diarioId: diarioId!, descricao: novaOcor.descricao, tipo: novaOcor.tipo as any, criticidade: novaOcor.criticidade as any })}>
+                <Plus className="w-4 h-4" /> Adicionar
+              </Button>
+            </CardContent></Card>
+
+            <Dialog open={!!editOcor} onOpenChange={(o) => { if (!o) setEditOcor(null); }}>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Editar ocorrência</DialogTitle></DialogHeader>
+                {editOcor && (
+                  <div className="space-y-3">
+                    <div className="space-y-1.5">
+                      <Label className="text-sm">Descrição *</Label>
+                      <Input value={editOcor.descricao} onChange={(e) => setEditOcor({ ...editOcor, descricao: e.target.value })} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Tipo</Label>
+                        <Select value={editOcor.tipo} onValueChange={(v) => setEditOcor({ ...editOcor, tipo: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="atraso_material">Atraso de material</SelectItem>
+                            <SelectItem value="falta_equipe">Falta de equipe</SelectItem>
+                            <SelectItem value="chuva">Chuva</SelectItem>
+                            <SelectItem value="problema_projeto">Problema de projeto</SelectItem>
+                            <SelectItem value="acidente">Acidente</SelectItem>
+                            <SelectItem value="nao_conformidade">Não conformidade</SelectItem>
+                            <SelectItem value="interferencia">Interferência</SelectItem>
+                            <SelectItem value="outro">Outro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label className="text-sm">Criticidade</Label>
+                        <Select value={editOcor.criticidade} onValueChange={(v) => setEditOcor({ ...editOcor, criticidade: v })}>
+                          <SelectTrigger><SelectValue /></SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="baixa">Baixa</SelectItem>
+                            <SelectItem value="media">Média</SelectItem>
+                            <SelectItem value="alta">Alta</SelectItem>
+                            <SelectItem value="critica">Crítica</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <Button className="flex-1 gap-1.5" disabled={!editOcor.descricao || updOcor.isPending}
+                        onClick={() => updOcor.mutate({ id: editOcor.id, descricao: editOcor.descricao, tipo: editOcor.tipo as any, criticidade: editOcor.criticidade as any })}>
+                        <Save className="w-4 h-4" /> {updOcor.isPending ? "Salvando..." : "Salvar"}
+                      </Button>
+                      <Button variant="outline" onClick={() => setEditOcor(null)}>Cancelar</Button>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
+            </Dialog>
           </TabsContent>
 
           {/* Fotos */}

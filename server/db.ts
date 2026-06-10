@@ -458,6 +458,12 @@ export async function updateOcorrencia(ocorrenciaId: number, data: Partial<typeo
   return db.update(ocorrencias).set(data).where(eq(ocorrencias.id, ocorrenciaId));
 }
 
+export async function deleteOcorrencia(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  return db.delete(ocorrencias).where(eq(ocorrencias.id, id));
+}
+
 // ============= COLABORADORES =============
 
 export async function getColaboradoresByEquipeId(equipeId: number) {

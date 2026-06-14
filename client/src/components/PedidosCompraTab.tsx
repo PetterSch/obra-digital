@@ -34,6 +34,8 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const [observacao, setObservacao] = useState("");
   const [status, setStatus] = useState("aberto");
   const [itens, setItens] = useState<Item[]>([itemVazio()]);
+  const [buscasInsumo, setBuscasInsumo] = useState<string[]>([""]);
+  const [dropdownAberto, setDropdownAberto] = useState<number | null>(null);
   const [delId, setDelId] = useState<number | null>(null);
   const [verData, setVerData] = useState<any | null>(null);
   const [statusFiltro, setStatusFiltro] = useState("todos");
@@ -50,12 +52,15 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
     const nums = (lista as any[]).map((p) => parseInt(String(p.numero ?? "").replace(/\D/g, ""), 10)).filter((n) => !isNaN(n));
     return String((nums.length ? Math.max(...nums) : 0) + 1).padStart(2, "0");
   };
-  const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setSolicitante(""); setObservacao(""); setStatus("aberto"); setItens([itemVazio()]); setOpen(true); };
+  const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setSolicitante(""); setObservacao(""); setStatus("aberto"); setItens([itemVazio()]); setBuscasInsumo([""]); setDropdownAberto(null); setOpen(true); };
   const abrirEdicao = async (id: number) => {
     const p: any = await utils.pedidos.getById.fetch({ id });
     if (!p) return;
     setEditId(id); setNumero(p.numero || ""); setSolicitante(p.solicitante || ""); setObservacao(p.observacao || ""); setStatus(p.status || "aberto");
-    setItens((p.itens || []).length ? (p.itens as any[]).map((i) => ({ descricao: i.descricao || "", unidade: i.unidade || "", quantidade: i.quantidade != null ? String(i.quantidade) : "", observacao: i.observacao || "" })) : [itemVazio()]);
+    const itensCarregados = (p.itens || []).length ? (p.itens as any[]).map((i) => ({ descricao: i.descricao || "", unidade: i.unidade || "", quantidade: i.quantidade != null ? String(i.quantidade) : "", observacao: i.observacao || "" })) : [itemVazio()];
+    setItens(itensCarregados);
+    setBuscasInsumo(itensCarregados.map((i: Item) => i.descricao));
+    setDropdownAberto(null);
     setOpen(true);
   };
   const verPedido = async (id: number) => { const p: any = await utils.pedidos.getById.fetch({ id }); if (p) setVerData(p); };
@@ -201,7 +206,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-sm font-medium">Itens do pedido</p>
-                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setItens((a) => [...a, itemVazio()])}><Plus className="w-4 h-4" /> Adicionar item</Button>
+                <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => { setItens((a) => [...a, itemVazio()]); setBuscasInsumo((a) => [...a, ""]); }}><Plus className="w-4 h-4" /> Adicionar item</Button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm" style={{ minWidth: 720 }}>
@@ -209,30 +214,74 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                     <th className="text-left p-1.5">Material / Descrição</th><th className="text-left p-1.5 w-24">Unidade</th><th className="text-left p-1.5 w-24">Quantidade</th><th className="text-left p-1.5 w-56">Observação</th><th className="w-8"></th>
                   </tr></thead>
                   <tbody>
-                    {itens.map((it, i) => (
-                      <tr key={i} className="border-b last:border-0">
-                        <td className="p-1">
-                          <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm"
-                            value={(insumos as any[]).some((ins) => ins.nome === it.descricao) ? it.descricao : (it.descricao ? "__atual" : "")}
-                            onChange={(e) => {
-                              const ins = (insumos as any[]).find((x) => x.nome === e.target.value);
-                              setItens((arr) => arr.map((x, idx) => idx === i ? { ...x, descricao: e.target.value, unidade: ins?.unidade ? ins.unidade : x.unidade } : x));
-                            }}>
-                            <option value="" disabled>Selecione um insumo...</option>
-                            {it.descricao && !(insumos as any[]).some((ins) => ins.nome === it.descricao) && <option value="__atual" disabled>{it.descricao} (não cadastrado)</option>}
-                            {Object.entries((insumos as any[]).reduce((acc: any, ins: any) => { const c = ins.categoriaNome || "Sem categoria"; (acc[c] ??= []).push(ins); return acc; }, {})).map(([cat, items]: any) => (
-                              <optgroup key={cat} label={cat}>
-                                {items.map((ins: any) => <option key={ins.id} value={ins.nome}>{ins.codigo ? `${ins.codigo} - ` : ""}{ins.nome}</option>)}
-                              </optgroup>
-                            ))}
-                          </select>
-                        </td>
-                        <td className="p-1"><Input list="unidades-compra" className={cellCls} value={it.unidade} onChange={(e) => setItem(i, "unidade", e.target.value)} placeholder="UND, SC 50kg..." /></td>
-                        <td className="p-1"><Input type="number" step="0.01" className={cellCls} value={it.quantidade} onChange={(e) => setItem(i, "quantidade", e.target.value)} placeholder="0" /></td>
-                        <td className="p-1"><Input className={cellCls} value={it.observacao} onChange={(e) => setItem(i, "observacao", e.target.value)} placeholder="marca, especificação..." /></td>
-                        <td className="p-1 text-center"><Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" disabled={itens.length === 1} onClick={() => setItens((a) => a.filter((_, idx) => idx !== i))}><X className="w-4 h-4" /></Button></td>
-                      </tr>
-                    ))}
+                    {itens.map((it, i) => {
+                      const busca = buscasInsumo[i] ?? "";
+                      const termoFiltro = busca.toLowerCase();
+                      const insumosFiltrados = termoFiltro.length >= 2
+                        ? (insumos as any[]).filter((ins) =>
+                            ins.nome.toLowerCase().includes(termoFiltro) ||
+                            (ins.codigo || "").toLowerCase().includes(termoFiltro) ||
+                            (ins.categoriaNome || "").toLowerCase().includes(termoFiltro)
+                          ).slice(0, 50)
+                        : [];
+                      return (
+                        <tr key={i} className="border-b last:border-0">
+                          <td className="p-1">
+                            <div className="relative">
+                              <div className="relative">
+                                <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
+                                <Input
+                                  className="h-9 text-sm pl-7 pr-6"
+                                  placeholder="Buscar insumo por código ou nome..."
+                                  value={busca}
+                                  onFocus={() => setDropdownAberto(i)}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setBuscasInsumo((a) => a.map((v, idx) => idx === i ? val : v));
+                                    if (!val) setItem(i, "descricao", "");
+                                    setDropdownAberto(i);
+                                  }}
+                                  onKeyDown={(e) => { if (e.key === "Escape") setDropdownAberto(null); }}
+                                  onBlur={() => setTimeout(() => setDropdownAberto(null), 150)}
+                                />
+                                {busca && (
+                                  <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                                    onClick={() => { setBuscasInsumo((a) => a.map((v, idx) => idx === i ? "" : v)); setItem(i, "descricao", ""); setDropdownAberto(null); }}>
+                                    <X className="w-3.5 h-3.5" />
+                                  </button>
+                                )}
+                              </div>
+                              {dropdownAberto === i && insumosFiltrados.length > 0 && (
+                                <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-background border rounded-md shadow-lg max-h-56 overflow-y-auto">
+                                  {insumosFiltrados.map((ins: any) => (
+                                    <button key={ins.id} type="button"
+                                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent flex items-center gap-2"
+                                      onMouseDown={() => {
+                                        setBuscasInsumo((a) => a.map((v, idx) => idx === i ? ins.nome : v));
+                                        setItens((arr) => arr.map((x, idx) => idx === i ? { ...x, descricao: ins.nome, unidade: ins.unidade || x.unidade } : x));
+                                        setDropdownAberto(null);
+                                      }}>
+                                      {ins.codigo && <span className="text-xs font-mono text-primary shrink-0">{ins.codigo}</span>}
+                                      <span className="truncate">{ins.nome}</span>
+                                      {ins.categoriaNome && <span className="text-xs text-muted-foreground ml-auto shrink-0">{ins.categoriaNome}</span>}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                              {dropdownAberto === i && termoFiltro.length >= 2 && insumosFiltrados.length === 0 && (
+                                <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-background border rounded-md shadow-lg px-3 py-2 text-sm text-muted-foreground">
+                                  Nenhum insumo encontrado.
+                                </div>
+                              )}
+                            </div>
+                          </td>
+                          <td className="p-1"><Input list="unidades-compra" className={cellCls} value={it.unidade} onChange={(e) => setItem(i, "unidade", e.target.value)} placeholder="UND, SC 50kg..." /></td>
+                          <td className="p-1"><Input type="number" step="0.01" className={cellCls} value={it.quantidade} onChange={(e) => setItem(i, "quantidade", e.target.value)} placeholder="0" /></td>
+                          <td className="p-1"><Input className={cellCls} value={it.observacao} onChange={(e) => setItem(i, "observacao", e.target.value)} placeholder="marca, especificação..." /></td>
+                          <td className="p-1 text-center"><Button type="button" variant="ghost" size="icon" className="h-7 w-7 text-destructive" disabled={itens.length === 1} onClick={() => { setItens((a) => a.filter((_, idx) => idx !== i)); setBuscasInsumo((a) => a.filter((_, idx) => idx !== i)); }}><X className="w-4 h-4" /></Button></td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>

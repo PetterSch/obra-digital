@@ -260,6 +260,16 @@ export async function runMigrations() {
       )`);
     }
   } catch { /* já existe */ }
+
+  // Suprimentos: campos de aprovação em pedido_itens
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN statusAprovacao VARCHAR(20) DEFAULT 'pendente'`);
+      await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN observacaoReprovacao TEXT`);
+      await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN valorEstimado DECIMAL(15,2)`);
+    }
+  } catch { /* já existe */ }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -1352,6 +1362,50 @@ export async function deletePedido(id: number) {
   if (!db) return;
   await db.execute(sql`DELETE FROM pedido_itens WHERE pedidoId = ${id}`);
   await db.execute(sql`DELETE FROM pedidos_compra WHERE id = ${id}`);
+}
+
+// ============= SUPRIMENTOS: APROVAÇÃO =============
+
+export async function getPedidosParaAprovacao(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  // Retorna pedidos em aberto (excluindo aprovado_total e reprovado)
+  const r: any = await db.execute(sql`
+    SELECT p.id, p.numero, p.solicitante, p.observacao, p.status, p.criadoEm
+    FROM pedidos_compra p
+    WHERE p.obraId = ${obraId}
+      AND (p.status IS NULL OR p.status NOT IN ('aprovado_total','reprovado','recebido','cancelado'))
+    ORDER BY p.id DESC`);
+  const pedidos = (r[0] ?? r) as any[];
+  for (const p of pedidos) {
+    const ir: any = await db.execute(sql`
+      SELECT id, descricao, unidade, quantidade, observacao, valorEstimado,
+             COALESCE(statusAprovacao,'pendente') AS statusAprovacao, observacaoReprovacao
+      FROM pedido_itens WHERE pedidoId = ${p.id} ORDER BY ordem, id`);
+    p.itens = (ir[0] ?? ir) as any[];
+  }
+  return pedidos;
+}
+
+export async function atualizarAprovacaoItem(itemId: number, statusAprovacao: string, observacaoReprovacao?: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`
+    UPDATE pedido_itens
+    SET statusAprovacao = ${statusAprovacao}, observacaoReprovacao = ${observacaoReprovacao ?? null}
+    WHERE id = ${itemId}`);
+  // Recalcula status do pedido pai
+  const ir: any = await db.execute(sql`SELECT statusAprovacao FROM pedido_itens WHERE pedidoId = (SELECT pedidoId FROM pedido_itens WHERE id = ${itemId})`);
+  const itens = (ir[0] ?? ir) as any[];
+  const todos = itens.map((i: any) => i.statusAprovacao ?? 'pendente');
+  let novoStatus: string;
+  if (todos.every((s: string) => s === 'aprovado')) novoStatus = 'aprovado_total';
+  else if (todos.every((s: string) => s === 'reprovado')) novoStatus = 'reprovado';
+  else if (todos.some((s: string) => s !== 'pendente')) novoStatus = 'aprovado_parcial';
+  else novoStatus = 'aberto';
+  const pr: any = await db.execute(sql`SELECT pedidoId FROM pedido_itens WHERE id = ${itemId} LIMIT 1`);
+  const pedidoId = ((pr[0] ?? pr)[0])?.pedidoId;
+  if (pedidoId) await db.execute(sql`UPDATE pedidos_compra SET status = ${novoStatus} WHERE id = ${pedidoId}`);
 }
 
 export async function buscarItensPedido(obraId: number, termo: string) {

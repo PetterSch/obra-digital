@@ -1236,6 +1236,24 @@ Gere um resumo executivo profissional em português que:
       .mutation(async ({ input }) => { await db.deletePedido(input.id); return { success: true }; }),
   }),
 
+  // ============= SUPRIMENTOS =============
+  suprimentos: router({
+    listPedidosAprovacao: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getPedidosParaAprovacao(input.obraId)),
+
+    aprovarItem: engineerProcedure
+      .input(z.object({
+        itemId: z.number(),
+        statusAprovacao: z.enum(["aprovado", "reprovado", "pendente"]),
+        observacaoReprovacao: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        await db.atualizarAprovacaoItem(input.itemId, input.statusAprovacao, input.observacaoReprovacao);
+        return { success: true };
+      }),
+  }),
+
   // ============= CADASTRO: CATEGORIAS DE INSUMOS =============
   insumoCategorias: router({
     list: protectedProcedure.query(async () => db.getInsumoCategorias()),

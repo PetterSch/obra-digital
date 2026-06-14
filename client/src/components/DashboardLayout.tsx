@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { useIsMobile } from "@/hooks/useMobile";
-import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings, UserCog, Calculator, ClipboardList, Tags, Package } from "lucide-react";
+import { LayoutDashboard, LogOut, PanelLeft, Building2, HardHat, UserSquare2, FileText, Zap, Settings, UserCog, Calculator, ClipboardList, Tags, Package, Truck, Map, ShoppingBag } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { CSSProperties, useEffect, useRef, useState } from "react";
 import { useLocation } from "wouter";
@@ -29,7 +29,7 @@ import { trpc } from "@/lib/trpc";
 import { setPDFConfig } from "@/lib/pdfExport";
 import { Button } from "./ui/button";
 
-type MenuItem = { icon: any; label: string; path: string; adminOnly?: boolean; count?: "obras" | "orcamentos" | "planejamentos" };
+type MenuItem = { icon: any; label: string; path: string; adminOnly?: boolean; count?: "obras" | "orcamentos" | "planejamentos"; disabled?: boolean };
 type MenuGroup = { label: string; items: MenuItem[] };
 
 const menuGroups: MenuGroup[] = [
@@ -41,6 +41,11 @@ const menuGroups: MenuGroup[] = [
     { icon: Calculator,    label: "Orçamentos",   path: "/orcamentos", count: "orcamentos" },
     { icon: ClipboardList, label: "Planejamento", path: "/planejamento", count: "planejamentos" },
     { icon: FileText,      label: "Resumos",      path: "/resumos" },
+  ]},
+  { label: "Suprimentos", items: [
+    { icon: Truck,      label: "Aprovação de Pedidos", path: "/suprimentos/aprovacao" },
+    { icon: Map,        label: "Mapa de Cotação",      path: "/suprimentos/cotacao",  disabled: true },
+    { icon: ShoppingBag,label: "Ordens de Compra",     path: "/suprimentos/ordens",   disabled: true },
   ]},
   { label: "Cadastros", items: [
     { icon: Building2, label: "Minha Empresa",          path: "/configuracoes/empresa", adminOnly: true },
@@ -237,13 +242,16 @@ function DashboardLayoutContent({
                         <SidebarMenuItem key={item.path}>
                           <SidebarMenuButton
                             isActive={isActive}
-                            onClick={() => setLocation(item.path)}
-                            tooltip={item.label}
-                            className={`h-10 transition-all font-normal`}
+                            onClick={() => !item.disabled && setLocation(item.path)}
+                            tooltip={item.disabled ? `${item.label} (em breve)` : item.label}
+                            className={`h-10 transition-all font-normal ${item.disabled ? "opacity-40 cursor-not-allowed pointer-events-none" : ""}`}
                           >
                             <item.icon className={`h-4 w-4 ${isActive ? "text-primary" : ""}`} />
                             <span className="flex-1">{item.label}</span>
-                            {!isCollapsed && count != null && count > 0 && (
+                            {!isCollapsed && item.disabled && (
+                              <span className="ml-auto rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-semibold text-muted-foreground">em breve</span>
+                            )}
+                            {!isCollapsed && !item.disabled && count != null && count > 0 && (
                               <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                                 {count}
                               </span>

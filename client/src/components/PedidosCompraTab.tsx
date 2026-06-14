@@ -274,10 +274,10 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                               </div>
                               {dropdownAberto === i && dropdownPos && (insumosFiltrados.length > 0 || termoFiltro.length >= 2) && createPortal(
                                 <>
-                                  {/* Backdrop invisível — clique fora fecha o dropdown */}
+                                  {/* Backdrop — clique fora fecha; pointerEvents:auto garante que funciona dentro do Dialog */}
                                   <div
-                                    style={{ position: "fixed", inset: 0, zIndex: 9998 }}
-                                    onClick={() => setDropdownAberto(null)}
+                                    style={{ position: "fixed", inset: 0, zIndex: 9998, pointerEvents: "auto" }}
+                                    onPointerDown={(e) => { e.stopPropagation(); setDropdownAberto(null); }}
                                   />
                                   {/* Lista de insumos */}
                                   <div
@@ -290,13 +290,18 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                                       width: dropdownPos.width,
                                       maxHeight: DROPDOWN_H,
                                       zIndex: 9999,
+                                      pointerEvents: "auto",
+                                      overscrollBehavior: "contain",
                                     }}
                                     className="bg-background border rounded-md shadow-xl overflow-y-auto"
+                                    onPointerDown={(e) => e.stopPropagation()}
+                                    onWheel={(e) => e.stopPropagation()}
                                   >
                                     {insumosFiltrados.length > 0 ? insumosFiltrados.map((ins: any) => (
                                       <button key={ins.id} type="button"
                                         className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
-                                        onClick={() => {
+                                        onPointerDown={(e) => {
+                                          e.stopPropagation();
                                           setBuscasInsumo((a) => a.map((v, idx) => idx === i ? ins.nome : v));
                                           setItens((arr) => arr.map((x, idx) => idx === i ? { ...x, descricao: ins.nome, unidade: ins.unidade || x.unidade } : x));
                                           setDropdownAberto(null);

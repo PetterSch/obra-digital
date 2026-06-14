@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -39,20 +39,6 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const [dropdownAberto, setDropdownAberto] = useState<number | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
-  const dropdownContainerRef = useRef<HTMLDivElement | null>(null);
-
-  // Fecha o dropdown ao clicar fora — sem usar onBlur (que fecha antes do scroll/clique)
-  useEffect(() => {
-    if (dropdownAberto === null) return;
-    const handler = (e: PointerEvent) => {
-      const input = inputRefs.current[dropdownAberto];
-      if (input?.contains(e.target as Node)) return;
-      if (dropdownContainerRef.current?.contains(e.target as Node)) return;
-      setDropdownAberto(null);
-    };
-    document.addEventListener("pointerdown", handler, true);
-    return () => document.removeEventListener("pointerdown", handler, true);
-  }, [dropdownAberto]);
 
   const DROPDOWN_H = 320; // altura máxima do dropdown em px
   const abrirDropdown = useCallback((i: number) => {
@@ -287,36 +273,44 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                                 )}
                               </div>
                               {dropdownAberto === i && dropdownPos && (insumosFiltrados.length > 0 || termoFiltro.length >= 2) && createPortal(
-                                <div
-                                  style={{
-                                    position: "fixed",
-                                    ...(dropdownPos.openUp
-                                      ? { bottom: window.innerHeight - dropdownPos.top, top: "auto" }
-                                      : { top: dropdownPos.top }),
-                                    left: dropdownPos.left,
-                                    width: dropdownPos.width,
-                                    maxHeight: DROPDOWN_H,
-                                    zIndex: 9999,
-                                  }}
-                                  className="bg-background border rounded-md shadow-xl overflow-y-auto"
-                                  ref={dropdownContainerRef}
-                                >
-                                  {insumosFiltrados.length > 0 ? insumosFiltrados.map((ins: any) => (
-                                    <button key={ins.id} type="button"
-                                      className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent flex items-center gap-2"
-                                      onMouseDown={() => {
-                                        setBuscasInsumo((a) => a.map((v, idx) => idx === i ? ins.nome : v));
-                                        setItens((arr) => arr.map((x, idx) => idx === i ? { ...x, descricao: ins.nome, unidade: ins.unidade || x.unidade } : x));
-                                        setDropdownAberto(null);
-                                      }}>
-                                      {ins.codigo && <span className="text-xs font-mono text-primary shrink-0">{ins.codigo}</span>}
-                                      <span className="truncate">{ins.nome}</span>
-                                      {ins.categoriaNome && <span className="text-xs text-muted-foreground ml-auto shrink-0">{ins.categoriaNome}</span>}
-                                    </button>
-                                  )) : (
-                                    <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum insumo encontrado.</div>
-                                  )}
-                                </div>,
+                                <>
+                                  {/* Backdrop invisível — clique fora fecha o dropdown */}
+                                  <div
+                                    style={{ position: "fixed", inset: 0, zIndex: 9998 }}
+                                    onClick={() => setDropdownAberto(null)}
+                                  />
+                                  {/* Lista de insumos */}
+                                  <div
+                                    style={{
+                                      position: "fixed",
+                                      ...(dropdownPos.openUp
+                                        ? { bottom: window.innerHeight - dropdownPos.top, top: "auto" }
+                                        : { top: dropdownPos.top }),
+                                      left: dropdownPos.left,
+                                      width: dropdownPos.width,
+                                      maxHeight: DROPDOWN_H,
+                                      zIndex: 9999,
+                                    }}
+                                    className="bg-background border rounded-md shadow-xl overflow-y-auto"
+                                  >
+                                    {insumosFiltrados.length > 0 ? insumosFiltrados.map((ins: any) => (
+                                      <button key={ins.id} type="button"
+                                        className="w-full text-left px-3 py-2 text-sm hover:bg-accent flex items-center gap-2"
+                                        onClick={() => {
+                                          setBuscasInsumo((a) => a.map((v, idx) => idx === i ? ins.nome : v));
+                                          setItens((arr) => arr.map((x, idx) => idx === i ? { ...x, descricao: ins.nome, unidade: ins.unidade || x.unidade } : x));
+                                          setDropdownAberto(null);
+                                          inputRefs.current[i]?.focus();
+                                        }}>
+                                        {ins.codigo && <span className="text-xs font-mono text-primary shrink-0">{ins.codigo}</span>}
+                                        <span className="truncate">{ins.nome}</span>
+                                        {ins.categoriaNome && <span className="text-xs text-muted-foreground ml-auto shrink-0">{ins.categoriaNome}</span>}
+                                      </button>
+                                    )) : (
+                                      <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum insumo encontrado.</div>
+                                    )}
+                                  </div>
+                                </>,
                                 document.body
                               )}
                             </div>

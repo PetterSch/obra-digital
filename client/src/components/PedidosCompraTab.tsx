@@ -208,10 +208,11 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
 
       {/* Modal criar/editar */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="!max-w-6xl w-[98vw] max-h-[96vh] overflow-y-auto overflow-x-hidden">
-          <DialogHeader><DialogTitle>{editId ? "Editar pedido" : "Novo pedido de compra"}</DialogTitle></DialogHeader>
+        <DialogContent className="!max-w-[95vw] w-[95vw] h-[95vh] flex flex-col overflow-hidden p-0">
+          <div className="flex flex-col h-full">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b shrink-0"><DialogTitle className="text-lg">{editId ? "Editar pedido" : "Novo pedido de compra"}</DialogTitle></DialogHeader>
           <datalist id="unidades-compra">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
-          <div className="space-y-4 min-w-0">
+          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 py-4 gap-4">
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Nº do pedido</Label><Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 001/2026" /></div>
               <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs">Solicitante</Label><Input value={solicitante} onChange={(e) => setSolicitante(e.target.value)} placeholder="Quem está solicitando" /></div>
@@ -223,13 +224,13 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
               <div className="space-y-1.5 sm:col-span-4"><Label className="text-xs">Observação (opcional)</Label><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: entrega urgente, fornecedor preferencial..." /></div>
             </div>
 
-            <div>
+            <div className="flex flex-col flex-1 min-h-0">
               <div className="flex items-center justify-between mb-2">
-                <p className="text-sm font-medium">Itens do pedido</p>
+                <p className="text-sm font-medium">Itens do pedido <span className="text-muted-foreground font-normal">({itens.length})</span></p>
                 <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => { setItens((a) => [...a, itemVazio()]); setBuscasInsumo((a) => [...a, ""]); }}><Plus className="w-4 h-4" /> Adicionar item</Button>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ minWidth: 720 }}>
+              <div className="overflow-auto flex-1 border rounded-lg" style={{ minHeight: 200 }}>
+                <table className="w-full text-sm" style={{ minWidth: 780 }}>
                   <thead><tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">
                     <th className="text-left p-1.5">Material / Descrição</th><th className="text-left p-1.5 w-24">Unidade</th><th className="text-left p-1.5 w-24">Quantidade</th><th className="text-left p-1.5 w-56">Observação</th><th className="w-8"></th>
                   </tr></thead>
@@ -285,6 +286,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                                     zIndex: 9999,
                                   }}
                                   className="bg-background border rounded-md shadow-xl overflow-y-auto"
+                                  onMouseDown={(e) => e.preventDefault()}
                                 >
                                   {insumosFiltrados.length > 0 ? insumosFiltrados.map((ins: any) => (
                                     <button key={ins.id} type="button"
@@ -317,11 +319,11 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                 </table>
               </div>
             </div>
-
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button onClick={salvar} disabled={createMut.isPending || updateMut.isPending}>{createMut.isPending || updateMut.isPending ? "Salvando..." : "Salvar pedido"}</Button>
-            </div>
+          </div>
+          <div className="flex justify-end gap-2 px-6 py-4 border-t shrink-0">
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={salvar} disabled={createMut.isPending || updateMut.isPending}>{createMut.isPending || updateMut.isPending ? "Salvando..." : "Salvar pedido"}</Button>
+          </div>
           </div>
         </DialogContent>
       </Dialog>

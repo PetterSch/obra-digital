@@ -230,13 +230,19 @@ export async function runMigrations() {
     const db = await getDb();
     if (db) {
       await db.execute(sql`CREATE TABLE IF NOT EXISTS insumo_categorias (
-        id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(255) NOT NULL, criadoEm TIMESTAMP DEFAULT NOW()
+        id INT AUTO_INCREMENT PRIMARY KEY, nome VARCHAR(255) NOT NULL, sigla VARCHAR(20), criadoEm TIMESTAMP DEFAULT NOW()
       )`);
       await db.execute(sql`CREATE TABLE IF NOT EXISTS insumos (
         id INT AUTO_INCREMENT PRIMARY KEY, categoriaId INT, codigo VARCHAR(50), nome VARCHAR(500) NOT NULL,
         unidade VARCHAR(20), ativo BOOLEAN DEFAULT TRUE, criadoEm TIMESTAMP DEFAULT NOW()
       )`);
     }
+  } catch { /* já existe */ }
+
+  // Migração: adicionar coluna sigla em insumo_categorias
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE insumo_categorias ADD COLUMN sigla VARCHAR(20)`);
   } catch { /* já existe */ }
 
   // Pedidos de compra (materiais)
@@ -1366,21 +1372,21 @@ export async function buscarItensPedido(obraId: number, termo: string) {
 export async function getInsumoCategorias() {
   const db = await getDb();
   if (!db) return [];
-  const r: any = await db.execute(sql`SELECT id, nome, criadoEm,
+  const r: any = await db.execute(sql`SELECT id, nome, sigla, criadoEm,
     (SELECT COUNT(*) FROM insumos i WHERE i.categoriaId = c.id) AS totalInsumos
     FROM insumo_categorias c ORDER BY c.nome`);
   return (r[0] ?? r) as any[];
 }
-export async function createInsumoCategoria(nome: string) {
+export async function createInsumoCategoria(nome: string, sigla?: string) {
   const db = await getDb();
   if (!db) return { id: 0 };
-  const res: any = await db.execute(sql`INSERT INTO insumo_categorias (nome) VALUES (${nome})`);
+  const res: any = await db.execute(sql`INSERT INTO insumo_categorias (nome, sigla) VALUES (${nome}, ${sigla ?? null})`);
   return { id: (res[0]?.insertId ?? res.insertId) as number };
 }
-export async function updateInsumoCategoria(id: number, nome: string) {
+export async function updateInsumoCategoria(id: number, nome: string, sigla?: string) {
   const db = await getDb();
   if (!db) return;
-  await db.execute(sql`UPDATE insumo_categorias SET nome = ${nome} WHERE id = ${id}`);
+  await db.execute(sql`UPDATE insumo_categorias SET nome = ${nome}, sigla = ${sigla ?? null} WHERE id = ${id}`);
 }
 export async function deleteInsumoCategoria(id: number) {
   const db = await getDb();
@@ -1388,12 +1394,80 @@ export async function deleteInsumoCategoria(id: number) {
   await db.execute(sql`DELETE FROM insumo_categorias WHERE id = ${id}`);
 }
 
+const CATEGORIAS_PADRAO = [
+  { sigla: "ACO", nome: "AÇO CONSTRUÇÃO CIVIL" },
+  { sigla: "EST", nome: "AÇO ESTRUTURAS METÁLICAS" },
+  { sigla: "IMP", nome: "ADITIVOS E IMPERMEABILIZANTES" },
+  { sigla: "ALV", nome: "ALVENARIAS" },
+  { sigla: "ARC", nome: "AR CONDICIONADO" },
+  { sigla: "CDO", nome: "CANTEIRO DE OBRAS" },
+  { sigla: "IBS", nome: "INSUMOS BÁSICOS - DIVERSOS" },
+  { sigla: "ELT", nome: "ELÉTRICOS - INFRAESTRUTURA E CABEAMENTOS" },
+  { sigla: "HID", nome: "HIDRÁULICOS" },
+  { sigla: "TR", nome: "TRIBUTOS" },
+  { sigla: "SPD", nome: "SISTEMA DE PROTEÇÃO DESCARGAS ATMOSFÉRICAS - SPDA" },
+  { sigla: "EEL", nome: "EQUIPAMENTOS ELÉTRICOS - LEVES" },
+  { sigla: "EEM", nome: "EQUIPAMENTOS ELÉTRICOS - MOVIMENTAÇÃO DE CARGA" },
+  { sigla: "EMEC", nome: "EQUIPAMENTOS MECÂNICOS - MOVIMENTAÇÃO DE CARGA" },
+  { sigla: "ESP", nome: "ESPAÇADORES PLÁSTICOS" },
+  { sigla: "FER", nome: "FERRAMENTAS - USO MANUAL" },
+  { sigla: "FDM", nome: "FORMAS DE MADEIRA" },
+  { sigla: "GAB", nome: "GABARITO / LOCAÇÃO" },
+  { sigla: "LOC", nome: "LOCAÇÃO DE EQUIPAMENTOS ELÉTRICOS - LEVES" },
+  { sigla: "LOCM", nome: "LOCAÇÃO DE EQUIPAMENTOS ELÉTRICOS - MOV. DE CARGA" },
+  { sigla: "LOM", nome: "LOUÇAS E METAIS SANITÁRIOS" },
+  { sigla: "ILU", nome: "ILUMINAÇÃO" },
+  { sigla: "ACBE", nome: "ACABAMENTOS ELÉTRICOS" },
+  { sigla: "LIMP", nome: "MATERIAL DE LIMPEZA E HIGIENE" },
+  { sigla: "PIN", nome: "MATERIAL DE PINTURA" },
+  { sigla: "REV", nome: "REVESTIMENTOS CERÂMICOS" },
+  { sigla: "ESQA", nome: "ESQUADRIAS DE ALUMÍNIO" },
+  { sigla: "ESQM", nome: "ESQUADRIAS DE MADEIRA" },
+  { sigla: "ESQV", nome: "ESQUADRIAS DE VIDROS" },
+  { sigla: "ESMT", nome: "ESQUADRIAS METÁLICAS" },
+  { sigla: "MO", nome: "MÃO DE OBRA" },
+  { sigla: "EPI", nome: "EPI" },
+  { sigla: "ALM", nome: "ALIMENTAÇÃO" },
+  { sigla: "INC", nome: "PREVENÇÃO E COMBATE A INCÊNDIO" },
+  { sigla: "PAV", nome: "PAVIMENTAÇÃO EXTERNA" },
+  { sigla: "PROJ", nome: "PROJETOS" },
+  { sigla: "SETEC", nome: "SERVIÇOS TÉCNICOS" },
+  { sigla: "TAE", nome: "TAXAS E EMOLUMENTOS" },
+  { sigla: "CADM", nome: "CUSTOS ADMINISTRATIVOS" },
+  { sigla: "COB", nome: "TELHADO / COBERTURA" },
+  { sigla: "MOB", nome: "MOBILIÁRIO" },
+  { sigla: "TRSP", nome: "TRANSPORTE" },
+  { sigla: "LAPM", nome: "LAJES PRÉ MOLDADAS" },
+  { sigla: "EPC", nome: "EPC - EQUIPAMENTOS PROTEÇÃO COLETIVA" },
+  { sigla: "MGS", nome: "MÁRMORES, GRANITOS E SINTÉTICOS" },
+  { sigla: "CONC", nome: "CONCESSIONÁRIAS" },
+  { sigla: "MOA", nome: "MÃO DE OBRA ADMINISTRATIVA" },
+  { sigla: "DEC", nome: "DESPESAS COMERCIAIS" },
+  { sigla: "LOCV", nome: "LOCAÇÃO DE VEÍCULOS" },
+  { sigla: "PLAN", nome: "PLANEJAMENTO" },
+];
+
+export async function seedInsumoCategorias() {
+  const db = await getDb();
+  if (!db) return { inseridas: 0 };
+  let inseridas = 0;
+  for (const cat of CATEGORIAS_PADRAO) {
+    const existe: any = await db.execute(sql`SELECT id FROM insumo_categorias WHERE sigla = ${cat.sigla}`);
+    const rows = existe[0] ?? existe;
+    if (!Array.isArray(rows) || rows.length === 0) {
+      await db.execute(sql`INSERT INTO insumo_categorias (nome, sigla) VALUES (${cat.nome}, ${cat.sigla})`);
+      inseridas++;
+    }
+  }
+  return { inseridas };
+}
+
 // ============= CADASTRO: INSUMOS =============
 export async function getInsumos() {
   const db = await getDb();
   if (!db) return [];
   const r: any = await db.execute(sql`
-    SELECT i.id, i.categoriaId, i.codigo, i.nome, i.unidade, i.ativo, c.nome AS categoriaNome
+    SELECT i.id, i.categoriaId, i.codigo, i.nome, i.unidade, i.ativo, c.nome AS categoriaNome, c.sigla AS categoriaSigla
     FROM insumos i LEFT JOIN insumo_categorias c ON i.categoriaId = c.id
     ORDER BY c.nome, i.nome`);
   return (r[0] ?? r) as any[];
@@ -1401,9 +1475,21 @@ export async function getInsumos() {
 export async function createInsumo(data: { categoriaId?: number; codigo?: string; nome: string; unidade?: string }) {
   const db = await getDb();
   if (!db) return { id: 0 };
+  let codigo = data.codigo ?? null;
+  if (!codigo && data.categoriaId) {
+    const catR: any = await db.execute(sql`SELECT sigla FROM insumo_categorias WHERE id = ${data.categoriaId}`);
+    const catRows = catR[0] ?? catR;
+    const sigla = Array.isArray(catRows) && catRows[0]?.sigla ? catRows[0].sigla : null;
+    if (sigla) {
+      const cntR: any = await db.execute(sql`SELECT COUNT(*) AS cnt FROM insumos WHERE categoriaId = ${data.categoriaId}`);
+      const cntRows = cntR[0] ?? cntR;
+      const cnt = Array.isArray(cntRows) ? Number(cntRows[0]?.cnt ?? 0) : 0;
+      codigo = `${sigla}${cnt + 1}`;
+    }
+  }
   const res: any = await db.execute(sql`INSERT INTO insumos (categoriaId, codigo, nome, unidade)
-    VALUES (${data.categoriaId ?? null}, ${data.codigo ?? null}, ${data.nome}, ${data.unidade ?? null})`);
-  return { id: (res[0]?.insertId ?? res.insertId) as number };
+    VALUES (${data.categoriaId ?? null}, ${codigo}, ${data.nome}, ${data.unidade ?? null})`);
+  return { id: (res[0]?.insertId ?? res.insertId) as number, codigo };
 }
 export async function updateInsumo(id: number, data: { categoriaId?: number; codigo?: string; nome?: string; unidade?: string; ativo?: boolean }) {
   const db = await getDb();

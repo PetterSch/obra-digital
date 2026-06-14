@@ -32,8 +32,12 @@ export default function Insumos() {
   const abrirEdicao = (it: any) => { setEditId(it.id); setForm({ categoriaId: it.categoriaId ? String(it.categoriaId) : "", codigo: it.codigo || "", nome: it.nome || "", unidade: it.unidade || "" }); setOpen(true); };
   const salvar = () => {
     if (!form.nome.trim()) { toast.error("Nome é obrigatório"); return; }
-    const payload = { categoriaId: form.categoriaId ? parseInt(form.categoriaId) : undefined, codigo: form.codigo || undefined, nome: form.nome.trim(), unidade: form.unidade || undefined };
-    editId ? updateMut.mutate({ id: editId, ...payload }) : createMut.mutate(payload);
+    const payload = { categoriaId: form.categoriaId ? parseInt(form.categoriaId) : undefined, nome: form.nome.trim(), unidade: form.unidade || undefined };
+    if (editId) {
+      updateMut.mutate({ id: editId, ...payload, codigo: form.codigo || undefined });
+    } else {
+      createMut.mutate(payload);
+    }
   };
 
   const filtrada = (lista as any[]).filter((i) =>
@@ -99,10 +103,21 @@ export default function Insumos() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{editId ? "Editar insumo" : "Novo insumo"}</DialogTitle></DialogHeader>
           <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-2">
-              <div className="space-y-1.5"><Label className="text-xs">Código</Label><Input value={form.codigo} onChange={(e) => setForm({ ...form, codigo: e.target.value })} placeholder="Ex: 001" /></div>
-              <div className="space-y-1.5 col-span-2"><Label className="text-xs">Unidade</Label><Input value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} placeholder="UND, SC 50kg, m³..." /></div>
-            </div>
+            {editId && (
+              <div className="grid grid-cols-3 gap-2">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Código</Label>
+                  <Input value={form.codigo} readOnly className="bg-muted text-muted-foreground cursor-default" />
+                </div>
+                <div className="space-y-1.5 col-span-2"><Label className="text-xs">Unidade</Label><Input value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} placeholder="UND, SC 50kg, m³..." /></div>
+              </div>
+            )}
+            {!editId && (
+              <div className="space-y-1.5">
+                <Label className="text-xs">Unidade</Label>
+                <Input value={form.unidade} onChange={(e) => setForm({ ...form, unidade: e.target.value })} placeholder="UND, SC 50kg, m³..." />
+              </div>
+            )}
             <div className="space-y-1.5"><Label className="text-xs">Nome / Descrição *</Label>
               <Input value={form.nome} onChange={(e) => setForm({ ...form, nome: e.target.value })} placeholder="Ex: Tubo PVC soldável 25mm" autoFocus />
             </div>
@@ -111,10 +126,15 @@ export default function Insumos() {
                 <SelectTrigger><SelectValue placeholder="Sem categoria" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="__none">Sem categoria</SelectItem>
-                  {(categorias as any[]).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.nome}</SelectItem>)}
+                  {(categorias as any[]).map((c) => <SelectItem key={c.id} value={String(c.id)}>{c.sigla ? `[${c.sigla}] ` : ""}{c.nome}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
+            {!editId && form.categoriaId && (
+              <p className="text-xs text-muted-foreground">
+                Código gerado automaticamente ao salvar (ex: {(categorias as any[]).find((c) => String(c.id) === form.categoriaId)?.sigla || ""}1)
+              </p>
+            )}
             <div className="flex justify-end gap-2 pt-1">
               <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
               <Button onClick={salvar} disabled={!form.nome.trim() || createMut.isPending || updateMut.isPending}>Salvar</Button>

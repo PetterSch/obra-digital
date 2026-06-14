@@ -1239,12 +1239,13 @@ Gere um resumo executivo profissional em português que:
   // ============= CADASTRO: CATEGORIAS DE INSUMOS =============
   insumoCategorias: router({
     list: protectedProcedure.query(async () => db.getInsumoCategorias()),
-    create: engineerProcedure.input(z.object({ nome: z.string().min(1) }))
-      .mutation(async ({ input }) => db.createInsumoCategoria(input.nome)),
-    update: engineerProcedure.input(z.object({ id: z.number(), nome: z.string().min(1) }))
-      .mutation(async ({ input }) => { await db.updateInsumoCategoria(input.id, input.nome); return { success: true }; }),
+    create: engineerProcedure.input(z.object({ nome: z.string().min(1), sigla: z.string().optional() }))
+      .mutation(async ({ input }) => db.createInsumoCategoria(input.nome, input.sigla)),
+    update: engineerProcedure.input(z.object({ id: z.number(), nome: z.string().min(1), sigla: z.string().optional() }))
+      .mutation(async ({ input }) => { await db.updateInsumoCategoria(input.id, input.nome, input.sigla); return { success: true }; }),
     delete: engineerProcedure.input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => { await db.deleteInsumoCategoria(input.id); return { success: true }; }),
+    seed: engineerProcedure.mutation(async () => db.seedInsumoCategorias()),
   }),
 
   // ============= CADASTRO: INSUMOS =============

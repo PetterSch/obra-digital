@@ -44,7 +44,9 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
     const el = inputRefs.current[i];
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    setDropdownPos({ top: rect.bottom + window.scrollY + 2, left: rect.left + window.scrollX, width: rect.width });
+    // position:fixed é relativo ao viewport — não somar scroll
+    const minW = 360;
+    setDropdownPos({ top: rect.bottom + 2, left: rect.left, width: Math.max(rect.width, minW) });
     setDropdownAberto(i);
   }, []);
   const [delId, setDelId] = useState<number | null>(null);

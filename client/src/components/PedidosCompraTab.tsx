@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
@@ -39,6 +39,20 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const [dropdownAberto, setDropdownAberto] = useState<number | null>(null);
   const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+  const dropdownContainerRef = useRef<HTMLDivElement | null>(null);
+
+  // Fecha o dropdown ao clicar fora — sem usar onBlur (que fecha antes do scroll/clique)
+  useEffect(() => {
+    if (dropdownAberto === null) return;
+    const handler = (e: PointerEvent) => {
+      const input = inputRefs.current[dropdownAberto];
+      if (input?.contains(e.target as Node)) return;
+      if (dropdownContainerRef.current?.contains(e.target as Node)) return;
+      setDropdownAberto(null);
+    };
+    document.addEventListener("pointerdown", handler, true);
+    return () => document.removeEventListener("pointerdown", handler, true);
+  }, [dropdownAberto]);
 
   const DROPDOWN_H = 320; // altura máxima do dropdown em px
   const abrirDropdown = useCallback((i: number) => {
@@ -264,7 +278,6 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                                     abrirDropdown(i);
                                   }}
                                   onKeyDown={(e) => { if (e.key === "Escape") setDropdownAberto(null); }}
-                                  onBlur={() => setTimeout(() => setDropdownAberto(null), 150)}
                                 />
                                 {busca && (
                                   <button type="button" className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
@@ -286,7 +299,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                                     zIndex: 9999,
                                   }}
                                   className="bg-background border rounded-md shadow-xl overflow-y-auto"
-                                  onMouseDown={(e) => e.preventDefault()}
+                                  ref={dropdownContainerRef}
                                 >
                                   {insumosFiltrados.length > 0 ? insumosFiltrados.map((ins: any) => (
                                     <button key={ins.id} type="button"

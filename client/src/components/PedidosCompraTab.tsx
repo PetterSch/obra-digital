@@ -37,16 +37,23 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const [itens, setItens] = useState<Item[]>([itemVazio()]);
   const [buscasInsumo, setBuscasInsumo] = useState<string[]>([""]);
   const [dropdownAberto, setDropdownAberto] = useState<number | null>(null);
-  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number; openUp: boolean } | null>(null);
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  const DROPDOWN_H = 320; // altura máxima do dropdown em px
   const abrirDropdown = useCallback((i: number) => {
     const el = inputRefs.current[i];
     if (!el) return;
     const rect = el.getBoundingClientRect();
-    // position:fixed é relativo ao viewport — não somar scroll
-    const minW = 360;
-    setDropdownPos({ top: rect.bottom + 2, left: rect.left, width: Math.max(rect.width, minW) });
+    const minW = 400;
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const openUp = spaceBelow < DROPDOWN_H + 8 && rect.top > DROPDOWN_H + 8;
+    setDropdownPos({
+      top: openUp ? rect.top - 2 : rect.bottom + 2,
+      left: rect.left,
+      width: Math.max(rect.width, minW),
+      openUp,
+    });
     setDropdownAberto(i);
   }, []);
   const [delId, setDelId] = useState<number | null>(null);
@@ -201,7 +208,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
 
       {/* Modal criar/editar */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="!max-w-4xl w-[96vw] max-h-[92vh] overflow-y-auto overflow-x-hidden">
+        <DialogContent className="!max-w-6xl w-[98vw] max-h-[96vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader><DialogTitle>{editId ? "Editar pedido" : "Novo pedido de compra"}</DialogTitle></DialogHeader>
           <datalist id="unidades-compra">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
           <div className="space-y-4 min-w-0">
@@ -267,8 +274,17 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                               </div>
                               {dropdownAberto === i && dropdownPos && (insumosFiltrados.length > 0 || termoFiltro.length >= 2) && createPortal(
                                 <div
-                                  style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
-                                  className="bg-background border rounded-md shadow-xl max-h-64 overflow-y-auto"
+                                  style={{
+                                    position: "fixed",
+                                    ...(dropdownPos.openUp
+                                      ? { bottom: window.innerHeight - dropdownPos.top, top: "auto" }
+                                      : { top: dropdownPos.top }),
+                                    left: dropdownPos.left,
+                                    width: dropdownPos.width,
+                                    maxHeight: DROPDOWN_H,
+                                    zIndex: 9999,
+                                  }}
+                                  className="bg-background border rounded-md shadow-xl overflow-y-auto"
                                 >
                                   {insumosFiltrados.length > 0 ? insumosFiltrados.map((ins: any) => (
                                     <button key={ins.id} type="button"

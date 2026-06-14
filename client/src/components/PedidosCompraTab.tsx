@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,6 +37,16 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const [itens, setItens] = useState<Item[]>([itemVazio()]);
   const [buscasInsumo, setBuscasInsumo] = useState<string[]>([""]);
   const [dropdownAberto, setDropdownAberto] = useState<number | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
+  const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  const abrirDropdown = useCallback((i: number) => {
+    const el = inputRefs.current[i];
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    setDropdownPos({ top: rect.bottom + window.scrollY + 2, left: rect.left + window.scrollX, width: rect.width });
+    setDropdownAberto(i);
+  }, []);
   const [delId, setDelId] = useState<number | null>(null);
   const [verData, setVerData] = useState<any | null>(null);
   const [statusFiltro, setStatusFiltro] = useState("todos");
@@ -231,15 +242,16 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                               <div className="relative">
                                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
                                 <Input
+                                  ref={(el) => { inputRefs.current[i] = el; }}
                                   className="h-9 text-sm pl-7 pr-6"
                                   placeholder="Buscar insumo por código ou nome..."
                                   value={busca}
-                                  onFocus={() => setDropdownAberto(i)}
+                                  onFocus={() => abrirDropdown(i)}
                                   onChange={(e) => {
                                     const val = e.target.value;
                                     setBuscasInsumo((a) => a.map((v, idx) => idx === i ? val : v));
                                     if (!val) setItem(i, "descricao", "");
-                                    setDropdownAberto(i);
+                                    abrirDropdown(i);
                                   }}
                                   onKeyDown={(e) => { if (e.key === "Escape") setDropdownAberto(null); }}
                                   onBlur={() => setTimeout(() => setDropdownAberto(null), 150)}
@@ -251,9 +263,12 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                                   </button>
                                 )}
                               </div>
-                              {dropdownAberto === i && insumosFiltrados.length > 0 && (
-                                <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-background border rounded-md shadow-lg max-h-56 overflow-y-auto">
-                                  {insumosFiltrados.map((ins: any) => (
+                              {dropdownAberto === i && dropdownPos && (insumosFiltrados.length > 0 || termoFiltro.length >= 2) && createPortal(
+                                <div
+                                  style={{ position: "fixed", top: dropdownPos.top, left: dropdownPos.left, width: dropdownPos.width, zIndex: 9999 }}
+                                  className="bg-background border rounded-md shadow-xl max-h-64 overflow-y-auto"
+                                >
+                                  {insumosFiltrados.length > 0 ? insumosFiltrados.map((ins: any) => (
                                     <button key={ins.id} type="button"
                                       className="w-full text-left px-3 py-1.5 text-sm hover:bg-accent flex items-center gap-2"
                                       onMouseDown={() => {
@@ -265,13 +280,11 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                                       <span className="truncate">{ins.nome}</span>
                                       {ins.categoriaNome && <span className="text-xs text-muted-foreground ml-auto shrink-0">{ins.categoriaNome}</span>}
                                     </button>
-                                  ))}
-                                </div>
-                              )}
-                              {dropdownAberto === i && termoFiltro.length >= 2 && insumosFiltrados.length === 0 && (
-                                <div className="absolute z-50 top-full left-0 right-0 mt-0.5 bg-background border rounded-md shadow-lg px-3 py-2 text-sm text-muted-foreground">
-                                  Nenhum insumo encontrado.
-                                </div>
+                                  )) : (
+                                    <div className="px-3 py-2 text-sm text-muted-foreground">Nenhum insumo encontrado.</div>
+                                  )}
+                                </div>,
+                                document.body
                               )}
                             </div>
                           </td>

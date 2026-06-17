@@ -1352,7 +1352,8 @@ export async function createPedido(data: { obraId: number; numero?: string; soli
 export async function updatePedido(id: number, data: { numero?: string; solicitante?: string; observacao?: string; status?: string; itens: PedidoItemInput[] }) {
   const db = await getDb();
   if (!db) return;
-  await db.execute(sql`UPDATE pedidos_compra SET numero = ${data.numero ?? null}, solicitante = ${data.solicitante ?? null}, observacao = ${data.observacao ?? null}, status = ${data.status ?? null} WHERE id = ${id}`);
+  // solicitante: se não vier no payload, preserva o valor já gravado (não sobrescreve com null)
+  await db.execute(sql`UPDATE pedidos_compra SET numero = ${data.numero ?? null}, solicitante = COALESCE(${data.solicitante ?? null}, solicitante), observacao = ${data.observacao ?? null}, status = ${data.status ?? null} WHERE id = ${id}`);
   await db.execute(sql`DELETE FROM pedido_itens WHERE pedidoId = ${id}`);
   await inserirPedidoItens(id, data.itens);
 }

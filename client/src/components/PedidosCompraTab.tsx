@@ -31,7 +31,6 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const [open, setOpen] = useState(false);
   const [editId, setEditId] = useState<number | null>(null);
   const [numero, setNumero] = useState("");
-  const [solicitante, setSolicitante] = useState("");
   const [observacao, setObservacao] = useState("");
   const [status, setStatus] = useState("aberto");
   const [itens, setItens] = useState<Item[]>([itemVazio()]);
@@ -72,11 +71,11 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
     const nums = (lista as any[]).map((p) => parseInt(String(p.numero ?? "").replace(/\D/g, ""), 10)).filter((n) => !isNaN(n));
     return String((nums.length ? Math.max(...nums) : 0) + 1).padStart(2, "0");
   };
-  const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setSolicitante(""); setObservacao(""); setStatus("aberto"); setItens([itemVazio()]); setBuscasInsumo([""]); setDropdownAberto(null); setOpen(true); };
+  const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setObservacao(""); setStatus("aberto"); setItens([itemVazio()]); setBuscasInsumo([""]); setDropdownAberto(null); setOpen(true); };
   const abrirEdicao = async (id: number) => {
     const p: any = await utils.pedidos.getById.fetch({ id });
     if (!p) return;
-    setEditId(id); setNumero(p.numero || ""); setSolicitante(p.solicitante || ""); setObservacao(p.observacao || ""); setStatus(p.status || "aberto");
+    setEditId(id); setNumero(p.numero || ""); setObservacao(p.observacao || ""); setStatus(p.status || "aberto");
     const itensCarregados = (p.itens || []).length ? (p.itens as any[]).map((i) => ({ descricao: i.descricao || "", unidade: i.unidade || "", quantidade: i.quantidade != null ? String(i.quantidade) : "", observacao: i.observacao || "" })) : [itemVazio()];
     setItens(itensCarregados);
     setBuscasInsumo(itensCarregados.map((i: Item) => i.descricao));
@@ -89,7 +88,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
 
   const salvar = () => {
     const itensLimpos = itens.filter((i) => i.descricao.trim()).map((i) => ({ descricao: i.descricao.trim(), unidade: i.unidade || undefined, quantidade: i.quantidade ? parseFloat(i.quantidade) : undefined, observacao: i.observacao || undefined }));
-    const payload = { numero: numero || undefined, solicitante: solicitante || undefined, observacao: observacao || undefined, status, itens: itensLimpos };
+    const payload = { numero: numero || undefined, observacao: observacao || undefined, status, itens: itensLimpos };
     if (editId) updateMut.mutate({ id: editId, ...payload });
     else createMut.mutate({ obraId, ...payload });
   };
@@ -216,10 +215,9 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
           <DialogHeader className="px-6 pt-6 pb-3 border-b shrink-0"><DialogTitle className="text-lg">{editId ? "Editar pedido" : "Novo pedido de compra"}</DialogTitle></DialogHeader>
           <datalist id="unidades-compra">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
           <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 py-4 gap-4">
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Nº do pedido</Label><Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 001/2026" /></div>
-              <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs">Solicitante</Label><Input value={solicitante} onChange={(e) => setSolicitante(e.target.value)} placeholder="Quem está solicitando" /></div>
-              <div className="space-y-1.5 sm:col-span-3"><Label className="text-xs">Observação (opcional)</Label><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: entrega urgente, fornecedor preferencial..." /></div>
+              <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs">Observação (opcional)</Label><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: entrega urgente, fornecedor preferencial..." /></div>
             </div>
 
             <div className="flex flex-col flex-1 min-h-0">

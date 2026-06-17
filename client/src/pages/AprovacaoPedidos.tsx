@@ -28,14 +28,12 @@ const STATUS_PEDIDO: Record<string, { label: string; cls: string }> = {
   aberto:               { label: "Aberto",                cls: "bg-gray-100 text-gray-600" },
 };
 
-// Agrupa um pedido em uma das 3 abas com base no status dos seus itens
-type Grupo = "aguardando" | "aprovados" | "reprovados";
-function grupoPedido(itens: { statusAprovacao?: StatusAprovacao }[]): Grupo {
-  const st = (itens ?? []).map(i => i.statusAprovacao ?? "pendente");
-  if (!st.length) return "aguardando";
-  if (st.some(s => s === "pendente")) return "aguardando";       // ainda há itens a decidir
-  if (st.every(s => s === "reprovado")) return "reprovados";     // todos reprovados
-  return "aprovados";                                            // tudo decidido, ao menos um aprovado
+// Agrupamento por ITEM (não por pedido): cada item vai para a aba do seu status.
+// "decididos" reúne aprovados e reprovados juntos (cada um com seu ícone/cor de status).
+type Grupo = "aguardando" | "decididos";
+function grupoItem(item: { statusAprovacao?: StatusAprovacao }): Grupo {
+  const s = item.statusAprovacao ?? "pendente";
+  return s === "pendente" ? "aguardando" : "decididos";
 }
 
 // ─── Indicador de status por item ────────────────────────────────────────────
@@ -273,17 +271,20 @@ export default function AprovacaoPedidos() {
   );
 
   const todos = pedidos as any[];
+  // Para cada aba, mostra os pedidos que têm itens daquele status, exibindo SÓ esses itens.
+  const filtrarPorItem = (g: Grupo) =>
+    todos
+      .map(p => ({ ...p, itens: (p.itens ?? []).filter((i: any) => grupoItem(i) === g) }))
+      .filter(p => p.itens.length > 0);
   const porGrupo = {
-    aguardando: todos.filter(p => grupoPedido(p.itens) === "aguardando"),
-    aprovados:  todos.filter(p => grupoPedido(p.itens) === "aprovados"),
-    reprovados: todos.filter(p => grupoPedido(p.itens) === "reprovados"),
+    aguardando: filtrarPorItem("aguardando"),
+    decididos:  filtrarPorItem("decididos"),
   };
   const pedidosAba = porGrupo[aba];
 
   const ABAS: { id: Grupo; label: string; cor: string }[] = [
     { id: "aguardando", label: "Aguardando aprovação", cor: "text-amber-600 border-amber-500" },
-    { id: "aprovados",  label: "Aprovados",            cor: "text-green-600 border-green-500" },
-    { id: "reprovados", label: "Reprovados",           cor: "text-red-600 border-red-500" },
+    { id: "decididos",  label: "Aprovado / Reprovado", cor: "text-primary border-primary" },
   ];
 
   return (
@@ -357,13 +358,13 @@ export default function AprovacaoPedidos() {
             {pedidosAba.length === 0 ? (
               <Card>
                 <CardContent className="py-14 text-center">
-                  {aba === "aguardando" && <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400/60" />}
-                  {aba === "aprovados" && <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />}
-                  {aba === "reprovados" && <XCircle className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />}
+                  {aba === "aguardando"
+                    ? <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400/60" />
+                    : <CheckCheck className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />}
                   <p className="text-muted-foreground text-sm">
-                    {aba === "aguardando" && "Nenhum pedido aguardando aprovação nesta obra."}
-                    {aba === "aprovados" && "Nenhum pedido aprovado ainda."}
-                    {aba === "reprovados" && "Nenhum pedido reprovado."}
+                    {aba === "aguardando"
+                      ? "Nenhum item aguardando aprovação nesta obra."
+                      : "Nenhum item aprovado ou reprovado ainda."}
                   </p>
                 </CardContent>
               </Card>

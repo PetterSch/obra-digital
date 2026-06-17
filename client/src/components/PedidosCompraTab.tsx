@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, ShoppingCart, X, FileDown, FileSpreadsheet, Search } from "lucide-react";
+import { Plus, Trash2, Pencil, ShoppingCart, X, FileDown, FileSpreadsheet, Search, User } from "lucide-react";
 import { fmtDataBR } from "@/lib/data";
 import { getPDFConfig } from "@/lib/pdfExport";
 import * as XLSX from "xlsx-js-style";
@@ -193,7 +193,10 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                 <ShoppingCart className="w-4 h-4 text-primary shrink-0" />
                 <div className="min-w-0">
                   <p className="font-medium text-sm leading-tight group-hover:text-primary group-hover:underline transition-colors">Pedido {p.numero ? `nº ${p.numero}` : `#${p.id}`}</p>
-                  <p className="text-xs text-muted-foreground">{p.totalItens} item(ns) · {fmtDataBR(p.criadoEm)}{p.solicitante ? ` · ${p.solicitante}` : ""}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+                    <span>{p.totalItens} item(ns) · {fmtDataBR(p.criadoEm)}</span>
+                    <span className="inline-flex items-center gap-1 font-medium text-foreground"><User className="w-3 h-3" /> {p.solicitante || "—"}</span>
+                  </p>
                 </div>
               </button>
               <div className="flex items-center gap-1 shrink-0">
@@ -345,7 +348,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
               <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
                 <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${STATUS_COR[verData.status || "aberto"] || ""}`}>{STATUS_LABEL[verData.status || "aberto"] || verData.status}</span>
                 <span>{(verData.itens || []).length} item(ns)</span>
-                {verData.solicitante && <span>· {verData.solicitante}</span>}
+                <span className="inline-flex items-center gap-1 font-medium text-foreground">· <User className="w-3.5 h-3.5" /> {verData.solicitante || "Solicitante não informado"}</span>
                 <span>· {fmtDataBR(verData.criadoEm)}</span>
                 {verData.observacao && <span>· {verData.observacao}</span>}
                 <span className="ml-auto flex gap-1.5">

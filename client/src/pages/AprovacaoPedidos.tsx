@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Truck, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Building2, CheckCheck } from "lucide-react";
+import { Truck, CheckCircle2, XCircle, Clock, ChevronDown, ChevronRight, Building2, CheckCheck, User } from "lucide-react";
 
 // ─── Utilitário de status ─────────────────────────────────────────────────────
 
@@ -208,10 +208,12 @@ function CardPedido({ pedido, onAtualizar }: { pedido: any; onAtualizar: () => v
               <p className="font-semibold text-sm leading-tight">
                 Pedido {pedido.numero ? `nº ${pedido.numero}` : `#${pedido.id}`}
               </p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {pedido.solicitante && <span>{pedido.solicitante} · </span>}
-                {new Date(pedido.criadoEm).toLocaleDateString("pt-BR")}
-                {pedido.observacao && <span> · {pedido.observacao}</span>}
+              <p className="text-xs text-muted-foreground mt-0.5 flex items-center gap-1 flex-wrap">
+                <span className="inline-flex items-center gap-1 font-medium text-foreground">
+                  <User className="w-3 h-3" /> {pedido.solicitante || "Solicitante não informado"}
+                </span>
+                <span>· {new Date(pedido.criadoEm).toLocaleDateString("pt-BR")}</span>
+                {pedido.observacao && <span>· {pedido.observacao}</span>}
               </p>
             </div>
           </button>

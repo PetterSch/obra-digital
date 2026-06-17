@@ -139,6 +139,18 @@ function LinhaItem({
           </td>
         </tr>
       )}
+      {/* Motivo da reprovação salvo — exibido abaixo do item reprovado */}
+      {!reprovando && status === "reprovado" && item.observacaoReprovacao && (
+        <tr className="bg-red-50/40 border-b last:border-0">
+          <td></td>
+          <td colSpan={5} className="px-2 pb-2 pt-0">
+            <div className="flex items-start gap-1.5 text-xs text-red-700">
+              <XCircle className="w-3.5 h-3.5 mt-0.5 shrink-0" />
+              <span><span className="font-semibold">Motivo da reprovação:</span> {item.observacaoReprovacao}</span>
+            </div>
+          </td>
+        </tr>
+      )}
     </>
   );
 }

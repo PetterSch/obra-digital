@@ -1247,9 +1247,10 @@ Gere um resumo executivo profissional em português que:
         itemId: z.number(),
         statusAprovacao: z.enum(["aprovado", "reprovado", "pendente"]),
         observacaoReprovacao: z.string().optional(),
+        quantidade: z.number().optional(),
       }))
       .mutation(async ({ input }) => {
-        await db.atualizarAprovacaoItem(input.itemId, input.statusAprovacao, input.observacaoReprovacao);
+        await db.atualizarAprovacaoItem(input.itemId, input.statusAprovacao, input.observacaoReprovacao, input.quantidade);
         return { success: true };
       }),
   }),

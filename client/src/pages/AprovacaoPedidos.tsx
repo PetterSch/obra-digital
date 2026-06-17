@@ -28,6 +28,16 @@ const STATUS_PEDIDO: Record<string, { label: string; cls: string }> = {
   aberto:               { label: "Aberto",                cls: "bg-gray-100 text-gray-600" },
 };
 
+// Agrupa um pedido em uma das 3 abas com base no status dos seus itens
+type Grupo = "aguardando" | "aprovados" | "reprovados";
+function grupoPedido(itens: { statusAprovacao?: StatusAprovacao }[]): Grupo {
+  const st = (itens ?? []).map(i => i.statusAprovacao ?? "pendente");
+  if (!st.length) return "aguardando";
+  if (st.some(s => s === "pendente")) return "aguardando";       // ainda há itens a decidir
+  if (st.every(s => s === "reprovado")) return "reprovados";     // todos reprovados
+  return "aprovados";                                            // tudo decidido, ao menos um aprovado
+}
+
 // ─── Indicador de status por item ────────────────────────────────────────────
 
 function ItemStatusIcon({ status }: { status: StatusAprovacao }) {
@@ -40,18 +50,29 @@ function ItemStatusIcon({ status }: { status: StatusAprovacao }) {
 
 function LinhaItem({
   item,
+  qtd,
+  onQtdChange,
   onAprovar,
   onReprovar,
   salvando,
 }: {
   item: any;
-  onAprovar: () => void;
+  qtd: string;
+  onQtdChange: (v: string) => void;
+  onAprovar: (quantidade?: number) => void;
   onReprovar: (obs: string) => void;
   salvando: boolean;
 }) {
   const [reprovando, setReprovando] = useState(false);
   const [obsReprovacao, setObsReprovacao] = useState(item.observacaoReprovacao ?? "");
   const status: StatusAprovacao = item.statusAprovacao ?? "pendente";
+
+  const handleAprovar = () => {
+    setReprovando(false);
+    const val = qtd.trim().replace(",", ".");
+    const n = val !== "" ? parseFloat(val) : undefined;
+    onAprovar(!n || isNaN(n) ? undefined : n);
+  };
 
   return (
     <>
@@ -60,7 +81,17 @@ function LinhaItem({
           <ItemStatusIcon status={status} />
         </td>
         <td className="p-2 text-sm font-medium">{item.descricao || "—"}</td>
-        <td className="p-2 text-sm text-right tabular-nums">{item.quantidade != null ? Number(item.quantidade).toLocaleString("pt-BR") : "—"}</td>
+        <td className="p-2" style={{ width: 110, minWidth: 90 }}>
+          <input
+            type="text"
+            inputMode="decimal"
+            className="w-full h-7 rounded-md border border-input bg-background px-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+            value={qtd}
+            onChange={e => onQtdChange(e.target.value)}
+            placeholder="Qtd"
+            title="Altere a quantidade antes de aprovar"
+          />
+        </td>
         <td className="p-2 text-sm text-muted-foreground">{item.unidade || "—"}</td>
         <td className="p-2 text-sm text-right tabular-nums text-muted-foreground">
           {item.valorEstimado != null ? Number(item.valorEstimado).toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
@@ -73,7 +104,7 @@ function LinhaItem({
               className={`h-7 gap-1 text-xs ${status === "aprovado" ? "bg-green-600 hover:bg-green-700 border-green-600" : "hover:border-green-500 hover:text-green-600"}`}
               disabled={salvando}
               aria-label="Aprovar item"
-              onClick={() => { setReprovando(false); onAprovar(); }}
+              onClick={handleAprovar}
             >
               <CheckCircle2 className="w-3.5 h-3.5" /> Aprovar
             </Button>
@@ -119,6 +150,9 @@ function LinhaItem({
 function CardPedido({ pedido, onAtualizar }: { pedido: any; onAtualizar: () => void }) {
   const [expandido, setExpandido] = useState(true);
   const [itensMutados, setItensMutados] = useState<Record<number, { statusAprovacao: StatusAprovacao; observacaoReprovacao?: string }>>({});
+  const [qtdsEditaveis, setQtdsEditaveis] = useState<Record<number, string>>(() =>
+    Object.fromEntries((pedido.itens as any[]).map((it: any) => [it.id, it.quantidade != null ? String(it.quantidade) : ""]))
+  );
   const utils = trpc.useUtils();
 
   const aprovarMut = trpc.suprimentos.aprovarItem.useMutation({
@@ -141,9 +175,9 @@ function CardPedido({ pedido, onAtualizar }: { pedido: any; onAtualizar: () => v
     toast.success("Todos os itens aprovados!");
   };
 
-  const handleAprovar = (itemId: number) => {
+  const handleAprovar = (itemId: number, quantidade?: number) => {
     setItensMutados(prev => ({ ...prev, [itemId]: { statusAprovacao: "aprovado" } }));
-    aprovarMut.mutate({ itemId, statusAprovacao: "aprovado" });
+    aprovarMut.mutate({ itemId, statusAprovacao: "aprovado", quantidade });
   };
 
   const handleReprovar = (itemId: number, obs: string) => {
@@ -207,8 +241,10 @@ function CardPedido({ pedido, onAtualizar }: { pedido: any; onAtualizar: () => v
                   <LinhaItem
                     key={it.id}
                     item={it}
+                    qtd={qtdsEditaveis[it.id] ?? ""}
+                    onQtdChange={v => setQtdsEditaveis(prev => ({ ...prev, [it.id]: v }))}
                     salvando={aprovarMut.isPending}
-                    onAprovar={() => handleAprovar(it.id)}
+                    onAprovar={(qtd) => handleAprovar(it.id, qtd)}
                     onReprovar={(obs) => handleReprovar(it.id, obs)}
                   />
                 ))}
@@ -228,12 +264,27 @@ function CardPedido({ pedido, onAtualizar }: { pedido: any; onAtualizar: () => v
 
 export default function AprovacaoPedidos() {
   const [obraId, setObraId] = useState<number | null>(null);
+  const [aba, setAba] = useState<Grupo>("aguardando");
   const { data: obras = [], isLoading: carregandoObras } = trpc.obras.list.useQuery();
 
   const { data: pedidos = [], isLoading: carregandoPedidos, refetch } = trpc.suprimentos.listPedidosAprovacao.useQuery(
     { obraId: obraId! },
     { enabled: obraId != null }
   );
+
+  const todos = pedidos as any[];
+  const porGrupo = {
+    aguardando: todos.filter(p => grupoPedido(p.itens) === "aguardando"),
+    aprovados:  todos.filter(p => grupoPedido(p.itens) === "aprovados"),
+    reprovados: todos.filter(p => grupoPedido(p.itens) === "reprovados"),
+  };
+  const pedidosAba = porGrupo[aba];
+
+  const ABAS: { id: Grupo; label: string; cor: string }[] = [
+    { id: "aguardando", label: "Aguardando aprovação", cor: "text-amber-600 border-amber-500" },
+    { id: "aprovados",  label: "Aprovados",            cor: "text-green-600 border-green-500" },
+    { id: "reprovados", label: "Reprovados",           cor: "text-red-600 border-red-500" },
+  ];
 
   return (
     <DashboardLayout>
@@ -278,24 +329,52 @@ export default function AprovacaoPedidos() {
           <Card>
             <CardContent className="py-14 text-center">
               <Truck className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />
-              <p className="text-muted-foreground text-sm">Selecione uma obra para visualizar os pedidos em aberto.</p>
+              <p className="text-muted-foreground text-sm">Selecione uma obra para visualizar os pedidos.</p>
             </CardContent>
           </Card>
         ) : carregandoPedidos ? (
           <div className="flex justify-center py-14"><Spinner /></div>
-        ) : (pedidos as any[]).length === 0 ? (
-          <Card>
-            <CardContent className="py-14 text-center">
-              <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400/60" />
-              <p className="text-muted-foreground text-sm">Nenhum pedido aguardando aprovação nesta obra.</p>
-            </CardContent>
-          </Card>
         ) : (
           <div className="space-y-4">
-            <p className="text-xs text-muted-foreground">{(pedidos as any[]).length} pedido(s) aguardando aprovação</p>
-            {(pedidos as any[]).map((p: any) => (
-              <CardPedido key={p.id} pedido={p} onAtualizar={() => refetch()} />
-            ))}
+            {/* Abas */}
+            <div className="flex items-center gap-1 border-b">
+              {ABAS.map(t => (
+                <button
+                  key={t.id}
+                  onClick={() => setAba(t.id)}
+                  className={`px-4 py-2 text-sm font-medium border-b-2 -mb-px transition-colors ${
+                    aba === t.id ? t.cor : "border-transparent text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {t.label}
+                  <span className={`ml-1.5 text-[11px] px-1.5 py-0.5 rounded-full ${aba === t.id ? "bg-muted" : "bg-muted/60"}`}>
+                    {porGrupo[t.id].length}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {pedidosAba.length === 0 ? (
+              <Card>
+                <CardContent className="py-14 text-center">
+                  {aba === "aguardando" && <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-green-400/60" />}
+                  {aba === "aprovados" && <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />}
+                  {aba === "reprovados" && <XCircle className="w-12 h-12 mx-auto mb-3 text-muted-foreground/30" />}
+                  <p className="text-muted-foreground text-sm">
+                    {aba === "aguardando" && "Nenhum pedido aguardando aprovação nesta obra."}
+                    {aba === "aprovados" && "Nenhum pedido aprovado ainda."}
+                    {aba === "reprovados" && "Nenhum pedido reprovado."}
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                <p className="text-xs text-muted-foreground">{pedidosAba.length} pedido(s)</p>
+                {pedidosAba.map((p: any) => (
+                  <CardPedido key={p.id} pedido={p} onAtualizar={() => refetch()} />
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>

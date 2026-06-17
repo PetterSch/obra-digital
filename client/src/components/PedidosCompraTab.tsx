@@ -15,14 +15,14 @@ import * as XLSX from "xlsx-js-style";
 
 type Item = { descricao: string; unidade: string; quantidade: string; observacao: string };
 const itemVazio = (): Item => ({ descricao: "", unidade: "", quantidade: "", observacao: "" });
-const STATUS_LABEL: Record<string, string> = { aberto: "Aberto", enviado: "Enviado", parcial: "Recebido parcial", recebido: "Recebido", cancelado: "Cancelado" };
+const STATUS_LABEL: Record<string, string> = { aberto: "Pendente", aprovado_parcial: "Aprovado", aprovado_total: "Aprovado", enviado: "Enviado", parcial: "Recebido parcial", recebido: "Recebido", cancelado: "Cancelado", reprovado: "Reprovado" };
 // Unidades comuns de compra (sugestões — campo continua de digitação livre)
 const UNIDADES = [
   "UND", "PÇ", "CX", "SC 50kg", "SC 25kg", "SC 20kg", "SC 15kg", "KG", "T",
   "M", "M²", "M³", "L", "GL", "BARRA", "RL", "PAR", "JG", "MILHEIRO",
   "VB", "LATA 18L", "BALDE", "TB", "FD", "DZ", "PALETE", "VIAGEM", "CAÇAMBA",
 ];
-const STATUS_COR: Record<string, string> = { aberto: "bg-amber-100 text-amber-700", enviado: "bg-blue-100 text-blue-700", parcial: "bg-violet-100 text-violet-700", recebido: "bg-green-100 text-green-700", cancelado: "bg-gray-100 text-gray-600" };
+const STATUS_COR: Record<string, string> = { aberto: "bg-amber-100 text-amber-700", aprovado_parcial: "bg-green-100 text-green-700", aprovado_total: "bg-green-100 text-green-700", enviado: "bg-blue-100 text-blue-700", parcial: "bg-violet-100 text-violet-700", recebido: "bg-green-100 text-green-700", cancelado: "bg-gray-100 text-gray-600", reprovado: "bg-red-100 text-red-700" };
 
 export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNome?: string }) {
   const utils = trpc.useUtils();
@@ -142,7 +142,10 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
         <div className="flex items-center gap-2 flex-wrap">
           <select value={statusFiltro} onChange={(e) => setStatusFiltro(e.target.value)} className="h-9 px-3 border border-input rounded-md bg-background text-sm">
             <option value="todos">Todos os status</option>
-            <option value="aberto">Aberto</option>
+            <option value="aberto">Pendente</option>
+            <option value="aprovado_total">Aprovado</option>
+            <option value="aprovado_parcial">Aprovado parcial</option>
+            <option value="reprovado">Reprovado</option>
             <option value="enviado">Enviado</option>
             <option value="parcial">Recebido parcial</option>
             <option value="recebido">Recebido</option>
@@ -213,15 +216,10 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
           <DialogHeader className="px-6 pt-6 pb-3 border-b shrink-0"><DialogTitle className="text-lg">{editId ? "Editar pedido" : "Novo pedido de compra"}</DialogTitle></DialogHeader>
           <datalist id="unidades-compra">{UNIDADES.map((u) => <option key={u} value={u} />)}</datalist>
           <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 py-4 gap-4">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5"><Label className="text-xs">Nº do pedido</Label><Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 001/2026" /></div>
               <div className="space-y-1.5 sm:col-span-2"><Label className="text-xs">Solicitante</Label><Input value={solicitante} onChange={(e) => setSolicitante(e.target.value)} placeholder="Quem está solicitando" /></div>
-              <div className="space-y-1.5"><Label className="text-xs">Status</Label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)} className="w-full h-10 px-3 border border-input rounded-md bg-background text-sm">
-                  <option value="aberto">Aberto</option><option value="enviado">Enviado</option><option value="parcial">Recebido parcial</option><option value="recebido">Recebido</option><option value="cancelado">Cancelado</option>
-                </select>
-              </div>
-              <div className="space-y-1.5 sm:col-span-4"><Label className="text-xs">Observação (opcional)</Label><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: entrega urgente, fornecedor preferencial..." /></div>
+              <div className="space-y-1.5 sm:col-span-3"><Label className="text-xs">Observação (opcional)</Label><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: entrega urgente, fornecedor preferencial..." /></div>
             </div>
 
             <div className="flex flex-col flex-1 min-h-0">

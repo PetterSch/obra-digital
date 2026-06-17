@@ -1369,12 +1369,13 @@ export async function deletePedido(id: number) {
 export async function getPedidosParaAprovacao(obraId: number) {
   const db = await getDb();
   if (!db) return [];
-  // Retorna pedidos em aberto (excluindo aprovado_total e reprovado)
+  // Retorna TODOS os pedidos da obra com seus itens e status de aprovação.
+  // A separação em "aguardando / aprovados / reprovados" é feita no front.
   const r: any = await db.execute(sql`
     SELECT p.id, p.numero, p.solicitante, p.observacao, p.status, p.criadoEm
     FROM pedidos_compra p
     WHERE p.obraId = ${obraId}
-      AND (p.status IS NULL OR p.status NOT IN ('aprovado_total','reprovado','recebido','cancelado'))
+      AND (p.status IS NULL OR p.status NOT IN ('recebido','cancelado'))
     ORDER BY p.id DESC`);
   const pedidos = (r[0] ?? r) as any[];
   for (const p of pedidos) {
@@ -1387,13 +1388,20 @@ export async function getPedidosParaAprovacao(obraId: number) {
   return pedidos;
 }
 
-export async function atualizarAprovacaoItem(itemId: number, statusAprovacao: string, observacaoReprovacao?: string) {
+export async function atualizarAprovacaoItem(itemId: number, statusAprovacao: string, observacaoReprovacao?: string, quantidade?: number) {
   const db = await getDb();
   if (!db) return;
-  await db.execute(sql`
-    UPDATE pedido_itens
-    SET statusAprovacao = ${statusAprovacao}, observacaoReprovacao = ${observacaoReprovacao ?? null}
-    WHERE id = ${itemId}`);
+  if (quantidade != null) {
+    await db.execute(sql`
+      UPDATE pedido_itens
+      SET statusAprovacao = ${statusAprovacao}, observacaoReprovacao = ${observacaoReprovacao ?? null}, quantidade = ${quantidade}
+      WHERE id = ${itemId}`);
+  } else {
+    await db.execute(sql`
+      UPDATE pedido_itens
+      SET statusAprovacao = ${statusAprovacao}, observacaoReprovacao = ${observacaoReprovacao ?? null}
+      WHERE id = ${itemId}`);
+  }
   // Recalcula status do pedido pai
   const ir: any = await db.execute(sql`SELECT statusAprovacao FROM pedido_itens WHERE pedidoId = (SELECT pedidoId FROM pedido_itens WHERE id = ${itemId})`);
   const itens = (ir[0] ?? ir) as any[];

@@ -1224,18 +1224,19 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({
         obraId: z.number(), numero: z.string().optional(),
         observacao: z.string().optional(), status: z.string().optional(),
+        dataEntrega: z.string().optional(),
         itens: z.array(z.object({
           descricao: z.string().optional(), unidade: z.string().optional(),
           quantidade: z.number().optional(), observacao: z.string().optional(),
         })).default([]),
       }))
-      // Solicitante é preenchido automaticamente com o nome do usuário logado
       .mutation(async ({ input, ctx }) => db.createPedido({ ...input, solicitante: ctx.user.name ?? ctx.user.username ?? undefined })),
 
     update: engineerProcedure
       .input(z.object({
         id: z.number(), numero: z.string().optional(), solicitante: z.string().optional(),
         observacao: z.string().optional(), status: z.string().optional(),
+        dataEntrega: z.string().optional(),
         itens: z.array(z.object({
           descricao: z.string().optional(), unidade: z.string().optional(),
           quantidade: z.number().optional(), observacao: z.string().optional(),

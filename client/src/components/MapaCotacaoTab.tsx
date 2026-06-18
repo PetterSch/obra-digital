@@ -290,7 +290,6 @@ interface EditorProps {
 function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
   const [titulo, setTitulo] = useState(mapa?.titulo ?? "");
   const [localAplicacao, setLocalAplicacao] = useState(mapa?.localAplicacao ?? "");
-  const [dataAplicacao, setDataAplicacao] = useState(mapa?.dataAplicacao ? String(mapa.dataAplicacao).slice(0, 10) : "");
   const [observacao, setObservacao] = useState(mapa?.observacao ?? "");
 
   // Fornecedores local state (dinâmico)
@@ -369,7 +368,6 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     if (!mapa) return;
     setTitulo(mapa.titulo ?? "");
     setLocalAplicacao(mapa.localAplicacao ?? "");
-    setDataAplicacao(mapa.dataAplicacao ? String(mapa.dataAplicacao).slice(0, 10) : "");
     setObservacao(mapa.observacao ?? "");
     setFornecedores((mapa.fornecedores ?? []).map((f: any) => ({
       id: f.id, ordem: f.ordem,
@@ -449,7 +447,6 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
       id: mapa.id,
       titulo: titulo || undefined,
       localAplicacao: localAplicacao || undefined,
-      dataAplicacao: dataAplicacao || undefined,
       observacao: observacao || undefined,
       status: status ?? mapa.status,
       fornecedores: fornecedores.map(f => ({
@@ -487,7 +484,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     <h2 style="text-align:center">REQUISIÇÃO DE MATERIAIS E COLETA DE PREÇOS</h2>
     <table style="margin-bottom:8px;border:none">
       <tr><td style="border:none"><b>OBRA:</b> ${obraNome}</td><td style="border:none"><b>Mapa #</b>${mapa?.numero}</td></tr>
-      <tr><td style="border:none"><b>Título:</b> ${titulo || "—"}</td><td style="border:none"><b>Data:</b> ${dataAplicacao || "—"}</td></tr>
+      <tr><td style="border:none"><b>Título:</b> ${titulo || "—"}</td></tr>
       ${localAplicacao ? `<tr><td colspan="2" style="border:none"><b>Local de Aplicação:</b> ${localAplicacao}</td></tr>` : ""}
     </table>
     <table><thead><tr>
@@ -591,7 +588,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
       {/* Meta */}
       <Card>
         <CardContent className="pt-4 pb-3">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Título</label>
               <Input value={titulo} onChange={e => setTitulo(e.target.value)}
@@ -601,10 +598,6 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
               <label className="text-xs font-medium text-muted-foreground">Local de Aplicação</label>
               <Input value={localAplicacao} onChange={e => setLocalAplicacao(e.target.value)}
                 placeholder="Ex: Bloco A" disabled={isConcluido} />
-            </div>
-            <div className="space-y-1">
-              <label className="text-xs font-medium text-muted-foreground">Data de Aplicação</label>
-              <Input type="date" value={dataAplicacao} onChange={e => setDataAplicacao(e.target.value)} disabled={isConcluido} />
             </div>
           </div>
         </CardContent>

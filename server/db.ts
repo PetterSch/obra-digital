@@ -265,13 +265,14 @@ export async function runMigrations() {
     }
   } catch { /* já existe */ }
 
-  // Suprimentos: campos de aprovação em pedido_itens
+  // Suprimentos: campos de aprovação em pedido_itens + dataEntrega no pedido
   try {
     const db = await getDb();
     if (db) {
       await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN statusAprovacao VARCHAR(20) DEFAULT 'pendente'`);
       await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN observacaoReprovacao TEXT`);
       await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN valorEstimado DECIMAL(15,2)`);
+      await db.execute(sql`ALTER TABLE pedidos_compra ADD COLUMN dataEntrega DATE`);
     }
   } catch { /* já existe */ }
 
@@ -1370,7 +1371,7 @@ export async function getPedidosByObra(obraId: number) {
   const db = await getDb();
   if (!db) return [];
   const r: any = await db.execute(sql`
-    SELECT p.id, p.numero, p.solicitante, p.observacao, p.status, p.criadoEm,
+    SELECT p.id, p.numero, p.solicitante, p.observacao, p.status, p.criadoEm, p.dataEntrega,
       (SELECT COUNT(*) FROM pedido_itens i WHERE i.pedidoId = p.id) AS totalItens
     FROM pedidos_compra p WHERE p.obraId = ${obraId} ORDER BY p.id DESC`);
   return (r[0] ?? r) as any[];
@@ -1396,21 +1397,20 @@ async function inserirPedidoItens(pedidoId: number, itens: PedidoItemInput[]) {
   }
 }
 
-export async function createPedido(data: { obraId: number; numero?: string; solicitante?: string; observacao?: string; status?: string; itens: PedidoItemInput[] }) {
+export async function createPedido(data: { obraId: number; numero?: string; solicitante?: string; observacao?: string; status?: string; dataEntrega?: string; itens: PedidoItemInput[] }) {
   const db = await getDb();
   if (!db) return { id: 0 };
-  const res: any = await db.execute(sql`INSERT INTO pedidos_compra (obraId, numero, solicitante, observacao, status)
-    VALUES (${data.obraId}, ${data.numero ?? null}, ${data.solicitante ?? null}, ${data.observacao ?? null}, ${data.status ?? "aberto"})`);
+  const res: any = await db.execute(sql`INSERT INTO pedidos_compra (obraId, numero, solicitante, observacao, status, dataEntrega)
+    VALUES (${data.obraId}, ${data.numero ?? null}, ${data.solicitante ?? null}, ${data.observacao ?? null}, ${data.status ?? "aberto"}, ${data.dataEntrega ?? null})`);
   const id = (res[0]?.insertId ?? res.insertId) as number;
   await inserirPedidoItens(id, data.itens);
   return { id };
 }
 
-export async function updatePedido(id: number, data: { numero?: string; solicitante?: string; observacao?: string; status?: string; itens: PedidoItemInput[] }) {
+export async function updatePedido(id: number, data: { numero?: string; solicitante?: string; observacao?: string; status?: string; dataEntrega?: string; itens: PedidoItemInput[] }) {
   const db = await getDb();
   if (!db) return;
-  // solicitante: se não vier no payload, preserva o valor já gravado (não sobrescreve com null)
-  await db.execute(sql`UPDATE pedidos_compra SET numero = ${data.numero ?? null}, solicitante = COALESCE(${data.solicitante ?? null}, solicitante), observacao = ${data.observacao ?? null}, status = ${data.status ?? null} WHERE id = ${id}`);
+  await db.execute(sql`UPDATE pedidos_compra SET numero = ${data.numero ?? null}, solicitante = COALESCE(${data.solicitante ?? null}, solicitante), observacao = ${data.observacao ?? null}, status = ${data.status ?? null}, dataEntrega = ${data.dataEntrega ?? null} WHERE id = ${id}`);
   await db.execute(sql`DELETE FROM pedido_itens WHERE pedidoId = ${id}`);
   await inserirPedidoItens(id, data.itens);
 }

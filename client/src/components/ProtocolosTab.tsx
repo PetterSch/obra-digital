@@ -261,21 +261,21 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                 <p className="text-sm font-medium">Notas do protocolo</p>
                 <Button type="button" variant="outline" size="sm" className="gap-1.5" onClick={() => setNotas((a) => [...a, notaVazia()])}><Plus className="w-4 h-4" /> Adicionar nota</Button>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm" style={{ minWidth: 1220 }}>
+              <div className="overflow-x-auto flex-1" style={{ minHeight: 120 }}>
+                <table className="w-full text-sm" style={{ minWidth: 1100 }}>
                   <thead>
                     <tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">
-                      <th className="text-left p-1.5">Fornecedor</th>
-                      <th className="text-left p-1.5 w-24">Nº OC</th>
-                      <th className="text-left p-1.5 w-24">Nº Pedido</th>
-                      <th className="text-left p-1.5 w-24">Nº NF</th>
-                      <th className="text-left p-1.5 w-28">Valor (R$)</th>
-                      <th className="text-left p-1.5 w-36">Data envio</th>
-                      <th className="text-left p-1.5 w-32">Pagamento</th>
-                      <th className="text-left p-1.5 w-32">Venc. 1</th>
-                      <th className="text-left p-1.5 w-32">Venc. 2</th>
-                      <th className="text-left p-1.5 w-32">Venc. 3</th>
-                      <th className="text-left p-1.5 w-28">Status</th>
+                      <th className="text-left p-1.5 min-w-[180px]">Fornecedor</th>
+                      <th className="text-left p-1.5 w-20">Nº OC</th>
+                      <th className="text-left p-1.5 w-20">Nº Pedido</th>
+                      <th className="text-left p-1.5 w-20">Nº NF</th>
+                      <th className="text-left p-1.5 w-24">Valor (R$)</th>
+                      <th className="text-left p-1.5 w-28">Data envio</th>
+                      <th className="text-left p-1.5 w-[130px]">Pagamento</th>
+                      <th className="text-left p-1.5 w-28">Venc. 1</th>
+                      <th className="text-left p-1.5 w-28">Venc. 2</th>
+                      <th className="text-left p-1.5 w-28">Venc. 3</th>
+                      <th className="text-left p-1.5 w-[140px]">Status</th>
                       <th className="w-8"></th>
                     </tr>
                   </thead>

@@ -1489,6 +1489,9 @@ Gere um resumo executivo profissional em português que:
 
   // ============= MAPA DE COTAÇÃO =============
   mapaCotacao: router({
+    listAll: protectedProcedure
+      .query(async () => db.getAllMapas()),
+
     listByObra: protectedProcedure
       .input(z.object({ obraId: z.number() }))
       .query(async ({ input }) => db.getMapasByObra(input.obraId)),

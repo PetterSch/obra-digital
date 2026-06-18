@@ -1744,6 +1744,18 @@ export async function deleteMapa(id: number) {
   await db.execute(sql`DELETE FROM mapas_cotacao WHERE id = ${id}`);
 }
 
+export async function getAllMapas() {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT m.*, o.nome AS obraNome,
+      (SELECT COUNT(*) FROM mapa_itens WHERE mapaId = m.id) AS totalItens,
+      (SELECT COUNT(*) FROM mapa_fornecedores WHERE mapaId = m.id AND nome IS NOT NULL AND nome != '') AS totalFornecedores
+    FROM mapas_cotacao m JOIN obras o ON m.obraId = o.id
+    ORDER BY m.criadoEm DESC`);
+  return (r[0] ?? r) as any[];
+}
+
 export async function getItensAprovadosByObra(obraId: number) {
   const db = await getDb();
   if (!db) return [];

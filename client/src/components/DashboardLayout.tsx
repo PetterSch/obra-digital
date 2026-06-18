@@ -44,7 +44,7 @@ const menuGroups: MenuGroup[] = [
   ]},
   { label: "Suprimentos", items: [
     { icon: Truck,      label: "Aprovação de Pedidos", path: "/suprimentos/aprovacao" },
-    { icon: Map,        label: "Mapa de Cotação",      path: "/suprimentos/cotacao",  disabled: true },
+    { icon: Map,        label: "Mapa de Cotação",      path: "/suprimentos/cotacao" },
     { icon: ShoppingBag,label: "Ordens de Compra",     path: "/suprimentos/ordens",   disabled: true },
   ]},
   { label: "Cadastros", items: [

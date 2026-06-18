@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil } from "lucide-react";
 
-interface Props { obraId: number; obraNome: string; }
+interface Props { obraId: number; obraNome: string; openMapaId?: number; }
 
 type View = "landing" | "selecionar" | "editor";
 
@@ -27,9 +27,9 @@ const STATUS_COR: Record<string, string> = {
   rascunho: "bg-gray-100 text-gray-600",
 };
 
-export function MapaCotacaoTab({ obraId, obraNome }: Props) {
-  const [view, setView] = useState<View>("landing");
-  const [mapaEditId, setMapaEditId] = useState<number | null>(null);
+export function MapaCotacaoTab({ obraId, obraNome, openMapaId }: Props) {
+  const [view, setView] = useState<View>(() => openMapaId != null ? "editor" : "landing");
+  const [mapaEditId, setMapaEditId] = useState<number | null>(() => openMapaId ?? null);
   const [selectedItemIds, setSelectedItemIds] = useState<Set<number>>(new Set());
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
@@ -90,11 +90,11 @@ export function MapaCotacaoTab({ obraId, obraNome }: Props) {
     const itens = itensAprovados
       .filter((i: any) => selectedItemIds.has(i.id))
       .map((i: any) => ({
-        pedidoItemId: i.id,
-        descricao: i.descricao,
-        unidade: i.unidade,
+        pedidoItemId: i.id != null ? Number(i.id) : undefined,
+        descricao: String(i.descricao ?? ""),
+        unidade: i.unidade ?? undefined,
         quantidade: Number(i.quantidade),
-        observacao: i.observacao,
+        observacao: i.observacao ?? undefined,
       }));
     createMut.mutate({ obraId, itens });
   }

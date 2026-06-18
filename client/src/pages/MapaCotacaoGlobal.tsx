@@ -1,12 +1,12 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { ClipboardList, CheckCircle2, Map, Building2, ArrowRight, Plus } from "lucide-react";
+import { ClipboardList, CheckCircle2, Map, Building2, ArrowRight, Plus, ChevronLeft } from "lucide-react";
+import { MapaCotacaoTab } from "@/components/MapaCotacaoTab";
 
 const STATUS_LABEL: Record<string, string> = {
   em_andamento: "Em andamento",
@@ -19,9 +19,12 @@ const STATUS_COR: Record<string, string> = {
   rascunho: "bg-gray-100 text-gray-600",
 };
 
+type ObraSelecionada = { id: number; nome: string };
+
 export default function MapaCotacaoGlobal() {
-  const [, navigate] = useLocation();
   const [dialogObra, setDialogObra] = useState(false);
+  const [obraSelecionada, setObraSelecionada] = useState<ObraSelecionada | null>(null);
+  const [openMapaId, setOpenMapaId] = useState<number | null>(null);
 
   const { data: mapas = [], isLoading } = trpc.mapaCotacao.listAll.useQuery();
   const { data: obras = [], isLoading: carregandoObras } = trpc.obras.list.useQuery();
@@ -37,8 +40,42 @@ export default function MapaCotacaoGlobal() {
   const emAndamento = mapas.filter((m: any) => m.status !== "concluido").length;
   const concluidos = mapas.filter((m: any) => m.status === "concluido").length;
 
-  function irParaObra(obraId: number) {
-    navigate(`/obras/${obraId}?tab=cotacao`);
+  function abrirObra(obraId: number, obraNome: string, mapaId?: number) {
+    setObraSelecionada({ id: obraId, nome: obraNome });
+    setOpenMapaId(mapaId ?? null);
+  }
+
+  function voltar() {
+    setObraSelecionada(null);
+    setOpenMapaId(null);
+  }
+
+  // View: obra selecionada → mostra MapaCotacaoTab inline
+  if (obraSelecionada) {
+    return (
+      <DashboardLayout>
+        <div className="max-w-6xl mx-auto space-y-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={voltar}>
+              <ChevronLeft className="w-4 h-4 mr-1" /> Voltar
+            </Button>
+            <div>
+              <h2 className="font-semibold text-lg flex items-center gap-2">
+                <Map className="w-5 h-5" /> Mapa de Cotação
+              </h2>
+              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                <Building2 className="w-3 h-3" /> {obraSelecionada.nome}
+              </p>
+            </div>
+          </div>
+          <MapaCotacaoTab
+            obraId={obraSelecionada.id}
+            obraNome={obraSelecionada.nome}
+            openMapaId={openMapaId ?? undefined}
+          />
+        </div>
+      </DashboardLayout>
+    );
   }
 
   return (
@@ -108,15 +145,15 @@ export default function MapaCotacaoGlobal() {
                     {obraNome}
                   </h3>
                   <Button variant="ghost" size="sm" className="h-7 text-xs gap-1"
-                    onClick={() => irParaObra(obraId)}>
-                    Ir para a Obra <ArrowRight className="w-3.5 h-3.5" />
+                    onClick={() => abrirObra(obraId, obraNome)}>
+                    Abrir Mapas <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>
                 <div className="space-y-2">
                   {ms.map((m: any) => (
                     <div key={m.id}
                       className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 hover:shadow-sm transition-shadow cursor-pointer"
-                      onClick={() => irParaObra(obraId)}>
+                      onClick={() => abrirObra(obraId, obraNome, m.id)}>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">Mapa #{m.numero}</span>
@@ -156,7 +193,7 @@ export default function MapaCotacaoGlobal() {
               {(obras as any[]).map((obra: any) => (
                 <button key={obra.id}
                   className="w-full text-left rounded-lg border px-4 py-3 hover:bg-muted/60 transition-colors flex items-center justify-between gap-3"
-                  onClick={() => { setDialogObra(false); irParaObra(obra.id); }}>
+                  onClick={() => { setDialogObra(false); abrirObra(obra.id, obra.nome); }}>
                   <div>
                     <p className="font-medium text-sm">{obra.nome}</p>
                     {obra.endereco && <p className="text-xs text-muted-foreground">{obra.endereco}</p>}

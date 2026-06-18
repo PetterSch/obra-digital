@@ -1671,15 +1671,24 @@ export async function createMapa(data: {
   const res: any = await db.execute(sql`INSERT INTO mapas_cotacao (obraId, numero, titulo, localAplicacao, dataAplicacao, criadoPor)
     VALUES (${data.obraId}, ${numero}, ${data.titulo ?? null}, ${data.localAplicacao ?? null}, ${data.dataAplicacao ?? null}, ${data.criadoPor ?? null})`);
   const mapaId = (res[0]?.insertId ?? res.insertId) as number;
-  for (let i = 1; i <= 4; i++) {
-    await db.execute(sql`INSERT INTO mapa_fornecedores (mapaId, ordem) VALUES (${mapaId}, ${i})`);
-  }
+  await db.execute(sql`INSERT INTO mapa_fornecedores (mapaId, ordem) VALUES (${mapaId}, 1)`);
   for (let i = 0; i < data.itens.length; i++) {
     const item = data.itens[i];
     await db.execute(sql`INSERT INTO mapa_itens (mapaId, pedidoItemId, descricao, unidade, quantidade, observacao, ordem)
       VALUES (${mapaId}, ${item.pedidoItemId ?? null}, ${item.descricao}, ${item.unidade ?? null}, ${item.quantidade ?? 1}, ${item.observacao ?? null}, ${i + 1})`);
   }
   return { id: mapaId, numero };
+}
+
+export async function addMapaFornecedor(mapaId: number) {
+  const db = await getDb();
+  if (!db) return { id: 0, ordem: 1 };
+  const nr: any = await db.execute(sql`SELECT COUNT(*) AS cnt FROM mapa_fornecedores WHERE mapaId = ${mapaId}`);
+  const cnt = Number(((nr[0] ?? nr) as any[])[0]?.cnt ?? 0);
+  const ordem = cnt + 1;
+  const res: any = await db.execute(sql`INSERT INTO mapa_fornecedores (mapaId, ordem) VALUES (${mapaId}, ${ordem})`);
+  const id = (res[0]?.insertId ?? res.insertId) as number;
+  return { id, ordem };
 }
 
 export async function updateMapa(id: number, data: {

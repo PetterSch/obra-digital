@@ -1558,6 +1558,10 @@ Gere um resumo executivo profissional em português que:
         return { success: true };
       }),
 
+    addFornecedor: engineerProcedure
+      .input(z.object({ mapaId: z.number() }))
+      .mutation(async ({ input }) => db.addMapaFornecedor(input.mapaId)),
+
     delete: engineerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {

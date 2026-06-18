@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil } from "lucide-react";
+import { Plus, X, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil } from "lucide-react";
 
 interface Props { obraId: number; obraNome: string; openMapaId?: number; }
 
@@ -315,6 +315,27 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     onError: () => toast.error("Erro ao adicionar fornecedor"),
   });
 
+  const removeFornecedorMut = trpc.mapaCotacao.removeFornecedor.useMutation({
+    onSuccess: (_, vars) => {
+      const fIdx = fornecedores.findIndex(f => f.id === vars.fornecedorId);
+      setFornecedores(prev => prev.filter(f => f.id !== vars.fornecedorId));
+      if (fIdx >= 0) {
+        setCotacoes(prev => {
+          const next: Record<string, string> = {};
+          for (const [key, val] of Object.entries(prev)) {
+            const [iIdxStr, fIdxStr] = key.split("-");
+            const fi = Number(fIdxStr);
+            if (fi === fIdx) continue;
+            next[`${iIdxStr}-${fi > fIdx ? fi - 1 : fi}`] = val;
+          }
+          return next;
+        });
+      }
+      toast.success("Fornecedor removido");
+    },
+    onError: () => toast.error("Erro ao remover fornecedor"),
+  });
+
   function adicionarFornecedor() {
     if (!mapa) return;
     addFornecedorMut.mutate({ mapaId: mapa.id });
@@ -591,8 +612,17 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Fornecedores</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {fornecedores.map((f, fi) => (
-              <div key={f.id} className="space-y-1.5 border rounded-lg p-3">
-                <p className="text-xs font-semibold text-blue-700">Fornecedor {f.ordem}</p>
+              <div key={f.id} className="relative space-y-1.5 border rounded-lg p-3">
+                {!isConcluido && fornecedores.length > 1 && (
+                  <button
+                    onClick={() => removeFornecedorMut.mutate({ fornecedorId: f.id })}
+                    disabled={removeFornecedorMut.isPending}
+                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-colors"
+                    title="Remover fornecedor">
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+                <p className="text-xs font-semibold text-blue-700 pr-6">Fornecedor {f.ordem}</p>
                 <Input placeholder="Nome do fornecedor" value={f.nome}
                   onChange={e => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, nome: e.target.value } : ff))}
                   disabled={isConcluido} className="h-8 text-sm" />
@@ -602,22 +632,6 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
                 <Input placeholder="Telefone" value={f.telefone}
                   onChange={e => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, telefone: e.target.value } : ff))}
                   disabled={isConcluido} className="h-8 text-sm" />
-                <div className="grid grid-cols-2 gap-1.5 pt-1">
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground font-medium">Desconto (R$)</label>
-                    <Input type="number" min="0" step="0.01" placeholder="0,00"
-                      value={f.desconto > 0 ? f.desconto : ""}
-                      onChange={e => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, desconto: parseFloat(e.target.value) || 0 } : ff))}
-                      disabled={isConcluido} className="h-8 text-sm text-right" />
-                  </div>
-                  <div className="space-y-0.5">
-                    <label className="text-[10px] text-muted-foreground font-medium">Frete (R$)</label>
-                    <Input type="number" min="0" step="0.01" placeholder="0,00"
-                      value={f.frete > 0 ? f.frete : ""}
-                      onChange={e => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, frete: parseFloat(e.target.value) || 0 } : ff))}
-                      disabled={isConcluido} className="h-8 text-sm text-right" />
-                  </div>
-                </div>
               </div>
             ))}
             {!isConcluido && (
@@ -737,12 +751,22 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
                 </td>
               </tr>
               <tr>
-                <td colSpan={4} className="border px-2 py-1.5 text-right text-xs uppercase text-muted-foreground">Desconto</td>
+                <td colSpan={4} className="border px-2 py-1.5 text-right text-xs uppercase text-muted-foreground">Desconto (R$)</td>
                 {fornecedores.map((f, fIdx) => (
                   <>
-                    <td key={`du${fIdx}`} className="border px-1 py-1.5"></td>
-                    <td key={`dt${fIdx}`} className="border px-2 py-1.5 text-right text-sm text-muted-foreground">
-                      {f.desconto > 0 ? `- ${fmtMoeda(f.desconto)}` : "—"}
+                    <td key={`du${fIdx}`} className="border"></td>
+                    <td key={`dt${fIdx}`} className="border px-1 py-0.5">
+                      <input
+                        type="number" min="0" step="any"
+                        disabled={isConcluido}
+                        className="w-full text-right text-sm outline-none bg-transparent border-b border-transparent focus:border-blue-400 transition-colors px-1 py-0.5 disabled:opacity-50"
+                        value={f.desconto > 0 ? f.desconto : ""}
+                        onChange={e => {
+                          const val = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                          setFornecedores(prev => prev.map((ff, i) => i === fIdx ? { ...ff, desconto: isNaN(val) ? 0 : val } : ff));
+                        }}
+                        placeholder="0,00"
+                      />
                     </td>
                   </>
                 ))}
@@ -750,12 +774,22 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
                 <td className="border px-2 py-1.5 text-right text-sm text-muted-foreground bg-green-50/60">—</td>
               </tr>
               <tr>
-                <td colSpan={4} className="border px-2 py-1.5 text-right text-xs uppercase text-muted-foreground">Frete</td>
+                <td colSpan={4} className="border px-2 py-1.5 text-right text-xs uppercase text-muted-foreground">Frete (R$)</td>
                 {fornecedores.map((f, fIdx) => (
                   <>
-                    <td key={`fu${fIdx}`} className="border px-1 py-1.5"></td>
-                    <td key={`ft${fIdx}`} className="border px-2 py-1.5 text-right text-sm text-muted-foreground">
-                      {f.frete > 0 ? `+ ${fmtMoeda(f.frete)}` : "—"}
+                    <td key={`fu${fIdx}`} className="border"></td>
+                    <td key={`ft${fIdx}`} className="border px-1 py-0.5">
+                      <input
+                        type="number" min="0" step="any"
+                        disabled={isConcluido}
+                        className="w-full text-right text-sm outline-none bg-transparent border-b border-transparent focus:border-blue-400 transition-colors px-1 py-0.5 disabled:opacity-50"
+                        value={f.frete > 0 ? f.frete : ""}
+                        onChange={e => {
+                          const val = e.target.value === "" ? 0 : parseFloat(e.target.value);
+                          setFornecedores(prev => prev.map((ff, i) => i === fIdx ? { ...ff, frete: isNaN(val) ? 0 : val } : ff));
+                        }}
+                        placeholder="0,00"
+                      />
                     </td>
                   </>
                 ))}

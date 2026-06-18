@@ -1691,6 +1691,13 @@ export async function addMapaFornecedor(mapaId: number) {
   return { id, ordem };
 }
 
+export async function removeMapaFornecedor(fornecedorId: number) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`DELETE FROM mapa_cotacoes WHERE mapaFornecedorId = ${fornecedorId}`);
+  await db.execute(sql`DELETE FROM mapa_fornecedores WHERE id = ${fornecedorId}`);
+}
+
 export async function updateMapa(id: number, data: {
   titulo?: string; localAplicacao?: string; dataAplicacao?: string; observacao?: string; status?: string;
   fornecedores?: { id: number; nome?: string; contato?: string; telefone?: string; desconto?: number; frete?: number; condicaoPagamento?: string; }[];

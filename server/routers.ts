@@ -1562,6 +1562,13 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({ mapaId: z.number() }))
       .mutation(async ({ input }) => db.addMapaFornecedor(input.mapaId)),
 
+    removeFornecedor: engineerProcedure
+      .input(z.object({ fornecedorId: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.removeMapaFornecedor(input.fornecedorId);
+        return { success: true };
+      }),
+
     delete: engineerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => {

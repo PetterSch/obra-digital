@@ -318,7 +318,11 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
   const removeFornecedorMut = trpc.mapaCotacao.removeFornecedor.useMutation({
     onSuccess: (_, vars) => {
       const fIdx = fornecedores.findIndex(f => f.id === vars.fornecedorId);
-      setFornecedores(prev => prev.filter(f => f.id !== vars.fornecedorId));
+      setFornecedores(prev =>
+        prev
+          .filter(f => f.id !== vars.fornecedorId)
+          .map((f, i) => ({ ...f, ordem: i + 1 }))
+      );
       if (fIdx >= 0) {
         setCotacoes(prev => {
           const next: Record<string, string> = {};

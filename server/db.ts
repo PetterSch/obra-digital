@@ -1694,8 +1694,17 @@ export async function addMapaFornecedor(mapaId: number) {
 export async function removeMapaFornecedor(fornecedorId: number) {
   const db = await getDb();
   if (!db) return;
+  const mr: any = await db.execute(sql`SELECT mapaId FROM mapa_fornecedores WHERE id = ${fornecedorId} LIMIT 1`);
+  const mapaId = ((mr[0] ?? mr) as any[])[0]?.mapaId;
   await db.execute(sql`DELETE FROM mapa_cotacoes WHERE mapaFornecedorId = ${fornecedorId}`);
   await db.execute(sql`DELETE FROM mapa_fornecedores WHERE id = ${fornecedorId}`);
+  if (mapaId) {
+    const rem: any = await db.execute(sql`SELECT id FROM mapa_fornecedores WHERE mapaId = ${mapaId} ORDER BY ordem ASC`);
+    const ids = ((rem[0] ?? rem) as any[]).map((r: any) => r.id);
+    for (let i = 0; i < ids.length; i++) {
+      await db.execute(sql`UPDATE mapa_fornecedores SET ordem = ${i + 1} WHERE id = ${ids[i]}`);
+    }
+  }
 }
 
 export async function updateMapa(id: number, data: {

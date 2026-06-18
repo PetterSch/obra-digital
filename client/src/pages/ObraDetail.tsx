@@ -93,6 +93,8 @@ export default function ObraDetail() {
     refetchPendencias();
   };
 
+  const pendenciasAbertas = (pendencias as any[]).filter(p => p.status === "aberta" || p.status === "em_andamento");
+
   if (!obra) return null;
 
   if (isLoading) {
@@ -137,7 +139,7 @@ export default function ObraDetail() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard label="Andamento da obra" value={`${obra.percentualAndamento || 0}%`} icon={Activity} tone="blue" hint="Percentual concluído" />
           <StatCard label="Diários de obra" value={diarios.length} icon={ClipboardList} tone="green" hint="Registros lançados" />
-          <StatCard label="Pendências" value={pendencias.length} icon={AlertTriangle} tone={pendencias.length > 0 ? "amber" : "neutral"} hint="Itens em aberto" />
+          <StatCard label="Pendências" value={pendenciasAbertas.length} icon={AlertTriangle} tone={pendenciasAbertas.length > 0 ? "amber" : "neutral"} hint="Itens em aberto" />
           <StatCard
             label="Status"
             value={<span className="capitalize">{(obra.status || "").replace("_", " ")}</span>}
@@ -191,7 +193,7 @@ export default function ObraDetail() {
           <TabsList className="flex w-full overflow-x-auto">
             <TabsTrigger value="diarios" className="flex-1">Diários ({diarios.length})</TabsTrigger>
             <TabsTrigger value="colaboradores" className="flex-1">Equipes & Colaboradores</TabsTrigger>
-            <TabsTrigger value="pendencias" className="flex-1">Pendências ({pendencias.length})</TabsTrigger>
+            <TabsTrigger value="pendencias" className="flex-1">Pendências ({pendenciasAbertas.length})</TabsTrigger>
             <TabsTrigger value="materiais" className="flex-1">Pedido de Compra</TabsTrigger>
             <TabsTrigger value="protocolos" className="flex-1">Protocolos de Envio</TabsTrigger>
           </TabsList>

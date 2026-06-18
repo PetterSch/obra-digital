@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, FileText, X, FileDown, FileSpreadsheet, Search } from "lucide-react";
+import { Plus, Trash2, Pencil, FileText, X, FileDown, FileSpreadsheet, Search, User } from "lucide-react";
 import { fmtDataBR } from "@/lib/data";
 import { getPDFConfig } from "@/lib/pdfExport";
 import * as XLSX from "xlsx-js-style";
@@ -86,7 +86,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
   };
 
   const cellCls = "h-9 text-sm";
-  const STATUS_LABEL: Record<string, string> = { lancado_assistente: "Lançado no assistente", medicao: "Medição" };
+  const STATUS_LABEL: Record<string, string> = { lancado_assistente: "Lançado no assistente", medicao: "Medição", regularizacao: "Regularização", nenhum: "—" };
   const linhaNota = (n: any) => [n.fornecedor || "—", n.ordemCompra || "—", n.pedido || "—", n.nf || "—", brl(n.valor),
     n.dataEnvio ? fmtDataBR(n.dataEnvio) : "—", n.venc1 ? fmtDataBR(n.venc1) : "—", n.venc2 ? fmtDataBR(n.venc2) : "—", n.venc3 ? fmtDataBR(n.venc3) : "—",
     STATUS_LABEL[n.status] || n.status || "—"];
@@ -167,6 +167,8 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
             <option value="todos">Todos os status</option>
             <option value="lancado_assistente">Lançado no assistente</option>
             <option value="medicao">Medição</option>
+            <option value="regularizacao">Regularização</option>
+            <option value="nenhum">—</option>
           </select>
           <Button size="sm" variant="outline" className="gap-1.5" disabled={listaFiltrada.length === 0} onClick={exportarTudo}><FileSpreadsheet className="w-4 h-4" /> Exportar tudo</Button>
           <Button size="sm" className="gap-1.5" onClick={abrirNovo}><Plus className="w-4 h-4" /> Novo Protocolo</Button>
@@ -220,7 +222,10 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                 <FileText className="w-4 h-4 text-primary shrink-0" />
                 <div className="min-w-0">
                   <p className="font-medium text-sm leading-tight group-hover:text-primary group-hover:underline transition-colors">Protocolo {p.numero ? `nº ${p.numero}` : `#${p.id}`}</p>
-                  <p className="text-xs text-muted-foreground">{p.totalNotas} nota(s) · {fmtDataBR(p.criadoEm)}{p.observacao ? ` · ${p.observacao}` : ""}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1 flex-wrap">
+                    <span>{p.totalNotas} nota(s) · {fmtDataBR(p.criadoEm)}{p.observacao ? ` · ${p.observacao}` : ""}</span>
+                    {p.criadoPor && <span className="inline-flex items-center gap-1 font-medium text-foreground"><User className="w-3 h-3" /> {p.criadoPor}</span>}
+                  </p>
                 </div>
               </button>
               <div className="flex gap-1 shrink-0">
@@ -236,9 +241,10 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
 
       {/* Modal criar/editar */}
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="!max-w-5xl w-[96vw] max-h-[92vh] overflow-y-auto overflow-x-hidden">
-          <DialogHeader><DialogTitle>{editId ? "Editar protocolo" : "Novo protocolo de envio"}</DialogTitle></DialogHeader>
-          <div className="space-y-4 min-w-0">
+        <DialogContent className="!max-w-[98vw] w-[98vw] h-[96vh] flex flex-col overflow-hidden p-0">
+          <div className="flex flex-col h-full">
+          <DialogHeader className="px-6 pt-6 pb-3 border-b shrink-0"><DialogTitle>{editId ? "Editar protocolo" : "Novo protocolo de envio"}</DialogTitle></DialogHeader>
+          <div className="flex flex-col flex-1 min-h-0 overflow-y-auto px-6 py-4 space-y-4 min-w-0">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <div className="space-y-1.5">
                 <Label className="text-xs">Nº do protocolo (opcional)</Label>
@@ -296,7 +302,9 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
                         <td className="p-1">
                           <select className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm" value={n.status} onChange={(e) => setNota(i, "status", e.target.value)}>
                             <option value="lancado_assistente">Lançado no assistente</option>
-            <option value="medicao">Medição</option>
+                            <option value="medicao">Medição</option>
+                            <option value="regularizacao">Regularização</option>
+                            <option value="nenhum">—</option>
                           </select>
                         </td>
                         <td className="p-1 text-center">
@@ -310,12 +318,13 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
               <p className="text-[11px] text-muted-foreground mt-1.5">Escolha a <b>forma de pagamento</b>: <b>À vista</b> não exibe datas; <b>Boleto 28</b> exibe 1 data; <b>28/56</b> exibe 2; <b>28/56/72</b> exibe 3. As datas você preenche manualmente.</p>
             </div>
 
-            <div className="flex justify-end gap-2 pt-1">
-              <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
-              <Button onClick={salvar} disabled={createMut.isPending || updateMut.isPending}>
-                {createMut.isPending || updateMut.isPending ? "Salvando..." : "Salvar protocolo"}
-              </Button>
-            </div>
+          </div>
+          <div className="flex justify-end gap-2 px-6 py-4 border-t shrink-0">
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
+            <Button onClick={salvar} disabled={createMut.isPending || updateMut.isPending}>
+              {createMut.isPending || updateMut.isPending ? "Salvando..." : "Salvar protocolo"}
+            </Button>
+          </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -331,6 +340,7 @@ export function ProtocolosTab({ obraId, obraNome }: { obraId: number; obraNome?:
               <div className="flex items-center gap-2 flex-wrap text-sm text-muted-foreground">
                 <span>{(verData.notas || []).length} nota(s)</span>
                 <span>· Criado em {fmtDataBR(verData.criadoEm)}</span>
+                {verData.criadoPor && <span className="inline-flex items-center gap-1 font-medium text-foreground">· <User className="w-3.5 h-3.5" /> {verData.criadoPor}</span>}
                 {verData.observacao && <span>· {verData.observacao}</span>}
                 <span className="ml-auto flex gap-1.5">
                   <Button size="sm" variant="outline" className="gap-1.5 h-8" onClick={() => exportarPDF(verData)}><FileDown className="w-3.5 h-3.5" /> PDF</Button>

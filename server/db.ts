@@ -224,6 +224,10 @@ export async function runMigrations() {
       if (db) await db.execute(sql.raw(`ALTER TABLE protocolo_notas ADD COLUMN ${col}`));
     } catch { /* já existe */ }
   }
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql.raw(`ALTER TABLE protocolos ADD COLUMN criadoPor VARCHAR(255)`));
+  } catch { /* já existe */ }
 
   // Cadastro de insumos e categorias
   try {
@@ -1244,7 +1248,7 @@ export async function getProtocolosByObra(obraId: number) {
   const db = await getDb();
   if (!db) return [];
   const r: any = await db.execute(sql`
-    SELECT p.id, p.numero, p.observacao, p.criadoEm,
+    SELECT p.id, p.numero, p.observacao, p.criadoEm, p.criadoPor,
       (SELECT COUNT(*) FROM protocolo_notas n WHERE n.protocoloId = p.id) AS totalNotas,
       (SELECT GROUP_CONCAT(DISTINCT n.status) FROM protocolo_notas n WHERE n.protocoloId = p.id) AS statuses
     FROM protocolos p WHERE p.obraId = ${obraId} ORDER BY p.id DESC`);
@@ -1262,10 +1266,10 @@ export async function getProtocoloById(id: number) {
   return { ...protocolo, notas };
 }
 
-export async function createProtocolo(data: { obraId: number; numero?: string; observacao?: string; notas: ProtocoloNotaInput[] }) {
+export async function createProtocolo(data: { obraId: number; numero?: string; observacao?: string; criadoPor?: string; notas: ProtocoloNotaInput[] }) {
   const db = await getDb();
   if (!db) return { id: 0 };
-  const res: any = await db.execute(sql`INSERT INTO protocolos (obraId, numero, observacao) VALUES (${data.obraId}, ${data.numero ?? null}, ${data.observacao ?? null})`);
+  const res: any = await db.execute(sql`INSERT INTO protocolos (obraId, numero, observacao, criadoPor) VALUES (${data.obraId}, ${data.numero ?? null}, ${data.observacao ?? null}, ${data.criadoPor ?? null})`);
   const id = (res[0]?.insertId ?? res.insertId) as number;
   await inserirNotas(id, data.notas);
   return { id };

@@ -1185,7 +1185,7 @@ Gere um resumo executivo profissional em português que:
           venc2: z.string().optional(), venc3: z.string().optional(), status: z.string().optional(), condicao: z.string().optional(),
         })).default([]),
       }))
-      .mutation(async ({ input }) => db.createProtocolo(input)),
+      .mutation(async ({ input, ctx }) => db.createProtocolo({ ...input, criadoPor: ctx.user.name ?? ctx.user.username ?? undefined })),
 
     update: engineerProcedure
       .input(z.object({

@@ -1,10 +1,12 @@
+import { useState } from "react";
 import { useLocation } from "wouter";
 import DashboardLayout from "@/components/DashboardLayout";
 import { trpc } from "@/lib/trpc";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Spinner } from "@/components/ui/spinner";
-import { ClipboardList, CheckCircle2, Map, Building2, ArrowRight } from "lucide-react";
+import { ClipboardList, CheckCircle2, Map, Building2, ArrowRight, Plus } from "lucide-react";
 
 const STATUS_LABEL: Record<string, string> = {
   em_andamento: "Em andamento",
@@ -19,7 +21,10 @@ const STATUS_COR: Record<string, string> = {
 
 export default function MapaCotacaoGlobal() {
   const [, navigate] = useLocation();
+  const [dialogObra, setDialogObra] = useState(false);
+
   const { data: mapas = [], isLoading } = trpc.mapaCotacao.listAll.useQuery();
+  const { data: obras = [], isLoading: carregandoObras } = trpc.obras.list.useQuery();
 
   // Agrupar por obra
   const porObra = mapas.reduce((acc: Record<number, { obraNome: string; obraId: number; mapas: any[] }>, m: any) => {
@@ -32,14 +37,24 @@ export default function MapaCotacaoGlobal() {
   const emAndamento = mapas.filter((m: any) => m.status !== "concluido").length;
   const concluidos = mapas.filter((m: any) => m.status === "concluido").length;
 
+  function irParaObra(obraId: number) {
+    navigate(`/obras/${obraId}?tab=cotacao`);
+  }
+
   return (
     <DashboardLayout>
       <div className="max-w-4xl mx-auto space-y-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Map className="w-6 h-6" /> Mapa de Cotação
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">Visão geral de todos os mapas de cotação por obra</p>
+        {/* Cabeçalho */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold flex items-center gap-2">
+              <Map className="w-6 h-6" /> Mapa de Cotação
+            </h1>
+            <p className="text-muted-foreground text-sm mt-1">Visão geral de todos os mapas por obra</p>
+          </div>
+          <Button className="gap-2" onClick={() => setDialogObra(true)}>
+            <Plus className="w-4 h-4" /> Montar Novo Mapa
+          </Button>
         </div>
 
         {/* Contadores */}
@@ -72,10 +87,15 @@ export default function MapaCotacaoGlobal() {
           <div className="flex justify-center py-16"><Spinner /></div>
         ) : grupos.length === 0 ? (
           <Card>
-            <CardContent className="py-16 text-center text-muted-foreground">
-              <Map className="w-10 h-10 mx-auto mb-3 opacity-30" />
-              <p>Nenhum mapa de cotação criado ainda.</p>
-              <p className="text-sm mt-1">Acesse uma obra e clique na aba <strong>Mapa de Cotação</strong> para criar o primeiro.</p>
+            <CardContent className="py-16 text-center space-y-4">
+              <Map className="w-10 h-10 mx-auto opacity-30" />
+              <div>
+                <p className="text-muted-foreground">Nenhum mapa de cotação criado ainda.</p>
+                <p className="text-sm text-muted-foreground mt-1">Clique em <strong>Montar Novo Mapa</strong> para começar.</p>
+              </div>
+              <Button onClick={() => setDialogObra(true)} className="gap-2">
+                <Plus className="w-4 h-4" /> Montar Novo Mapa
+              </Button>
             </CardContent>
           </Card>
         ) : (
@@ -88,14 +108,15 @@ export default function MapaCotacaoGlobal() {
                     {obraNome}
                   </h3>
                   <Button variant="ghost" size="sm" className="h-7 text-xs gap-1"
-                    onClick={() => navigate(`/obras/${obraId}`)}>
+                    onClick={() => irParaObra(obraId)}>
                     Ir para a Obra <ArrowRight className="w-3.5 h-3.5" />
                   </Button>
                 </div>
                 <div className="space-y-2">
                   {ms.map((m: any) => (
                     <div key={m.id}
-                      className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 hover:shadow-sm transition-shadow">
+                      className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 hover:shadow-sm transition-shadow cursor-pointer"
+                      onClick={() => irParaObra(obraId)}>
                       <div>
                         <div className="flex items-center gap-2">
                           <span className="font-medium text-sm">Mapa #{m.numero}</span>
@@ -109,10 +130,7 @@ export default function MapaCotacaoGlobal() {
                           {m.criadoPor && <span className="text-xs text-muted-foreground">por {m.criadoPor}</span>}
                         </div>
                       </div>
-                      <Button size="sm" variant="outline" className="h-8 gap-1.5 shrink-0"
-                        onClick={() => navigate(`/obras/${obraId}`)}>
-                        Abrir <ArrowRight className="w-3.5 h-3.5" />
-                      </Button>
+                      <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
                     </div>
                   ))}
                 </div>
@@ -121,6 +139,35 @@ export default function MapaCotacaoGlobal() {
           </div>
         )}
       </div>
+
+      {/* Dialog: selecionar obra */}
+      <Dialog open={dialogObra} onOpenChange={setDialogObra}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Selecionar Obra</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">Escolha a obra para montar o mapa de cotação:</p>
+          {carregandoObras ? (
+            <div className="flex justify-center py-8"><Spinner /></div>
+          ) : obras.length === 0 ? (
+            <p className="text-center text-muted-foreground py-6">Nenhuma obra encontrada.</p>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto pr-1">
+              {(obras as any[]).map((obra: any) => (
+                <button key={obra.id}
+                  className="w-full text-left rounded-lg border px-4 py-3 hover:bg-muted/60 transition-colors flex items-center justify-between gap-3"
+                  onClick={() => { setDialogObra(false); irParaObra(obra.id); }}>
+                  <div>
+                    <p className="font-medium text-sm">{obra.nome}</p>
+                    {obra.endereco && <p className="text-xs text-muted-foreground">{obra.endereco}</p>}
+                  </div>
+                  <ArrowRight className="w-4 h-4 text-muted-foreground shrink-0" />
+                </button>
+              ))}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </DashboardLayout>
   );
 }

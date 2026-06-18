@@ -190,7 +190,7 @@ export default function ObraDetail() {
 
         {/* Tabs */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 items-start">
-        <Tabs defaultValue="diarios" className="w-full">
+        <Tabs defaultValue={new URLSearchParams(window.location.search).get("tab") ?? "diarios"} className="w-full">
           <TabsList className="flex w-full overflow-x-auto">
             <TabsTrigger value="diarios" className="flex-1">Diários ({diarios.length})</TabsTrigger>
             <TabsTrigger value="colaboradores" className="flex-1">Equipes & Colaboradores</TabsTrigger>

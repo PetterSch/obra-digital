@@ -274,6 +274,53 @@ export async function runMigrations() {
       await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN valorEstimado DECIMAL(15,2)`);
     }
   } catch { /* já existe */ }
+
+  // Mapa de Cotação
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS mapas_cotacao (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        obraId INT NOT NULL,
+        numero VARCHAR(50),
+        titulo VARCHAR(255),
+        localAplicacao VARCHAR(255),
+        dataAplicacao DATE,
+        observacao TEXT,
+        status VARCHAR(20) DEFAULT 'em_andamento',
+        criadoPor VARCHAR(255),
+        criadoEm TIMESTAMP DEFAULT NOW()
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS mapa_fornecedores (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mapaId INT NOT NULL,
+        ordem INT DEFAULT 1,
+        nome VARCHAR(255),
+        contato VARCHAR(255),
+        telefone VARCHAR(100),
+        desconto DECIMAL(15,2) DEFAULT 0,
+        frete DECIMAL(15,2) DEFAULT 0,
+        condicaoPagamento VARCHAR(255)
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS mapa_itens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mapaId INT NOT NULL,
+        pedidoItemId INT,
+        descricao VARCHAR(500),
+        unidade VARCHAR(20),
+        quantidade DECIMAL(12,2),
+        observacao VARCHAR(500),
+        ordem INT DEFAULT 0
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS mapa_cotacoes (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        mapaItemId INT NOT NULL,
+        mapaFornecedorId INT NOT NULL,
+        valorUnitario DECIMAL(15,4) DEFAULT 0,
+        UNIQUE KEY uq_item_forn (mapaItemId, mapaFornecedorId)
+      )`);
+    }
+  } catch { /* já existe */ }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -1576,4 +1623,135 @@ export async function deleteInsumo(id: number) {
   const db = await getDb();
   if (!db) return;
   await db.execute(sql`DELETE FROM insumos WHERE id = ${id}`);
+}
+
+// ============= MAPA DE COTAÇÃO =============
+
+export async function getMapasByObra(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT m.*,
+      (SELECT COUNT(*) FROM mapa_itens WHERE mapaId = m.id) AS totalItens,
+      (SELECT COUNT(*) FROM mapa_fornecedores WHERE mapaId = m.id AND nome IS NOT NULL AND nome != '') AS totalFornecedores
+    FROM mapas_cotacao m WHERE m.obraId = ${obraId} ORDER BY m.criadoEm DESC`);
+  return (r[0] ?? r) as any[];
+}
+
+export async function getMapaById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const mr: any = await db.execute(sql`SELECT * FROM mapas_cotacao WHERE id = ${id}`);
+  const mapaRows = (mr[0] ?? mr) as any[];
+  if (!mapaRows.length) return null;
+  const mapa = mapaRows[0];
+  const fr: any = await db.execute(sql`SELECT * FROM mapa_fornecedores WHERE mapaId = ${id} ORDER BY ordem`);
+  const ir: any = await db.execute(sql`SELECT * FROM mapa_itens WHERE mapaId = ${id} ORDER BY ordem`);
+  const itensRows = (ir[0] ?? ir) as any[];
+  let cotacoesRows: any[] = [];
+  if (itensRows.length > 0) {
+    const cr: any = await db.execute(sql`
+      SELECT mc.* FROM mapa_cotacoes mc
+      JOIN mapa_itens mi ON mc.mapaItemId = mi.id
+      WHERE mi.mapaId = ${id}`);
+    cotacoesRows = (cr[0] ?? cr) as any[];
+  }
+  return { ...mapa, fornecedores: (fr[0] ?? fr) as any[], itens: itensRows, cotacoes: cotacoesRows };
+}
+
+export async function createMapa(data: {
+  obraId: number; titulo?: string; localAplicacao?: string; dataAplicacao?: string; criadoPor?: string;
+  itens: { pedidoItemId?: number; descricao: string; unidade?: string; quantidade?: number; observacao?: string; }[];
+}) {
+  const db = await getDb();
+  if (!db) return { id: 0, numero: '001' };
+  const nr: any = await db.execute(sql`SELECT COUNT(*) AS cnt FROM mapas_cotacao WHERE obraId = ${data.obraId}`);
+  const cnt = Number(((nr[0] ?? nr) as any[])[0]?.cnt ?? 0);
+  const numero = String(cnt + 1).padStart(3, '0');
+  const res: any = await db.execute(sql`INSERT INTO mapas_cotacao (obraId, numero, titulo, localAplicacao, dataAplicacao, criadoPor)
+    VALUES (${data.obraId}, ${numero}, ${data.titulo ?? null}, ${data.localAplicacao ?? null}, ${data.dataAplicacao ?? null}, ${data.criadoPor ?? null})`);
+  const mapaId = (res[0]?.insertId ?? res.insertId) as number;
+  for (let i = 1; i <= 4; i++) {
+    await db.execute(sql`INSERT INTO mapa_fornecedores (mapaId, ordem) VALUES (${mapaId}, ${i})`);
+  }
+  for (let i = 0; i < data.itens.length; i++) {
+    const item = data.itens[i];
+    await db.execute(sql`INSERT INTO mapa_itens (mapaId, pedidoItemId, descricao, unidade, quantidade, observacao, ordem)
+      VALUES (${mapaId}, ${item.pedidoItemId ?? null}, ${item.descricao}, ${item.unidade ?? null}, ${item.quantidade ?? 1}, ${item.observacao ?? null}, ${i + 1})`);
+  }
+  return { id: mapaId, numero };
+}
+
+export async function updateMapa(id: number, data: {
+  titulo?: string; localAplicacao?: string; dataAplicacao?: string; observacao?: string; status?: string;
+  fornecedores?: { id: number; nome?: string; contato?: string; telefone?: string; desconto?: number; frete?: number; condicaoPagamento?: string; }[];
+  itens?: { pedidoItemId?: number; descricao: string; unidade?: string; quantidade?: number; observacao?: string; }[];
+  cotacoes?: { itemIndex: number; fornecedorId: number; valorUnitario: number; }[];
+}) {
+  const db = await getDb();
+  if (!db) return;
+  await db.execute(sql`UPDATE mapas_cotacao SET
+    titulo = ${data.titulo ?? null}, localAplicacao = ${data.localAplicacao ?? null},
+    dataAplicacao = ${data.dataAplicacao ?? null}, observacao = ${data.observacao ?? null},
+    status = ${data.status ?? 'em_andamento'}
+    WHERE id = ${id}`);
+  if (data.fornecedores) {
+    for (const f of data.fornecedores) {
+      await db.execute(sql`UPDATE mapa_fornecedores SET
+        nome = ${f.nome ?? null}, contato = ${f.contato ?? null}, telefone = ${f.telefone ?? null},
+        desconto = ${f.desconto ?? 0}, frete = ${f.frete ?? 0}, condicaoPagamento = ${f.condicaoPagamento ?? null}
+        WHERE id = ${f.id}`);
+    }
+  }
+  if (data.itens !== undefined) {
+    // Delete old cotacoes before deleting items
+    const oldR: any = await db.execute(sql`SELECT id FROM mapa_itens WHERE mapaId = ${id}`);
+    const oldIds = ((oldR[0] ?? oldR) as any[]).map((r: any) => r.id);
+    for (const oid of oldIds) {
+      await db.execute(sql`DELETE FROM mapa_cotacoes WHERE mapaItemId = ${oid}`);
+    }
+    await db.execute(sql`DELETE FROM mapa_itens WHERE mapaId = ${id}`);
+    const newItemIds: number[] = [];
+    for (let i = 0; i < data.itens.length; i++) {
+      const item = data.itens[i];
+      const ir: any = await db.execute(sql`INSERT INTO mapa_itens (mapaId, pedidoItemId, descricao, unidade, quantidade, observacao, ordem)
+        VALUES (${id}, ${item.pedidoItemId ?? null}, ${item.descricao}, ${item.unidade ?? null}, ${item.quantidade ?? 1}, ${item.observacao ?? null}, ${i + 1})`);
+      newItemIds.push((ir[0]?.insertId ?? ir.insertId) as number);
+    }
+    if (data.cotacoes) {
+      for (const c of data.cotacoes) {
+        const newItemId = newItemIds[c.itemIndex];
+        if (newItemId && c.valorUnitario > 0) {
+          await db.execute(sql`INSERT INTO mapa_cotacoes (mapaItemId, mapaFornecedorId, valorUnitario)
+            VALUES (${newItemId}, ${c.fornecedorId}, ${c.valorUnitario})
+            ON DUPLICATE KEY UPDATE valorUnitario = ${c.valorUnitario}`);
+        }
+      }
+    }
+  }
+}
+
+export async function deleteMapa(id: number) {
+  const db = await getDb();
+  if (!db) return;
+  const oldR: any = await db.execute(sql`SELECT id FROM mapa_itens WHERE mapaId = ${id}`);
+  const oldIds = ((oldR[0] ?? oldR) as any[]).map((r: any) => r.id);
+  for (const oid of oldIds) {
+    await db.execute(sql`DELETE FROM mapa_cotacoes WHERE mapaItemId = ${oid}`);
+  }
+  await db.execute(sql`DELETE FROM mapa_itens WHERE mapaId = ${id}`);
+  await db.execute(sql`DELETE FROM mapa_fornecedores WHERE mapaId = ${id}`);
+  await db.execute(sql`DELETE FROM mapas_cotacao WHERE id = ${id}`);
+}
+
+export async function getItensAprovadosByObra(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT i.id, i.descricao, i.unidade, i.quantidade, i.observacao,
+      p.id AS pedidoId, p.numero AS pedidoNumero
+    FROM pedido_itens i JOIN pedidos_compra p ON i.pedidoId = p.id
+    WHERE p.obraId = ${obraId} AND i.statusAprovacao = 'aprovado'
+    ORDER BY p.numero, i.ordem`);
+  return (r[0] ?? r) as any[];
 }

@@ -1486,6 +1486,82 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => { await db.deleteOrcamentoItem(input.id); return { success: true }; }),
   }),
+
+  // ============= MAPA DE COTAÇÃO =============
+  mapaCotacao: router({
+    listByObra: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getMapasByObra(input.obraId)),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => db.getMapaById(input.id)),
+
+    getItensAprovados: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getItensAprovadosByObra(input.obraId)),
+
+    create: engineerProcedure
+      .input(z.object({
+        obraId: z.number(),
+        titulo: z.string().optional(),
+        localAplicacao: z.string().optional(),
+        dataAplicacao: z.string().optional(),
+        itens: z.array(z.object({
+          pedidoItemId: z.number().optional(),
+          descricao: z.string(),
+          unidade: z.string().optional(),
+          quantidade: z.number().optional(),
+          observacao: z.string().optional(),
+        })).default([]),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        return db.createMapa({ ...input, criadoPor: (ctx.user as any).name ?? (ctx.user as any).username });
+      }),
+
+    update: engineerProcedure
+      .input(z.object({
+        id: z.number(),
+        titulo: z.string().optional(),
+        localAplicacao: z.string().optional(),
+        dataAplicacao: z.string().optional(),
+        observacao: z.string().optional(),
+        status: z.string().optional(),
+        fornecedores: z.array(z.object({
+          id: z.number(),
+          nome: z.string().optional(),
+          contato: z.string().optional(),
+          telefone: z.string().optional(),
+          desconto: z.number().optional(),
+          frete: z.number().optional(),
+          condicaoPagamento: z.string().optional(),
+        })).optional(),
+        itens: z.array(z.object({
+          pedidoItemId: z.number().optional(),
+          descricao: z.string(),
+          unidade: z.string().optional(),
+          quantidade: z.number().optional(),
+          observacao: z.string().optional(),
+        })).optional(),
+        cotacoes: z.array(z.object({
+          itemIndex: z.number(),
+          fornecedorId: z.number(),
+          valorUnitario: z.number(),
+        })).optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...d } = input;
+        await db.updateMapa(id, d);
+        return { success: true };
+      }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deleteMapa(input.id);
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

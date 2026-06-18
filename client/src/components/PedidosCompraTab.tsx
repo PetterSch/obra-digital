@@ -8,21 +8,21 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Card, CardContent } from "@/components/ui/card";
 import { Spinner } from "@/components/ui/spinner";
 import { toast } from "sonner";
-import { Plus, Trash2, Pencil, ShoppingCart, X, FileDown, FileSpreadsheet, Search, User } from "lucide-react";
+import { Plus, Trash2, Pencil, ShoppingCart, X, FileDown, FileSpreadsheet, Search, User, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { fmtDataBR } from "@/lib/data";
 import { getPDFConfig } from "@/lib/pdfExport";
 import * as XLSX from "xlsx-js-style";
 
 type Item = { descricao: string; unidade: string; quantidade: string; observacao: string };
 const itemVazio = (): Item => ({ descricao: "", unidade: "", quantidade: "", observacao: "" });
-const STATUS_LABEL: Record<string, string> = { aberto: "Pendente", aprovado_parcial: "Aprovado", aprovado_total: "Aprovado", enviado: "Enviado", parcial: "Recebido parcial", recebido: "Recebido", cancelado: "Cancelado", reprovado: "Reprovado" };
+const STATUS_LABEL: Record<string, string> = { aberto: "Pendente", aprovado_parcial: "Apr. Parcial", aprovado_total: "Aprovado", enviado: "Enviado", parcial: "Recebido parcial", recebido: "Recebido", cancelado: "Cancelado", reprovado: "Reprovado" };
 // Unidades comuns de compra (sugestões — campo continua de digitação livre)
 const UNIDADES = [
   "UND", "PÇ", "CX", "SC 50kg", "SC 25kg", "SC 20kg", "SC 15kg", "KG", "T",
   "M", "M²", "M³", "L", "GL", "BARRA", "RL", "PAR", "JG", "MILHEIRO",
   "VB", "LATA 18L", "BALDE", "TB", "FD", "DZ", "PALETE", "VIAGEM", "CAÇAMBA",
 ];
-const STATUS_COR: Record<string, string> = { aberto: "bg-amber-100 text-amber-700", aprovado_parcial: "bg-green-100 text-green-700", aprovado_total: "bg-green-100 text-green-700", enviado: "bg-blue-100 text-blue-700", parcial: "bg-violet-100 text-violet-700", recebido: "bg-green-100 text-green-700", cancelado: "bg-gray-100 text-gray-600", reprovado: "bg-red-100 text-red-700" };
+const STATUS_COR: Record<string, string> = { aberto: "bg-amber-100 text-amber-700", aprovado_parcial: "bg-yellow-100 text-yellow-700", aprovado_total: "bg-green-100 text-green-700", enviado: "bg-blue-100 text-blue-700", parcial: "bg-violet-100 text-violet-700", recebido: "bg-green-100 text-green-700", cancelado: "bg-gray-100 text-gray-600", reprovado: "bg-red-100 text-red-700" };
 
 export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNome?: string }) {
   const utils = trpc.useUtils();
@@ -96,6 +96,13 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const cellCls = "h-9 text-sm";
   const COLS = ["Material / Descrição", "Unid.", "Qtd.", "Observação"];
   const linhaItem = (it: any) => [it.descricao || "—", it.unidade || "—", it.quantidade != null ? Number(it.quantidade).toLocaleString("pt-BR") : "—", it.observacao || "—"];
+
+  const ItemStatusBadge = ({ status }: { status?: string }) => {
+    const s = status ?? "pendente";
+    if (s === "aprovado") return <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold"><CheckCircle2 className="w-3 h-3" />Aprovado</span>;
+    if (s === "reprovado") return <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold"><XCircle className="w-3 h-3" />Não aprovado</span>;
+    return <span className="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 font-semibold"><Clock className="w-3 h-3" />Pendente</span>;
+  };
 
   const listaFiltrada = statusFiltro === "todos" ? (lista as any[]) : (lista as any[]).filter((p) => (p.status || "aberto") === statusFiltro);
 
@@ -359,14 +366,18 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
               </div>
               <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm">
-                  <thead><tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">{COLS.map((c) => <th key={c} className="text-left p-2">{c}</th>)}</tr></thead>
+                  <thead><tr className="bg-muted/40 text-[11px] uppercase text-muted-foreground">
+                    {COLS.map((c) => <th key={c} className="text-left p-2">{c}</th>)}
+                    <th className="text-left p-2">Aprovação</th>
+                  </tr></thead>
                   <tbody>
                     {(verData.itens || []).map((it: any) => (
-                      <tr key={it.id} className="border-t">
+                      <tr key={it.id} className={`border-t ${it.statusAprovacao === "reprovado" ? "bg-red-50/40" : ""}`}>
                         <td className="p-2">{it.descricao || "—"}</td>
                         <td className="p-2">{it.unidade || "—"}</td>
                         <td className="p-2">{it.quantidade != null ? Number(it.quantidade).toLocaleString("pt-BR") : "—"}</td>
                         <td className="p-2 text-muted-foreground">{it.observacao || "—"}</td>
+                        <td className="p-2"><ItemStatusBadge status={it.statusAprovacao} /></td>
                       </tr>
                     ))}
                   </tbody>

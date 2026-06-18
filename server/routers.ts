@@ -676,17 +676,28 @@ export const appRouter = router({
     update: engineerProcedure
       .input(z.object({
         id: z.number(),
+        titulo: z.string().min(1).optional(),
+        descricao: z.string().optional(),
         status: z.enum(["aberta", "em_andamento", "resolvida", "cancelada"]).optional(),
         prioridade: z.enum(["baixa", "media", "alta", "critica"]).optional(),
+        dataVencimento: z.string().optional(),
         dataResolucao: z.string().optional(),
       }))
       .mutation(async ({ input }) => {
-        const { id, dataResolucao, ...data } = input;
+        const { id, dataResolucao, dataVencimento, ...data } = input;
         const updateData = {
           ...data,
+          ...(dataVencimento && { dataVencimento: new Date(dataVencimento) as unknown as Date }),
           ...(dataResolucao && { dataResolucao: new Date(dataResolucao) as unknown as Date }),
         };
         return db.updatePendencia(id, updateData);
+      }),
+
+    delete: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => {
+        await db.deletePendencia(input.id);
+        return { success: true };
       }),
   }),
 

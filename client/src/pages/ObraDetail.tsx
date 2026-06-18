@@ -6,12 +6,16 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { trpc } from "@/lib/trpc";
 import { useLocation, useRoute } from "wouter";
-import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2, Building2, FileText, BarChart3, CalendarRange, CalendarCheck } from "lucide-react";
+import { ArrowLeft, Plus, Calendar, MapPin, User, Eye, Edit, Trash2, Activity, ClipboardList, AlertTriangle, CheckCircle2, Building2, FileText, BarChart3, CalendarRange, CalendarCheck, Pencil } from "lucide-react";
 import { StatCard } from "@/components/StatCard";
 import { PageHeader } from "@/components/PageHeader";
 import { ActionPanel } from "@/components/ActionPanel";
@@ -59,6 +63,29 @@ export default function ObraDetail() {
     onSuccess: () => { toast.success("Diário excluído"); setDiarioToDelete(null); refetchDiarios(); },
     onError: (e: any) => toast.error(e.message || "Erro ao excluir diário"),
   });
+
+  const [pendToDelete, setPendToDelete] = useState<number | null>(null);
+  const [pendToEdit, setPendToEdit] = useState<any | null>(null);
+  const [editPendForm, setEditPendForm] = useState({ titulo: "", descricao: "", prioridade: "media", dataVencimento: "" });
+
+  const updatePendMut = trpc.pendencias.update.useMutation({
+    onSuccess: () => { toast.success("Pendência atualizada"); setPendToEdit(null); refetchPendencias(); },
+    onError: (e: any) => toast.error(e.message || "Erro ao atualizar pendência"),
+  });
+  const deletePendMut = trpc.pendencias.delete.useMutation({
+    onSuccess: () => { toast.success("Pendência excluída"); setPendToDelete(null); refetchPendencias(); },
+    onError: (e: any) => toast.error(e.message || "Erro ao excluir pendência"),
+  });
+
+  const abrirEditPend = (pend: any) => {
+    setEditPendForm({
+      titulo: pend.titulo || "",
+      descricao: pend.descricao || "",
+      prioridade: pend.prioridade || "media",
+      dataVencimento: pend.dataVencimento ? new Date(pend.dataVencimento).toISOString().split("T")[0] : "",
+    });
+    setPendToEdit(pend);
+  };
 
   const refetch = () => {
     refetchObra();
@@ -226,21 +253,45 @@ export default function ObraDetail() {
               </Card>
             ) : (
               <div className="space-y-2">
-                {pendencias.map(pend => (
+                {pendencias.map((pend: any) => (
                   <Card key={pend.id}>
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <p className="font-medium">{pend.titulo}</p>
-                          <p className="text-sm text-muted-foreground">{pend.descricao}</p>
+                    <CardContent className="py-3 px-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{pend.titulo}</p>
+                          {pend.descricao && <p className="text-xs text-muted-foreground mt-0.5">{pend.descricao}</p>}
+                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                            <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                              pend.status === "aberta" ? "bg-red-100 text-red-700" :
+                              pend.status === "em_andamento" ? "bg-blue-100 text-blue-700" :
+                              pend.status === "resolvida" ? "bg-green-100 text-green-700" :
+                              "bg-gray-100 text-gray-600"
+                            }`}>
+                              {pend.status === "aberta" ? "Aberta" : pend.status === "em_andamento" ? "Em andamento" : pend.status === "resolvida" ? "Resolvida" : pend.status}
+                            </span>
+                            {pend.prioridade && <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${
+                              pend.prioridade === "critica" ? "bg-red-100 text-red-700" :
+                              pend.prioridade === "alta" ? "bg-orange-100 text-orange-700" :
+                              pend.prioridade === "media" ? "bg-yellow-100 text-yellow-700" :
+                              "bg-gray-100 text-gray-600"
+                            }`}>{pend.prioridade === "critica" ? "Crítica" : pend.prioridade === "alta" ? "Alta" : pend.prioridade === "media" ? "Média" : "Baixa"}</span>}
+                            {pend.dataVencimento && <span className="text-[11px] text-muted-foreground">Vence: {fmtDataBR(pend.dataVencimento)}</span>}
+                          </div>
                         </div>
-                        <span className={`text-xs px-2 py-1 rounded-full ${
-                          pend.status === "aberta" ? "bg-red-100 text-red-700" :
-                          pend.status === "em_andamento" ? "bg-blue-100 text-blue-700" :
-                          "bg-green-100 text-green-700"
-                        }`}>
-                          {pend.status}
-                        </span>
+                        <div className="flex items-center gap-1 shrink-0">
+                          {pend.status !== "resolvida" && (
+                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-green-700 border-green-200 hover:bg-green-50"
+                              onClick={() => updatePendMut.mutate({ id: pend.id, status: "resolvida" })}>
+                              <CheckCircle2 className="w-3.5 h-3.5" /> Resolver
+                            </Button>
+                          )}
+                          <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar" onClick={() => abrirEditPend(pend)}>
+                            <Pencil className="w-4 h-4" />
+                          </Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="Excluir" onClick={() => setPendToDelete(pend.id)}>
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardContent>
                   </Card>
@@ -266,6 +317,58 @@ export default function ObraDetail() {
         ]} />
         </div>
       </div>
+
+      {/* Editar pendência */}
+      <Dialog open={!!pendToEdit} onOpenChange={(o) => { if (!o) setPendToEdit(null); }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader><DialogTitle>Editar Pendência</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div className="space-y-1.5"><Label className="text-xs">Título *</Label>
+              <Input value={editPendForm.titulo} onChange={(e) => setEditPendForm((f) => ({ ...f, titulo: e.target.value }))} placeholder="Título da pendência" />
+            </div>
+            <div className="space-y-1.5"><Label className="text-xs">Descrição</Label>
+              <Textarea value={editPendForm.descricao} onChange={(e) => setEditPendForm((f) => ({ ...f, descricao: e.target.value }))} placeholder="Descreva a pendência..." className="min-h-20" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5"><Label className="text-xs">Prioridade</Label>
+                <select value={editPendForm.prioridade} onChange={(e) => setEditPendForm((f) => ({ ...f, prioridade: e.target.value }))} className="w-full h-9 px-3 border border-input rounded-md bg-background text-sm">
+                  <option value="baixa">Baixa</option>
+                  <option value="media">Média</option>
+                  <option value="alta">Alta</option>
+                  <option value="critica">Crítica</option>
+                </select>
+              </div>
+              <div className="space-y-1.5"><Label className="text-xs">Vencimento</Label>
+                <Input type="date" value={editPendForm.dataVencimento} onChange={(e) => setEditPendForm((f) => ({ ...f, dataVencimento: e.target.value }))} />
+              </div>
+            </div>
+            <div className="flex justify-end gap-2 pt-1">
+              <Button variant="outline" onClick={() => setPendToEdit(null)}>Cancelar</Button>
+              <Button disabled={updatePendMut.isPending || !editPendForm.titulo.trim()}
+                onClick={() => pendToEdit && updatePendMut.mutate({ id: pendToEdit.id, titulo: editPendForm.titulo, descricao: editPendForm.descricao, prioridade: editPendForm.prioridade as any, dataVencimento: editPendForm.dataVencimento || undefined })}>
+                {updatePendMut.isPending ? "Salvando..." : "Salvar"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Excluir pendência */}
+      <AlertDialog open={!!pendToDelete} onOpenChange={(o) => { if (!o) setPendToDelete(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir pendência?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deletePendMut.isPending}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" disabled={deletePendMut.isPending}
+              onClick={(e) => { e.preventDefault(); if (pendToDelete) deletePendMut.mutate({ id: pendToDelete }); }}>
+              {deletePendMut.isPending ? "Excluindo..." : "Excluir"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog open={!!diarioToDelete} onOpenChange={(o) => { if (!o) setDiarioToDelete(null); }}>
         <AlertDialogContent>

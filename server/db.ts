@@ -698,6 +698,12 @@ export async function updatePendencia(pendenciaId: number, data: Partial<typeof 
   return db.update(pendencias).set(data).where(eq(pendencias.id, pendenciaId));
 }
 
+export async function deletePendencia(pendenciaId: number) {
+  const db = await getDb();
+  if (!db) return;
+  return db.delete(pendencias).where(eq(pendencias.id, pendenciaId));
+}
+
 // ============= RELATÓRIOS =============
 
 export async function getRelatoriosByObraId(obraId: number) {

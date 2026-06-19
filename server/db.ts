@@ -265,16 +265,14 @@ export async function runMigrations() {
     }
   } catch { /* já existe */ }
 
-  // Suprimentos: campos de aprovação em pedido_itens + dataEntrega no pedido
-  try {
-    const db = await getDb();
-    if (db) {
-      await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN statusAprovacao VARCHAR(20) DEFAULT 'pendente'`);
-      await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN observacaoReprovacao TEXT`);
-      await db.execute(sql`ALTER TABLE pedido_itens ADD COLUMN valorEstimado DECIMAL(15,2)`);
-      await db.execute(sql`ALTER TABLE pedidos_compra ADD COLUMN dataEntrega DATE`);
-    }
-  } catch { /* já existe */ }
+  // Cada ALTER TABLE em bloco isolado para não abortar os demais se a coluna já existir
+  const runAlter = async (stmt: ReturnType<typeof sql>) => {
+    try { const db = await getDb(); if (db) await db.execute(stmt); } catch { /* coluna já existe */ }
+  };
+  await runAlter(sql`ALTER TABLE pedido_itens ADD COLUMN statusAprovacao VARCHAR(20) DEFAULT 'pendente'`);
+  await runAlter(sql`ALTER TABLE pedido_itens ADD COLUMN observacaoReprovacao TEXT`);
+  await runAlter(sql`ALTER TABLE pedido_itens ADD COLUMN valorEstimado DECIMAL(15,2)`);
+  await runAlter(sql`ALTER TABLE pedidos_compra ADD COLUMN dataEntrega DATE`);
 
   // Mapa de Cotação
   try {

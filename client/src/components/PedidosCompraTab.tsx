@@ -33,6 +33,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
   const [numero, setNumero] = useState("");
   const [observacao, setObservacao] = useState("");
   const [dataEntrega, setDataEntrega] = useState("");
+  const [localAplicacao, setLocalAplicacao] = useState("");
   const [status, setStatus] = useState("aberto");
   const [itens, setItens] = useState<Item[]>([itemVazio()]);
   const [buscasInsumo, setBuscasInsumo] = useState<string[]>([""]);
@@ -72,11 +73,11 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
     const nums = (lista as any[]).map((p) => parseInt(String(p.numero ?? "").replace(/\D/g, ""), 10)).filter((n) => !isNaN(n));
     return String((nums.length ? Math.max(...nums) : 0) + 1).padStart(2, "0");
   };
-  const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setObservacao(""); setDataEntrega(""); setStatus("aberto"); setItens([itemVazio()]); setBuscasInsumo([""]); setDropdownAberto(null); setOpen(true); };
+  const abrirNovo = () => { setEditId(null); setNumero(proximoNumero()); setObservacao(""); setDataEntrega(""); setLocalAplicacao(""); setStatus("aberto"); setItens([itemVazio()]); setBuscasInsumo([""]); setDropdownAberto(null); setOpen(true); };
   const abrirEdicao = async (id: number) => {
     const p: any = await utils.pedidos.getById.fetch({ id });
     if (!p) return;
-    setEditId(id); setNumero(p.numero || ""); setObservacao(p.observacao || ""); setDataEntrega(p.dataEntrega ? String(p.dataEntrega).slice(0, 10) : ""); setStatus(p.status || "aberto");
+    setEditId(id); setNumero(p.numero || ""); setObservacao(p.observacao || ""); setDataEntrega(p.dataEntrega ? String(p.dataEntrega).slice(0, 10) : ""); setLocalAplicacao(p.localAplicacao || ""); setStatus(p.status || "aberto");
     const itensCarregados = (p.itens || []).length ? (p.itens as any[]).map((i) => ({ descricao: i.descricao || "", unidade: i.unidade || "", quantidade: i.quantidade != null ? String(i.quantidade) : "", observacao: i.observacao || "" })) : [itemVazio()];
     setItens(itensCarregados);
     setBuscasInsumo(itensCarregados.map((i: Item) => i.descricao));
@@ -89,7 +90,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
 
   const salvar = () => {
     const itensLimpos = itens.filter((i) => i.descricao.trim()).map((i) => ({ descricao: i.descricao.trim(), unidade: i.unidade || undefined, quantidade: i.quantidade ? parseFloat(i.quantidade) : undefined, observacao: i.observacao || undefined }));
-    const payload = { numero: numero || undefined, observacao: observacao || undefined, dataEntrega: dataEntrega || undefined, status, itens: itensLimpos };
+    const payload = { numero: numero || undefined, observacao: observacao || undefined, dataEntrega: dataEntrega || undefined, localAplicacao: localAplicacao || undefined, status, itens: itensLimpos };
     if (editId) updateMut.mutate({ id: editId, ...payload });
     else createMut.mutate({ obraId, ...payload });
   };
@@ -205,6 +206,7 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
                     <span>{p.totalItens} item(ns) · {fmtDataBR(p.criadoEm)}</span>
                     <span className="inline-flex items-center gap-1 font-medium text-foreground"><User className="w-3 h-3" /> {p.solicitante || "—"}</span>
                     {p.dataEntrega && <span className="inline-flex items-center gap-1 text-amber-700 font-medium"><CalendarClock className="w-3 h-3" /> Entrega: {fmtDataBR(p.dataEntrega)}</span>}
+                    {p.localAplicacao && <span className="inline-flex items-center gap-1 text-blue-700 font-medium">📍 {p.localAplicacao}</span>}
                   </p>
                 </div>
               </button>
@@ -231,6 +233,10 @@ export function PedidosCompraTab({ obraId, obraNome }: { obraId: number; obraNom
               <div className="space-y-1.5"><Label className="text-xs">Nº do pedido</Label><Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="Ex: 001/2026" /></div>
               <div className="space-y-1.5"><Label className="text-xs">Data de Entrega</Label><Input type="date" value={dataEntrega} onChange={(e) => setDataEntrega(e.target.value)} /></div>
               <div className="space-y-1.5"><Label className="text-xs">Observação (opcional)</Label><Input value={observacao} onChange={(e) => setObservacao(e.target.value)} placeholder="Ex: fornecedor preferencial..." /></div>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs">Local de Aplicação</Label>
+              <Input value={localAplicacao} onChange={(e) => setLocalAplicacao(e.target.value)} placeholder="Ex: Bloco A — 2º Pavimento, Estrutura, Cobertura..." />
             </div>
 
             <div className="flex flex-col flex-1 min-h-0">

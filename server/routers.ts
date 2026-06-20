@@ -1224,7 +1224,7 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({
         obraId: z.number(), numero: z.string().optional(),
         observacao: z.string().optional(), status: z.string().optional(),
-        dataEntrega: z.string().optional(),
+        dataEntrega: z.string().optional(), localAplicacao: z.string().optional(),
         itens: z.array(z.object({
           descricao: z.string().optional(), unidade: z.string().optional(),
           quantidade: z.number().optional(), observacao: z.string().optional(),
@@ -1236,7 +1236,7 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({
         id: z.number(), numero: z.string().optional(), solicitante: z.string().optional(),
         observacao: z.string().optional(), status: z.string().optional(),
-        dataEntrega: z.string().optional(),
+        dataEntrega: z.string().optional(), localAplicacao: z.string().optional(),
         itens: z.array(z.object({
           descricao: z.string().optional(), unidade: z.string().optional(),
           quantidade: z.number().optional(), observacao: z.string().optional(),

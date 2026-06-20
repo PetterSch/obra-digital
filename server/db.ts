@@ -273,6 +273,7 @@ export async function runMigrations() {
   await runAlter(sql`ALTER TABLE pedido_itens ADD COLUMN observacaoReprovacao TEXT`);
   await runAlter(sql`ALTER TABLE pedido_itens ADD COLUMN valorEstimado DECIMAL(15,2)`);
   await runAlter(sql`ALTER TABLE pedidos_compra ADD COLUMN dataEntrega DATE`);
+  await runAlter(sql`ALTER TABLE pedidos_compra ADD COLUMN localAplicacao VARCHAR(255)`);
 
   // Cadastro de Fornecedores
   try {
@@ -1428,20 +1429,20 @@ async function inserirPedidoItens(pedidoId: number, itens: PedidoItemInput[]) {
   }
 }
 
-export async function createPedido(data: { obraId: number; numero?: string; solicitante?: string; observacao?: string; status?: string; dataEntrega?: string; itens: PedidoItemInput[] }) {
+export async function createPedido(data: { obraId: number; numero?: string; solicitante?: string; observacao?: string; status?: string; dataEntrega?: string; localAplicacao?: string; itens: PedidoItemInput[] }) {
   const db = await getDb();
   if (!db) return { id: 0 };
-  const res: any = await db.execute(sql`INSERT INTO pedidos_compra (obraId, numero, solicitante, observacao, status, dataEntrega)
-    VALUES (${data.obraId}, ${data.numero ?? null}, ${data.solicitante ?? null}, ${data.observacao ?? null}, ${data.status ?? "aberto"}, ${data.dataEntrega ?? null})`);
+  const res: any = await db.execute(sql`INSERT INTO pedidos_compra (obraId, numero, solicitante, observacao, status, dataEntrega, localAplicacao)
+    VALUES (${data.obraId}, ${data.numero ?? null}, ${data.solicitante ?? null}, ${data.observacao ?? null}, ${data.status ?? "aberto"}, ${data.dataEntrega ?? null}, ${data.localAplicacao ?? null})`);
   const id = (res[0]?.insertId ?? res.insertId) as number;
   await inserirPedidoItens(id, data.itens);
   return { id };
 }
 
-export async function updatePedido(id: number, data: { numero?: string; solicitante?: string; observacao?: string; status?: string; dataEntrega?: string; itens: PedidoItemInput[] }) {
+export async function updatePedido(id: number, data: { numero?: string; solicitante?: string; observacao?: string; status?: string; dataEntrega?: string; localAplicacao?: string; itens: PedidoItemInput[] }) {
   const db = await getDb();
   if (!db) return;
-  await db.execute(sql`UPDATE pedidos_compra SET numero = ${data.numero ?? null}, solicitante = COALESCE(${data.solicitante ?? null}, solicitante), observacao = ${data.observacao ?? null}, status = ${data.status ?? null}, dataEntrega = ${data.dataEntrega ?? null} WHERE id = ${id}`);
+  await db.execute(sql`UPDATE pedidos_compra SET numero = ${data.numero ?? null}, solicitante = COALESCE(${data.solicitante ?? null}, solicitante), observacao = ${data.observacao ?? null}, status = ${data.status ?? null}, dataEntrega = ${data.dataEntrega ?? null}, localAplicacao = ${data.localAplicacao ?? null} WHERE id = ${id}`);
   await db.execute(sql`DELETE FROM pedido_itens WHERE pedidoId = ${id}`);
   await inserirPedidoItens(id, data.itens);
 }
@@ -1817,7 +1818,7 @@ export async function getItensAprovadosByObra(obraId: number) {
   if (!db) return [];
   const r: any = await db.execute(sql`
     SELECT i.id, i.descricao, i.unidade, i.quantidade, i.observacao,
-      p.id AS pedidoId, p.numero AS pedidoNumero
+      p.id AS pedidoId, p.numero AS pedidoNumero, p.localAplicacao AS pedidoLocalAplicacao
     FROM pedido_itens i JOIN pedidos_compra p ON i.pedidoId = p.id
     WHERE p.obraId = ${obraId} AND i.statusAprovacao = 'aprovado'
     ORDER BY p.numero, i.ordem`);

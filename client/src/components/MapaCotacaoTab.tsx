@@ -88,16 +88,18 @@ export function MapaCotacaoTab({ obraId, obraNome, openMapaId }: Props) {
   }
 
   function montarMapa() {
-    const itens = itensAprovados
-      .filter((i: any) => selectedItemIds.has(i.id))
-      .map((i: any) => ({
-        pedidoItemId: i.id != null ? Number(i.id) : undefined,
-        descricao: String(i.descricao ?? ""),
-        unidade: i.unidade ?? undefined,
-        quantidade: Number(i.quantidade),
-        observacao: i.observacao ?? undefined,
-      }));
-    createMut.mutate({ obraId, itens });
+    const selecionados = itensAprovados.filter((i: any) => selectedItemIds.has(i.id));
+    const itens = selecionados.map((i: any) => ({
+      pedidoItemId: i.id != null ? Number(i.id) : undefined,
+      descricao: String(i.descricao ?? ""),
+      unidade: i.unidade ?? undefined,
+      quantidade: Number(i.quantidade),
+      observacao: i.observacao ?? undefined,
+    }));
+    // Coleta localAplicacao únicos dos pedidos selecionados
+    const locaisSet = selecionados.map((i: any) => i.pedidoLocalAplicacao as string).filter(Boolean);
+    const locais = locaisSet.filter((v, idx, arr) => arr.indexOf(v) === idx).join(" | ");
+    createMut.mutate({ obraId, itens, localAplicacao: locais || undefined });
   }
 
   function abrirMapa(id: number) {
@@ -889,8 +891,9 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
             </div>
             <div className="space-y-1">
               <label className="text-xs font-medium text-muted-foreground">Local de Aplicação</label>
-              <Input value={localAplicacao} onChange={e => setLocalAplicacao(e.target.value)}
-                placeholder="Ex: Bloco A" disabled={isConcluido} />
+              {localAplicacao
+                ? <p className="text-sm font-medium px-3 py-2 rounded-md bg-muted/60 border">📍 {localAplicacao}</p>
+                : <p className="text-sm text-muted-foreground px-3 py-2 rounded-md bg-muted/30 border border-dashed">Definido no Pedido de Compra</p>}
             </div>
           </div>
         </CardContent>

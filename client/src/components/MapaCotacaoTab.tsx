@@ -8,6 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Plus, X, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil } from "lucide-react";
+import { getPDFConfig } from "@/lib/pdfExport";
 
 interface Props { obraId: number; obraNome: string; openMapaId?: number; }
 
@@ -598,81 +599,245 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
   }
 
   function exportarExcel() {
-    // Monta HTML para print/export visual
+    const cfg = getPDFConfig();
     const fornAtivos = fornecedores.filter(f => f.nome);
-    let html = `<html><head><meta charset="utf-8"><title>Mapa de Cotação #${mapa?.numero}</title>
-    <style>body{font-family:Arial,sans-serif;font-size:11px}
-    table{border-collapse:collapse;width:100%}
-    th,td{border:1px solid #aaa;padding:3px 6px;text-align:center}
-    th{background:#1E3A5F;color:#fff;font-weight:bold}
-    .left{text-align:left}.ideal{background:#e8f5e9;color:#1b5e20;font-weight:bold}
-    .forn-header{background:#2a5090;color:#fff}
-    .subtotal{background:#f5f5f5;font-weight:bold}
-    </style></head><body>
-    <h2 style="text-align:center">REQUISIÇÃO DE MATERIAIS E COLETA DE PREÇOS</h2>
-    <table style="margin-bottom:8px;border:none">
-      <tr><td style="border:none"><b>OBRA:</b> ${obraNome}</td><td style="border:none"><b>Mapa #</b>${mapa?.numero}</td></tr>
-      <tr><td style="border:none"><b>Título:</b> ${titulo || "—"}</td></tr>
-      ${localAplicacao ? `<tr><td colspan="2" style="border:none"><b>Local de Aplicação:</b> ${localAplicacao}</td></tr>` : ""}
-    </table>
-    <table><thead><tr>
-      <th>#</th><th class="left">Descrição</th><th>UND</th><th>Quant.</th>`;
-    (fornAtivos.length > 0 ? fornAtivos : fornecedores.slice(0, 1)).forEach((f, fi) => {
-      html += `<th colspan="2" class="forn-header">${f.nome || `Fornecedor ${f.ordem}`}<br><small>${f.contato || ""}</small></th>`;
-    });
-    html += `<th colspan="2" class="ideal">R$ IDEAL</th></tr>
-    <tr><th></th><th></th><th></th><th></th>`;
-    (fornAtivos.length > 0 ? fornAtivos : fornecedores.slice(0, 1)).forEach(() => {
-      html += `<th>R$ Unit.</th><th>R$ Total</th>`;
-    });
-    html += `<th class="ideal">R$ Unit.</th><th class="ideal">R$ Total</th></tr></thead><tbody>`;
-
     const activeFornIdx = (fornAtivos.length > 0 ? fornAtivos : fornecedores.slice(0, 1))
       .map(f => fornecedores.findIndex(ff => ff.id === f.id));
+    const dataHoje = new Date().toLocaleDateString("pt-BR");
+
+    // Cores base
+    const COR_HEADER = "#1a3a5c";
+    const COR_FORN   = "#1e4976";
+    const COR_IDEAL  = "#145a32";
+    const COR_IDEAL_BG = "#eafaf1";
+    const COR_STRIPE = "#f4f6f9";
+    const COR_FOOT   = "#2c3e50";
+
+    const logoHTML = cfg.logoBase64
+      ? `<img src="${cfg.logoBase64}" style="height:52px;max-width:160px;object-fit:contain;" />`
+      : `<div style="font-size:20px;font-weight:700;color:${COR_HEADER};">${cfg.empresaNome || "Obra Digital"}</div>`;
+
+    const empresaInfo = [
+      cfg.empresaNome ? `<strong>${cfg.empresaNome}</strong>` : null,
+      cfg.cnpj        ? `CNPJ: ${cfg.cnpj}` : null,
+      cfg.endereco    ? cfg.endereco : null,
+      cfg.telefone    ? `Tel: ${cfg.telefone}` : null,
+      cfg.email       ? cfg.email : null,
+    ].filter(Boolean).join(" &nbsp;|&nbsp; ");
+
+    let html = `<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="utf-8">
+<title>Mapa de Cotação #${mapa?.numero} — ${obraNome}</title>
+<style>
+  @page { size: A4 landscape; margin: 12mm 10mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; font-size: 9.5px; color: #222; background: #fff; }
+
+  /* ── Cabeçalho ── */
+  .page-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding-bottom: 8px; border-bottom: 3px solid ${COR_HEADER}; margin-bottom: 8px;
+  }
+  .header-left { display: flex; align-items: center; gap: 12px; }
+  .empresa-info { font-size: 8px; color: #555; margin-top: 3px; }
+  .header-right { text-align: right; }
+  .doc-title { font-size: 13px; font-weight: 700; color: ${COR_HEADER}; text-transform: uppercase; letter-spacing: 0.5px; }
+  .doc-sub { font-size: 8.5px; color: #666; margin-top: 2px; }
+
+  /* ── Ficha da obra ── */
+  .ficha {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    gap: 0; border: 1px solid #c8d0dc; border-radius: 5px;
+    overflow: hidden; margin-bottom: 8px;
+  }
+  .ficha-cell {
+    padding: 5px 8px; border-right: 1px solid #c8d0dc;
+    background: #f8f9fb;
+  }
+  .ficha-cell:last-child { border-right: none; }
+  .ficha-label { font-size: 7.5px; font-weight: 700; color: #888; text-transform: uppercase; letter-spacing: 0.4px; }
+  .ficha-val { font-size: 9.5px; font-weight: 600; color: #1a1a1a; margin-top: 1px; }
+
+  /* ── Tabela principal ── */
+  table { border-collapse: collapse; width: 100%; font-size: 8.5px; }
+  th, td { border: 1px solid #c5cdd8; padding: 3px 5px; }
+  th { font-weight: 700; text-align: center; }
+
+  /* cabeçalho fixo */
+  .th-num  { background: ${COR_HEADER}; color: #fff; width: 22px; }
+  .th-desc { background: ${COR_HEADER}; color: #fff; text-align: left; min-width: 160px; }
+  .th-und  { background: ${COR_HEADER}; color: #fff; width: 36px; }
+  .th-qtd  { background: ${COR_HEADER}; color: #fff; width: 42px; }
+
+  /* fornecedor */
+  .th-forn-name { background: ${COR_FORN}; color: #fff; }
+  .th-forn-sub  { background: #2a6099; color: #e8f0fe; font-weight: 600; }
+  .td-price { text-align: right; }
+  .td-ideal-u { background: ${COR_IDEAL_BG}; color: ${COR_IDEAL}; font-weight: 700; text-align: right; }
+  .td-ideal-t { background: ${COR_IDEAL_BG}; color: ${COR_IDEAL}; font-weight: 700; text-align: right; }
+  .th-ideal { background: ${COR_IDEAL}; color: #fff; }
+
+  /* linhas da tabela */
+  .tr-odd  { background: #fff; }
+  .tr-even { background: ${COR_STRIPE}; }
+  .tr-best td { }
+  td.best  { background: #d5f5e3; color: ${COR_IDEAL}; font-weight: 700; }
+
+  .td-desc { text-align: left; }
+  .td-obs  { font-size: 7.5px; color: #777; }
+  .td-center { text-align: center; }
+
+  /* rodapé da tabela */
+  .tf-label { text-align: right; font-weight: 700; font-size: 8px; text-transform: uppercase;
+              color: #555; background: #eef1f5; padding: 4px 8px; }
+  .tf-val   { text-align: right; background: #eef1f5; }
+  .tf-total-label { background: ${COR_FOOT}; color: #fff; font-weight: 700; text-align: right;
+                    text-transform: uppercase; font-size: 8px; padding: 5px 8px; }
+  .tf-total-val   { background: ${COR_FOOT}; color: #fff; font-weight: 700; text-align: right; font-size: 9px; }
+  .tf-ideal-val   { background: ${COR_IDEAL}; color: #fff; font-weight: 700; text-align: right; font-size: 9px; }
+  .tf-ideal-empty { background: ${COR_IDEAL_BG}; }
+
+  /* rodapé de página */
+  .page-footer {
+    margin-top: 10px; padding-top: 5px; border-top: 1px solid #dde3ec;
+    display: flex; justify-content: space-between; font-size: 7.5px; color: #999;
+  }
+
+  @media print {
+    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+</style>
+</head><body>
+
+<!-- CABEÇALHO -->
+<div class="page-header">
+  <div class="header-left">
+    ${logoHTML}
+    <div>
+      <div class="doc-title">Mapa de Cotação de Preços</div>
+      <div class="empresa-info">${empresaInfo}</div>
+    </div>
+  </div>
+  <div class="header-right">
+    <div style="font-size:18px;font-weight:800;color:${COR_HEADER};">Nº ${mapa?.numero ?? "—"}</div>
+    <div class="doc-sub">Data: ${dataHoje}</div>
+    <div class="doc-sub" style="margin-top:2px;">
+      ${mapa?.status === "concluido"
+        ? `<span style="background:#145a32;color:#fff;padding:1px 6px;border-radius:3px;font-size:7.5px;">✔ CONCLUÍDO</span>`
+        : `<span style="background:#1a6db5;color:#fff;padding:1px 6px;border-radius:3px;font-size:7.5px;">EM ANDAMENTO</span>`}
+    </div>
+  </div>
+</div>
+
+<!-- FICHA DA OBRA -->
+<div class="ficha">
+  <div class="ficha-cell">
+    <div class="ficha-label">Obra</div>
+    <div class="ficha-val">${obraNome}</div>
+  </div>
+  <div class="ficha-cell">
+    <div class="ficha-label">Título / Objeto</div>
+    <div class="ficha-val">${titulo || "—"}</div>
+  </div>
+  <div class="ficha-cell">
+    <div class="ficha-label">Local de Aplicação</div>
+    <div class="ficha-val">${localAplicacao || "—"}</div>
+  </div>
+</div>
+
+<!-- TABELA DE PREÇOS -->
+<table>
+  <thead>
+    <tr>
+      <th class="th-num" rowspan="2">#</th>
+      <th class="th-desc" rowspan="2">Descrição</th>
+      <th class="th-und" rowspan="2">UND</th>
+      <th class="th-qtd" rowspan="2">Qtd.</th>
+      ${activeFornIdx.map(fIdx => {
+        const f = fornecedores[fIdx];
+        return `<th colspan="2" class="th-forn-name">${f?.nome || `Fornecedor ${f?.ordem}`}${f?.contato ? `<br><span style="font-weight:400;font-size:7.5px;opacity:.85;">${f.contato}</span>` : ""}</th>`;
+      }).join("")}
+      <th colspan="2" class="th-ideal">★ Melhor Preço</th>
+    </tr>
+    <tr>
+      ${activeFornIdx.map(() =>
+        `<th class="th-forn-sub" style="width:58px;">R$ Unit.</th><th class="th-forn-sub" style="width:62px;">R$ Total</th>`
+      ).join("")}
+      <th class="th-ideal" style="width:58px;">R$ Unit.</th>
+      <th class="th-ideal" style="width:62px;">R$ Total</th>
+    </tr>
+  </thead>
+  <tbody>`;
 
     itens.forEach((item, iIdx) => {
       const idealUnit = getIdealUnit(iIdx);
-      const idealTotal = idealUnit * item.quantidade;
-      html += `<tr><td>${iIdx + 1}</td><td class="left">${item.descricao}</td><td>${item.unidade || ""}</td><td>${item.quantidade}</td>`;
+      const idealFornIdx = getIdealFornIdx(iIdx);
+      const rowClass = iIdx % 2 === 0 ? "tr-even" : "tr-odd";
+      html += `<tr class="${rowClass}">
+        <td class="td-center" style="color:#888;">${iIdx + 1}</td>
+        <td class="td-desc">${item.descricao}${item.observacao ? `<div class="td-obs">${item.observacao}</div>` : ""}</td>
+        <td class="td-center">${item.unidade || "—"}</td>
+        <td class="td-center">${Number(item.quantidade).toLocaleString("pt-BR")}</td>`;
       activeFornIdx.forEach(fIdx => {
         const unit = getPreco(iIdx, fIdx);
         const total = unit * item.quantidade;
-        const isIdeal = fIdx === getIdealFornIdx(iIdx);
-        html += `<td style="${isIdeal ? "background:#c8e6c9;" : ""}">${unit > 0 ? fmtMoeda(unit) : "—"}</td>
-          <td style="${isIdeal ? "background:#c8e6c9;" : ""}">${unit > 0 ? fmtMoeda(total) : "—"}</td>`;
+        const isBest = fIdx === idealFornIdx && unit > 0;
+        html += `<td class="td-price${isBest ? " best" : ""}">${unit > 0 ? fmtMoeda(unit) : "<span style='color:#ccc'>—</span>"}</td>
+                 <td class="td-price${isBest ? " best" : ""}">${unit > 0 ? fmtMoeda(total) : "<span style='color:#ccc'>—</span>"}</td>`;
       });
-      html += `<td class="ideal">${idealUnit > 0 ? fmtMoeda(idealUnit) : "—"}</td><td class="ideal">${idealTotal > 0 ? fmtMoeda(idealTotal) : "—"}</td></tr>`;
+      html += `<td class="td-ideal-u">${idealUnit > 0 ? fmtMoeda(idealUnit) : "—"}</td>
+               <td class="td-ideal-t">${idealUnit > 0 ? fmtMoeda(idealUnit * item.quantidade) : "—"}</td>
+             </tr>`;
     });
 
-    html += `<tr class="subtotal"><td colspan="4" class="left">SUBTOTAL</td>`;
-    activeFornIdx.forEach(fIdx => {
-      const st = getSubtotal(fIdx);
-      html += `<td></td><td>${st > 0 ? fmtMoeda(st) : "—"}</td>`;
-    });
-    html += `<td></td><td class="ideal">${getIdealSubtotal() > 0 ? fmtMoeda(getIdealSubtotal()) : "—"}</td></tr>`;
+    html += `</tbody><tfoot>
+    <tr>
+      <td colspan="4" class="tf-label">Subtotal</td>
+      ${activeFornIdx.map(fIdx => {
+        const st = getSubtotal(fIdx);
+        return `<td class="tf-val"></td><td class="tf-val">${st > 0 ? fmtMoeda(st) : "—"}</td>`;
+      }).join("")}
+      <td class="tf-ideal-empty"></td>
+      <td class="td-ideal-t" style="background:#d5f5e3;">${getIdealSubtotal() > 0 ? fmtMoeda(getIdealSubtotal()) : "—"}</td>
+    </tr>
+    <tr>
+      <td colspan="4" class="tf-label">Desconto (R$)</td>
+      ${activeFornIdx.map(fIdx => {
+        const d = fornecedores[fIdx]?.desconto ?? 0;
+        return `<td class="tf-val"></td><td class="tf-val" style="color:#c0392b;">${d > 0 ? `- ${fmtMoeda(d)}` : "—"}</td>`;
+      }).join("")}
+      <td class="tf-ideal-empty" colspan="2"></td>
+    </tr>
+    <tr>
+      <td colspan="4" class="tf-label">Frete (R$)</td>
+      ${activeFornIdx.map(fIdx => {
+        const fr = fornecedores[fIdx]?.frete ?? 0;
+        return `<td class="tf-val"></td><td class="tf-val">${fr > 0 ? fmtMoeda(fr) : "—"}</td>`;
+      }).join("")}
+      <td class="tf-ideal-empty" colspan="2"></td>
+    </tr>
+    <tr>
+      <td colspan="4" class="tf-total-label">Total Geral</td>
+      ${activeFornIdx.map(fIdx => {
+        const tot = getTotal(fIdx);
+        return `<td class="tf-total-val"></td><td class="tf-total-val">${tot > 0 ? fmtMoeda(tot) : "—"}</td>`;
+      }).join("")}
+      <td class="tf-ideal-val"></td>
+      <td class="tf-ideal-val">${getIdealTotal() > 0 ? fmtMoeda(getIdealTotal()) : "—"}</td>
+    </tr>
+  </tfoot>
+</table>
 
-    html += `<tr><td colspan="4" class="left">DESCONTO</td>`;
-    activeFornIdx.forEach(fIdx => {
-      html += `<td></td><td>${fornecedores[fIdx]?.desconto > 0 ? fmtMoeda(fornecedores[fIdx].desconto) : "—"}</td>`;
-    });
-    html += `<td></td><td>—</td></tr>`;
+<!-- RODAPÉ -->
+<div class="page-footer">
+  <span>${cfg.empresaNome ? `${cfg.empresaNome} — ` : ""}Mapa de Cotação #${mapa?.numero} | ${obraNome}</span>
+  <span>Gerado em ${dataHoje} via Obra Digital</span>
+</div>
 
-    html += `<tr><td colspan="4" class="left">FRETE</td>`;
-    activeFornIdx.forEach(fIdx => {
-      html += `<td></td><td>${fornecedores[fIdx]?.frete > 0 ? fmtMoeda(fornecedores[fIdx].frete) : "—"}</td>`;
-    });
-    html += `<td></td><td>—</td></tr>`;
+</body></html>`;
 
-    html += `<tr class="subtotal"><td colspan="4" class="left">TOTAL</td>`;
-    activeFornIdx.forEach(fIdx => {
-      const tot = getTotal(fIdx);
-      html += `<td></td><td>${tot > 0 ? fmtMoeda(tot) : "—"}</td>`;
-    });
-    html += `<td></td><td class="ideal">${getIdealTotal() > 0 ? fmtMoeda(getIdealTotal()) : "—"}</td></tr>`;
-
-    html += `</tbody></table></body></html>`;
     const win = window.open("", "_blank");
-    if (win) { win.document.write(html); win.document.close(); win.print(); }
+    if (win) { win.document.write(html); win.document.close(); setTimeout(() => win.print(), 400); }
   }
 
   if (!mapa) {

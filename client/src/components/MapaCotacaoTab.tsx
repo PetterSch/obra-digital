@@ -95,6 +95,7 @@ export function MapaCotacaoTab({ obraId, obraNome, openMapaId }: Props) {
       unidade: i.unidade ?? undefined,
       quantidade: Number(i.quantidade),
       observacao: i.observacao ?? undefined,
+      dataEntrega: i.pedidoDataEntrega ? String(i.pedidoDataEntrega).slice(0, 10) : undefined,
     }));
     // Coleta localAplicacao únicos dos pedidos selecionados
     const locaisSet = selecionados.map((i: any) => i.pedidoLocalAplicacao as string).filter(Boolean);
@@ -477,7 +478,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
 
   // Itens local state
   const [itens, setItens] = useState<any[]>(() =>
-    (mapa?.itens ?? []).map((i: any) => ({ ...i, quantidade: Number(i.quantidade) }))
+    (mapa?.itens ?? []).map((i: any) => ({ ...i, quantidade: Number(i.quantidade), dataEntrega: i.dataEntrega ? String(i.dataEntrega).slice(0, 10) : null }))
   );
 
   // Cotacoes: key = `${itemIndex}-${fornecedorIndex}` → valor (string for input)
@@ -507,7 +508,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
       condicaoPagamento: f.condicaoPagamento ?? "",
     })));
 
-    setItens((mapa.itens ?? []).map((i: any) => ({ ...i, quantidade: Number(i.quantidade) })));
+    setItens((mapa.itens ?? []).map((i: any) => ({ ...i, quantidade: Number(i.quantidade), dataEntrega: i.dataEntrega ? String(i.dataEntrega).slice(0, 10) : null })));
     const nc: Record<string, string> = {};
     for (const c of mapa.cotacoes ?? []) {
       const iIdx = (mapa.itens ?? []).findIndex((i: any) => i.id === c.mapaItemId);
@@ -595,6 +596,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
         unidade: i.unidade ?? undefined,
         quantidade: i.quantidade,
         observacao: i.observacao ?? undefined,
+        dataEntrega: i.dataEntrega ?? undefined,
       })),
       cotacoes: cotacoesArray,
     });
@@ -775,9 +777,12 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
       const idealUnit = getIdealUnit(iIdx);
       const idealFornIdx = getIdealFornIdx(iIdx);
       const rowClass = iIdx % 2 === 0 ? "tr-even" : "tr-odd";
+      const dataEntregaFmt = item.dataEntrega
+        ? new Date(item.dataEntrega + "T00:00:00").toLocaleDateString("pt-BR")
+        : null;
       html += `<tr class="${rowClass}">
         <td class="td-center" style="color:#888;">${iIdx + 1}</td>
-        <td class="td-desc">${item.descricao}${item.observacao ? `<div class="td-obs">${item.observacao}</div>` : ""}</td>
+        <td class="td-desc">${item.descricao}${item.observacao ? `<div class="td-obs">${item.observacao}</div>` : ""}${dataEntregaFmt ? `<div style="font-size:7.5px;color:#b7770d;font-weight:600;margin-top:1px;">📅 Entrega: ${dataEntregaFmt}</div>` : ""}</td>
         <td class="td-center">${item.unidade || "—"}</td>
         <td class="td-center">${Number(item.quantidade).toLocaleString("pt-BR")}</td>`;
       activeFornIdx.forEach(fIdx => {
@@ -975,6 +980,11 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
                     <td className="border px-2 py-1">
                       <div className="font-medium">{item.descricao}</div>
                       {item.observacao && <div className="text-xs text-muted-foreground">{item.observacao}</div>}
+                      {item.dataEntrega && (
+                        <div className="text-xs text-amber-600 font-medium mt-0.5">
+                          📅 Entrega: {new Date(item.dataEntrega + "T00:00:00").toLocaleDateString("pt-BR")}
+                        </div>
+                      )}
                     </td>
                     <td className="border px-2 py-1 text-center">{item.unidade || "—"}</td>
                     <td className="border px-2 py-1 text-center">{item.quantidade}</td>

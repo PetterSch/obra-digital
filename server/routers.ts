@@ -1551,6 +1551,7 @@ Gere um resumo executivo profissional em português que:
           unidade: z.string().optional(),
           quantidade: z.number().optional(),
           observacao: z.string().optional(),
+          dataEntrega: z.string().optional(),
         })).default([]),
       }))
       .mutation(async ({ input, ctx }) => {
@@ -1580,6 +1581,7 @@ Gere um resumo executivo profissional em português que:
           unidade: z.string().optional(),
           quantidade: z.number().optional(),
           observacao: z.string().optional(),
+          dataEntrega: z.string().optional(),
         })).optional(),
         cotacoes: z.array(z.object({
           itemIndex: z.number(),

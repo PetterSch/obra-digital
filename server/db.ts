@@ -307,6 +307,7 @@ export async function runMigrations() {
 
   // Migração: adicionar coluna nomeContato em fornecedores
   await runAlter(sql`ALTER TABLE fornecedores ADD COLUMN nomeContato VARCHAR(255)`);
+  await runAlter(sql`ALTER TABLE mapa_itens ADD COLUMN dataEntrega DATE`);
 
   // Mapa de Cotação
   try {
@@ -1706,8 +1707,8 @@ export async function createMapa(data: {
   await db.execute(sql`INSERT INTO mapa_fornecedores (mapaId, ordem) VALUES (${mapaId}, 1)`);
   for (let i = 0; i < data.itens.length; i++) {
     const item = data.itens[i];
-    await db.execute(sql`INSERT INTO mapa_itens (mapaId, pedidoItemId, descricao, unidade, quantidade, observacao, ordem)
-      VALUES (${mapaId}, ${item.pedidoItemId ?? null}, ${item.descricao}, ${item.unidade ?? null}, ${item.quantidade ?? 1}, ${item.observacao ?? null}, ${i + 1})`);
+    await db.execute(sql`INSERT INTO mapa_itens (mapaId, pedidoItemId, descricao, unidade, quantidade, observacao, ordem, dataEntrega)
+      VALUES (${mapaId}, ${item.pedidoItemId ?? null}, ${item.descricao}, ${item.unidade ?? null}, ${item.quantidade ?? 1}, ${item.observacao ?? null}, ${i + 1}, ${(item as any).dataEntrega ?? null})`);
   }
   return { id: mapaId, numero };
 }
@@ -1771,8 +1772,8 @@ export async function updateMapa(id: number, data: {
     const newItemIds: number[] = [];
     for (let i = 0; i < data.itens.length; i++) {
       const item = data.itens[i];
-      const ir: any = await db.execute(sql`INSERT INTO mapa_itens (mapaId, pedidoItemId, descricao, unidade, quantidade, observacao, ordem)
-        VALUES (${id}, ${item.pedidoItemId ?? null}, ${item.descricao}, ${item.unidade ?? null}, ${item.quantidade ?? 1}, ${item.observacao ?? null}, ${i + 1})`);
+      const ir: any = await db.execute(sql`INSERT INTO mapa_itens (mapaId, pedidoItemId, descricao, unidade, quantidade, observacao, ordem, dataEntrega)
+        VALUES (${id}, ${item.pedidoItemId ?? null}, ${item.descricao}, ${item.unidade ?? null}, ${item.quantidade ?? 1}, ${item.observacao ?? null}, ${i + 1}, ${(item as any).dataEntrega ?? null})`);
       newItemIds.push((ir[0]?.insertId ?? ir.insertId) as number);
     }
     if (data.cotacoes) {
@@ -1818,7 +1819,9 @@ export async function getItensAprovadosByObra(obraId: number) {
   if (!db) return [];
   const r: any = await db.execute(sql`
     SELECT i.id, i.descricao, i.unidade, i.quantidade, i.observacao,
-      p.id AS pedidoId, p.numero AS pedidoNumero, p.localAplicacao AS pedidoLocalAplicacao
+      p.id AS pedidoId, p.numero AS pedidoNumero,
+      p.localAplicacao AS pedidoLocalAplicacao,
+      p.dataEntrega AS pedidoDataEntrega
     FROM pedido_itens i JOIN pedidos_compra p ON i.pedidoId = p.id
     WHERE p.obraId = ${obraId} AND i.statusAprovacao = 'aprovado'
     ORDER BY p.numero, i.ordem`);

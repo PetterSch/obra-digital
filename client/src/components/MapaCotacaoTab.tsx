@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import { trpc } from "@/lib/trpc";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -243,6 +243,134 @@ export function MapaCotacaoTab({ obraId, obraNome, openMapaId }: Props) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  );
+}
+
+// ==================== FORNECEDOR CARD COM BUSCA ====================
+
+interface FornecedorCardProps {
+  forn: { id: number; ordem: number; nome: string; contato: string; telefone: string; desconto: number; frete: number; condicaoPagamento: string };
+  index: number;
+  isConcluido: boolean;
+  canRemove: boolean;
+  onRemove: () => void;
+  onUpdate: (patch: Partial<{ nome: string; contato: string; telefone: string }>) => void;
+}
+
+function FornecedorCard({ forn, isConcluido, canRemove, onRemove, onUpdate }: FornecedorCardProps) {
+  const { data: baseFornecedores = [] } = trpc.fornecedores.list.useQuery();
+  const [busca, setBusca] = useState("");
+  const [aberto, setAberto] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  const filtrados = useMemo(() => {
+    const q = busca.toLowerCase().trim();
+    if (!q) return (baseFornecedores as any[]).slice(0, 8);
+    return (baseFornecedores as any[]).filter((f: any) =>
+      f.nome.toLowerCase().includes(q) ||
+      (f.nomeFantasia ?? "").toLowerCase().includes(q)
+    ).slice(0, 10);
+  }, [baseFornecedores, busca]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setAberto(false);
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, []);
+
+  function selecionar(f: any) {
+    onUpdate({ nome: f.nome, contato: f.nomeContato ?? "", telefone: f.telefone ?? "" });
+    setBusca("");
+    setAberto(false);
+  }
+
+  function limpar() {
+    onUpdate({ nome: "", contato: "", telefone: "" });
+    setBusca("");
+  }
+
+  const temFornecedor = !!forn.nome;
+
+  return (
+    <div className="relative space-y-1.5 border rounded-lg p-3">
+      {!isConcluido && canRemove && (
+        <button
+          onClick={onRemove}
+          className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-colors"
+          title="Remover fornecedor">
+          <X className="w-3 h-3" />
+        </button>
+      )}
+      <p className="text-xs font-semibold text-blue-700 pr-6">Fornecedor {forn.ordem}</p>
+
+      {!isConcluido && (
+        <div ref={ref} className="relative">
+          <div className="relative">
+            <Input
+              className="h-8 text-sm pr-7"
+              placeholder="Pesquisar fornecedor..."
+              value={busca}
+              onFocus={() => setAberto(true)}
+              onChange={e => { setBusca(e.target.value); setAberto(true); }}
+            />
+            {busca && (
+              <button onClick={() => setBusca("")} className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-3 h-3" />
+              </button>
+            )}
+          </div>
+          {aberto && filtrados.length > 0 && (
+            <div className="absolute z-50 top-full mt-1 left-0 right-0 bg-popover border rounded-md shadow-md max-h-52 overflow-y-auto">
+              {filtrados.map((f: any) => (
+                <button
+                  key={f.id}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-accent transition-colors"
+                  onMouseDown={(e) => { e.preventDefault(); selecionar(f); }}>
+                  <p className="font-medium truncate">{f.nome}</p>
+                  {f.nomeFantasia && f.nomeFantasia !== f.nome && (
+                    <p className="text-xs text-muted-foreground truncate">{f.nomeFantasia}</p>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {temFornecedor ? (
+        <div className="space-y-1 pt-1">
+          <div className="flex items-start justify-between gap-1">
+            <div className="min-w-0 flex-1">
+              <p className="text-xs text-muted-foreground">Razão Social</p>
+              <p className="text-sm font-medium truncate">{forn.nome}</p>
+            </div>
+            {!isConcluido && (
+              <button onClick={limpar} className="text-xs text-muted-foreground hover:text-destructive mt-3 shrink-0" title="Limpar">
+                <X className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Nome do Vendedor</p>
+            {isConcluido
+              ? <p className="text-sm">{forn.contato || "—"}</p>
+              : <Input value={forn.contato} onChange={e => onUpdate({ contato: e.target.value })} placeholder="Nome do vendedor" className="h-7 text-sm mt-0.5" />
+            }
+          </div>
+          <div>
+            <p className="text-xs text-muted-foreground">Telefone</p>
+            {isConcluido
+              ? <p className="text-sm">{forn.telefone || "—"}</p>
+              : <Input value={forn.telefone} onChange={e => onUpdate({ telefone: e.target.value })} placeholder="Telefone" className="h-7 text-sm mt-0.5" />
+            }
+          </div>
+        </div>
+      ) : (
+        <p className="text-xs text-muted-foreground italic pt-1">Nenhum fornecedor selecionado</p>
+      )}
     </div>
   );
 }
@@ -609,27 +737,15 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Fornecedores</p>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {fornecedores.map((f, fi) => (
-              <div key={f.id} className="relative space-y-1.5 border rounded-lg p-3">
-                {!isConcluido && fornecedores.length > 1 && (
-                  <button
-                    onClick={() => removeFornecedorMut.mutate({ fornecedorId: f.id })}
-                    disabled={removeFornecedorMut.isPending}
-                    className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-muted hover:bg-destructive hover:text-destructive-foreground flex items-center justify-center transition-colors"
-                    title="Remover fornecedor">
-                    <X className="w-3 h-3" />
-                  </button>
-                )}
-                <p className="text-xs font-semibold text-blue-700 pr-6">Fornecedor {f.ordem}</p>
-                <Input placeholder="Nome do fornecedor" value={f.nome}
-                  onChange={e => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, nome: e.target.value } : ff))}
-                  disabled={isConcluido} className="h-8 text-sm" />
-                <Input placeholder="Contato" value={f.contato}
-                  onChange={e => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, contato: e.target.value } : ff))}
-                  disabled={isConcluido} className="h-8 text-sm" />
-                <Input placeholder="Telefone" value={f.telefone}
-                  onChange={e => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, telefone: e.target.value } : ff))}
-                  disabled={isConcluido} className="h-8 text-sm" />
-              </div>
+              <FornecedorCard
+                key={f.id}
+                forn={f}
+                index={fi}
+                isConcluido={isConcluido}
+                canRemove={fornecedores.length > 1}
+                onRemove={() => removeFornecedorMut.mutate({ fornecedorId: f.id })}
+                onUpdate={(patch) => setFornecedores(prev => prev.map((ff, i) => i === fi ? { ...ff, ...patch } : ff))}
+              />
             ))}
             {!isConcluido && (
               <button

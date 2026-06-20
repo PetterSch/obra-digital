@@ -1294,7 +1294,8 @@ Gere um resumo executivo profissional em português que:
       bairro: z.string().optional().nullable(), cidade: z.string().optional().nullable(),
       uf: z.string().optional().nullable(), cep: z.string().optional().nullable(),
       referencia: z.string().optional().nullable(), email: z.string().optional().nullable(),
-      telefone: z.string().optional().nullable(), observacao: z.string().optional().nullable(),
+      telefone: z.string().optional().nullable(), nomeContato: z.string().optional().nullable(),
+      observacao: z.string().optional().nullable(),
     })).mutation(async ({ input }) => db.createFornecedor(input)),
     update: engineerProcedure.input(z.object({
       id: z.number(), nome: z.string().min(1).optional(), nomeFantasia: z.string().optional().nullable(),
@@ -1305,7 +1306,8 @@ Gere um resumo executivo profissional em português que:
       bairro: z.string().optional().nullable(), cidade: z.string().optional().nullable(),
       uf: z.string().optional().nullable(), cep: z.string().optional().nullable(),
       referencia: z.string().optional().nullable(), email: z.string().optional().nullable(),
-      telefone: z.string().optional().nullable(), observacao: z.string().optional().nullable(),
+      telefone: z.string().optional().nullable(), nomeContato: z.string().optional().nullable(),
+      observacao: z.string().optional().nullable(),
     })).mutation(async ({ input }) => { const { id, ...d } = input; await db.updateFornecedor(id, d); return { success: true }; }),
     delete: engineerProcedure.input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => { await db.deleteFornecedor(input.id); return { success: true }; }),

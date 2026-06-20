@@ -296,12 +296,16 @@ export async function runMigrations() {
         referencia VARCHAR(500),
         email VARCHAR(255),
         telefone VARCHAR(100),
+        nomeContato VARCHAR(255),
         observacao TEXT,
         ativo BOOLEAN DEFAULT TRUE,
         criadoEm TIMESTAMP DEFAULT NOW()
       )`);
     }
   } catch { /* já existe */ }
+
+  // Migração: adicionar coluna nomeContato em fornecedores
+  await runAlter(sql`ALTER TABLE fornecedores ADD COLUMN nomeContato VARCHAR(255)`);
 
   // Mapa de Cotação
   try {
@@ -1842,18 +1846,19 @@ type FornecedorInput = {
   cpfCnpj?: string | null; inscEstadual?: string | null; inscMunicipal?: string | null;
   endereco?: string | null; complemento?: string | null; numero?: string | null;
   bairro?: string | null; cidade?: string | null; uf?: string | null; cep?: string | null;
-  referencia?: string | null; email?: string | null; telefone?: string | null; observacao?: string | null;
+  referencia?: string | null; email?: string | null; telefone?: string | null;
+  nomeContato?: string | null; observacao?: string | null;
 };
 
 export async function createFornecedor(d: FornecedorInput) {
   const db = await getDb();
   if (!db) return { id: 0 };
   const res: any = await db.execute(sql`INSERT INTO fornecedores
-    (nome, nomeFantasia, tipo, cpfCnpj, inscEstadual, inscMunicipal, endereco, complemento, numero, bairro, cidade, uf, cep, referencia, email, telefone, observacao)
+    (nome, nomeFantasia, tipo, cpfCnpj, inscEstadual, inscMunicipal, endereco, complemento, numero, bairro, cidade, uf, cep, referencia, email, telefone, nomeContato, observacao)
     VALUES (${d.nome}, ${d.nomeFantasia ?? null}, ${d.tipo ?? 'juridica'}, ${d.cpfCnpj ?? null},
       ${d.inscEstadual ?? null}, ${d.inscMunicipal ?? null}, ${d.endereco ?? null}, ${d.complemento ?? null},
       ${d.numero ?? null}, ${d.bairro ?? null}, ${d.cidade ?? null}, ${d.uf ?? null}, ${d.cep ?? null},
-      ${d.referencia ?? null}, ${d.email ?? null}, ${d.telefone ?? null}, ${d.observacao ?? null})`);
+      ${d.referencia ?? null}, ${d.email ?? null}, ${d.telefone ?? null}, ${d.nomeContato ?? null}, ${d.observacao ?? null})`);
   return { id: (res[0]?.insertId ?? res.insertId) as number };
 }
 
@@ -1877,6 +1882,7 @@ export async function updateFornecedor(id: number, d: Partial<FornecedorInput>) 
     referencia = ${d.referencia ?? null},
     email = ${d.email ?? null},
     telefone = ${d.telefone ?? null},
+    nomeContato = ${d.nomeContato ?? null},
     observacao = ${d.observacao ?? null}
     WHERE id = ${id}`);
 }

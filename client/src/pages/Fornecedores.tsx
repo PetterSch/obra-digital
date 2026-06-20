@@ -9,20 +9,20 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Truck, Search, Download, Building2, User, Mail, MapPin, Phone, FileText } from "lucide-react";
+import { Plus, Pencil, Trash2, Truck, Search, Download, Building2, User, Mail, MapPin, Phone, FileText, Eye, X } from "lucide-react";
 
 type Fornecedor = {
   id: number; nome: string; nomeFantasia?: string; tipo?: string;
   cpfCnpj?: string; inscEstadual?: string; inscMunicipal?: string;
   endereco?: string; complemento?: string; numero?: string; bairro?: string;
   cidade?: string; uf?: string; cep?: string; referencia?: string;
-  email?: string; telefone?: string; observacao?: string;
+  email?: string; telefone?: string; nomeContato?: string; observacao?: string;
 };
 
 const EMPTY: Omit<Fornecedor, "id"> = {
   nome: "", nomeFantasia: "", tipo: "juridica", cpfCnpj: "", inscEstadual: "",
   inscMunicipal: "", endereco: "", complemento: "", numero: "", bairro: "",
-  cidade: "", uf: "", cep: "", referencia: "", email: "", telefone: "", observacao: "",
+  cidade: "", uf: "", cep: "", referencia: "", email: "", telefone: "", nomeContato: "", observacao: "",
 };
 
 function FornecedorForm({
@@ -111,6 +111,10 @@ function FornecedorForm({
       <div className="border-t pt-3">
         <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-3">Contato</p>
         <div className="grid grid-cols-2 gap-3">
+          <div className="col-span-2 space-y-1.5">
+            <Label className="text-sm">Nome do Contato</Label>
+            <Input value={form.nomeContato} onChange={set("nomeContato")} placeholder="Ex: José Silva" />
+          </div>
           <div className="space-y-1.5">
             <Label className="text-sm">E-mail</Label>
             <Input value={form.email} onChange={set("email")} type="email" placeholder="email@exemplo.com" />
@@ -145,6 +149,7 @@ export default function Fornecedores() {
   const [form, setForm] = useState<Omit<Fornecedor, "id">>(EMPTY);
   const [delId, setDelId] = useState<number | null>(null);
   const [delNome, setDelNome] = useState("");
+  const [viewForn, setViewForn] = useState<Fornecedor | null>(null);
 
   const inval = () => utils.fornecedores.list.invalidate();
   const createMut = trpc.fornecedores.create.useMutation({ onSuccess: () => { toast.success("Fornecedor cadastrado!"); setOpen(false); inval(); }, onError: (e) => toast.error(e.message) });
@@ -166,7 +171,7 @@ export default function Fornecedores() {
   const abrirNovo = () => { setEditId(null); setForm(EMPTY); setOpen(true); };
   const abrirEdicao = (f: Fornecedor) => {
     setEditId(f.id);
-    setForm({ nome: f.nome ?? "", nomeFantasia: f.nomeFantasia ?? "", tipo: f.tipo ?? "juridica", cpfCnpj: f.cpfCnpj ?? "", inscEstadual: f.inscEstadual ?? "", inscMunicipal: f.inscMunicipal ?? "", endereco: f.endereco ?? "", complemento: f.complemento ?? "", numero: f.numero ?? "", bairro: f.bairro ?? "", cidade: f.cidade ?? "", uf: f.uf ?? "", cep: f.cep ?? "", referencia: f.referencia ?? "", email: f.email ?? "", telefone: f.telefone ?? "", observacao: f.observacao ?? "" });
+    setForm({ nome: f.nome ?? "", nomeFantasia: f.nomeFantasia ?? "", tipo: f.tipo ?? "juridica", cpfCnpj: f.cpfCnpj ?? "", inscEstadual: f.inscEstadual ?? "", inscMunicipal: f.inscMunicipal ?? "", endereco: f.endereco ?? "", complemento: f.complemento ?? "", numero: f.numero ?? "", bairro: f.bairro ?? "", cidade: f.cidade ?? "", uf: f.uf ?? "", cep: f.cep ?? "", referencia: f.referencia ?? "", email: f.email ?? "", telefone: f.telefone ?? "", nomeContato: f.nomeContato ?? "", observacao: f.observacao ?? "" });
     setOpen(true);
   };
   const salvar = () => {
@@ -188,14 +193,15 @@ export default function Fornecedores() {
       referencia: form.referencia?.trim() || null,
       email: form.email?.trim() || null,
       telefone: form.telefone?.trim() || null,
+      nomeContato: form.nomeContato?.trim() || null,
       observacao: form.observacao?.trim() || null,
     };
     const tipoVal = (payload.tipo === "fisica" || payload.tipo === "juridica") ? payload.tipo : "juridica" as const;
     const payloadFinal = { ...payload, tipo: tipoVal } as const;
     if (editId) {
-      updateMut.mutate({ id: editId, nome: payloadFinal.nome, nomeFantasia: payloadFinal.nomeFantasia, tipo: tipoVal, cpfCnpj: payloadFinal.cpfCnpj, inscEstadual: payloadFinal.inscEstadual, inscMunicipal: payloadFinal.inscMunicipal, endereco: payloadFinal.endereco, complemento: payloadFinal.complemento, numero: payloadFinal.numero, bairro: payloadFinal.bairro, cidade: payloadFinal.cidade, uf: payloadFinal.uf, cep: payloadFinal.cep, referencia: payloadFinal.referencia, email: payloadFinal.email, telefone: payloadFinal.telefone, observacao: payloadFinal.observacao });
+      updateMut.mutate({ id: editId, nome: payloadFinal.nome, nomeFantasia: payloadFinal.nomeFantasia, tipo: tipoVal, cpfCnpj: payloadFinal.cpfCnpj, inscEstadual: payloadFinal.inscEstadual, inscMunicipal: payloadFinal.inscMunicipal, endereco: payloadFinal.endereco, complemento: payloadFinal.complemento, numero: payloadFinal.numero, bairro: payloadFinal.bairro, cidade: payloadFinal.cidade, uf: payloadFinal.uf, cep: payloadFinal.cep, referencia: payloadFinal.referencia, email: payloadFinal.email, telefone: payloadFinal.telefone, nomeContato: payloadFinal.nomeContato, observacao: payloadFinal.observacao });
     } else {
-      createMut.mutate({ nome: payloadFinal.nome, nomeFantasia: payloadFinal.nomeFantasia, tipo: tipoVal, cpfCnpj: payloadFinal.cpfCnpj, inscEstadual: payloadFinal.inscEstadual, inscMunicipal: payloadFinal.inscMunicipal, endereco: payloadFinal.endereco, complemento: payloadFinal.complemento, numero: payloadFinal.numero, bairro: payloadFinal.bairro, cidade: payloadFinal.cidade, uf: payloadFinal.uf, cep: payloadFinal.cep, referencia: payloadFinal.referencia, email: payloadFinal.email, telefone: payloadFinal.telefone, observacao: payloadFinal.observacao });
+      createMut.mutate({ nome: payloadFinal.nome, nomeFantasia: payloadFinal.nomeFantasia, tipo: tipoVal, cpfCnpj: payloadFinal.cpfCnpj, inscEstadual: payloadFinal.inscEstadual, inscMunicipal: payloadFinal.inscMunicipal, endereco: payloadFinal.endereco, complemento: payloadFinal.complemento, numero: payloadFinal.numero, bairro: payloadFinal.bairro, cidade: payloadFinal.cidade, uf: payloadFinal.uf, cep: payloadFinal.cep, referencia: payloadFinal.referencia, email: payloadFinal.email, telefone: payloadFinal.telefone, nomeContato: payloadFinal.nomeContato, observacao: payloadFinal.observacao });
     }
   };
 
@@ -248,7 +254,11 @@ export default function Fornecedores() {
           <div className="space-y-2">
             <p className="text-xs text-muted-foreground">{filtrados.length} fornecedor(es){busca ? ` encontrado(s) para "${busca}"` : ""}</p>
             {filtrados.map((f) => (
-              <div key={f.id} className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3">
+              <div
+                key={f.id}
+                className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 cursor-pointer hover:bg-accent/40 transition-colors"
+                onClick={() => setViewForn(f)}
+              >
                 <div className="flex items-start gap-3 min-w-0">
                   <div className="shrink-0 mt-0.5">
                     {f.tipo === "fisica"
@@ -284,7 +294,8 @@ export default function Fornecedores() {
                     </div>
                   </div>
                 </div>
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground" title="Ver detalhes" onClick={() => setViewForn(f)}><Eye className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" title="Editar" onClick={() => abrirEdicao(f)}><Pencil className="w-4 h-4" /></Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" title="Excluir" onClick={() => { setDelId(f.id); setDelNome(f.nome); }}><Trash2 className="w-4 h-4" /></Button>
                 </div>
@@ -304,6 +315,126 @@ export default function Fornecedores() {
           <div className="flex justify-end gap-2 pt-2 border-t">
             <Button variant="outline" onClick={() => setOpen(false)}>Cancelar</Button>
             <Button onClick={salvar} disabled={!form.nome.trim() || createMut.isPending || updateMut.isPending}>Salvar</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Modal visualização de detalhes */}
+      <Dialog open={!!viewForn} onOpenChange={(o) => { if (!o) setViewForn(null); }}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {viewForn?.tipo === "fisica"
+                ? <User className="w-5 h-5 text-muted-foreground" />
+                : <Building2 className="w-5 h-5 text-muted-foreground" />}
+              <span className="truncate">{viewForn?.nome}</span>
+            </DialogTitle>
+            {viewForn?.nomeFantasia && viewForn.nomeFantasia !== viewForn.nome && (
+              <p className="text-sm text-muted-foreground">{viewForn.nomeFantasia}</p>
+            )}
+          </DialogHeader>
+
+          {viewForn && (
+            <div className="space-y-4 text-sm">
+              {/* Dados fiscais */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dados Fiscais</p>
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Tipo</p>
+                    <p className="font-medium">{viewForn.tipo === "fisica" ? "Pessoa Física" : "Pessoa Jurídica"}</p>
+                  </div>
+                  {viewForn.cpfCnpj && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">{viewForn.tipo === "fisica" ? "CPF" : "CNPJ"}</p>
+                      <p className="font-medium">{viewForn.cpfCnpj}</p>
+                    </div>
+                  )}
+                  {viewForn.inscEstadual && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Insc. Estadual</p>
+                      <p className="font-medium">{viewForn.inscEstadual}</p>
+                    </div>
+                  )}
+                  {viewForn.inscMunicipal && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Insc. Municipal</p>
+                      <p className="font-medium">{viewForn.inscMunicipal}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Endereço */}
+              {(viewForn.endereco || viewForn.cidade || viewForn.uf) && (
+                <div className="space-y-2 border-t pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                    <MapPin className="w-3.5 h-3.5" /> Endereço
+                  </p>
+                  <div className="space-y-1">
+                    {viewForn.endereco && (
+                      <p>
+                        {viewForn.endereco}
+                        {viewForn.numero ? `, ${viewForn.numero}` : ""}
+                        {viewForn.complemento ? ` — ${viewForn.complemento}` : ""}
+                      </p>
+                    )}
+                    {viewForn.bairro && <p className="text-muted-foreground">{viewForn.bairro}</p>}
+                    {(viewForn.cidade || viewForn.uf || viewForn.cep) && (
+                      <p className="text-muted-foreground">
+                        {[viewForn.cidade, viewForn.uf].filter(Boolean).join(" - ")}
+                        {viewForn.cep ? ` — CEP ${viewForn.cep}` : ""}
+                      </p>
+                    )}
+                    {viewForn.referencia && (
+                      <p className="text-xs text-muted-foreground italic">Ref: {viewForn.referencia}</p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Contato */}
+              {(viewForn.nomeContato || viewForn.email || viewForn.telefone) && (
+                <div className="space-y-2 border-t pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Contato</p>
+                  <div className="space-y-1.5">
+                    {viewForn.nomeContato && (
+                      <p className="flex items-center gap-2">
+                        <User className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <span>{viewForn.nomeContato}</span>
+                      </p>
+                    )}
+                    {viewForn.email && (
+                      <p className="flex items-center gap-2">
+                        <Mail className="w-4 h-4 text-muted-foreground shrink-0" />
+                        <a href={`mailto:${viewForn.email}`} className="text-primary hover:underline">{viewForn.email}</a>
+                      </p>
+                    )}
+                    {viewForn.telefone && (
+                      <p className="flex items-center gap-2">
+                        <Phone className="w-4 h-4 text-muted-foreground shrink-0" />
+                        {viewForn.telefone}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Observações */}
+              {viewForn.observacao && (
+                <div className="space-y-1 border-t pt-3">
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Observações</p>
+                  <p className="text-muted-foreground whitespace-pre-wrap">{viewForn.observacao}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="flex justify-between gap-2 pt-3 border-t">
+            <Button variant="outline" onClick={() => setViewForn(null)}>Fechar</Button>
+            <Button className="gap-1.5" onClick={() => { if (viewForn) { setViewForn(null); abrirEdicao(viewForn); } }}>
+              <Pencil className="w-4 h-4" /> Editar
+            </Button>
           </div>
         </DialogContent>
       </Dialog>

@@ -1280,6 +1280,38 @@ Gere um resumo executivo profissional em português que:
     seed: engineerProcedure.mutation(async () => db.seedInsumoCategorias()),
   }),
 
+  // ============= CADASTRO: FORNECEDORES =============
+  fornecedores: router({
+    list: protectedProcedure.query(async () => db.getFornecedores()),
+    getById: protectedProcedure.input(z.object({ id: z.number() }))
+      .query(async ({ input }) => db.getFornecedorById(input.id)),
+    create: engineerProcedure.input(z.object({
+      nome: z.string().min(1), nomeFantasia: z.string().optional().nullable(),
+      tipo: z.enum(['fisica', 'juridica']).optional(),
+      cpfCnpj: z.string().optional().nullable(), inscEstadual: z.string().optional().nullable(),
+      inscMunicipal: z.string().optional().nullable(), endereco: z.string().optional().nullable(),
+      complemento: z.string().optional().nullable(), numero: z.string().optional().nullable(),
+      bairro: z.string().optional().nullable(), cidade: z.string().optional().nullable(),
+      uf: z.string().optional().nullable(), cep: z.string().optional().nullable(),
+      referencia: z.string().optional().nullable(), email: z.string().optional().nullable(),
+      telefone: z.string().optional().nullable(), observacao: z.string().optional().nullable(),
+    })).mutation(async ({ input }) => db.createFornecedor(input)),
+    update: engineerProcedure.input(z.object({
+      id: z.number(), nome: z.string().min(1).optional(), nomeFantasia: z.string().optional().nullable(),
+      tipo: z.enum(['fisica', 'juridica']).optional().nullable(),
+      cpfCnpj: z.string().optional().nullable(), inscEstadual: z.string().optional().nullable(),
+      inscMunicipal: z.string().optional().nullable(), endereco: z.string().optional().nullable(),
+      complemento: z.string().optional().nullable(), numero: z.string().optional().nullable(),
+      bairro: z.string().optional().nullable(), cidade: z.string().optional().nullable(),
+      uf: z.string().optional().nullable(), cep: z.string().optional().nullable(),
+      referencia: z.string().optional().nullable(), email: z.string().optional().nullable(),
+      telefone: z.string().optional().nullable(), observacao: z.string().optional().nullable(),
+    })).mutation(async ({ input }) => { const { id, ...d } = input; await db.updateFornecedor(id, d); return { success: true }; }),
+    delete: engineerProcedure.input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => { await db.deleteFornecedor(input.id); return { success: true }; }),
+    seed: engineerProcedure.mutation(async () => db.seedFornecedores()),
+  }),
+
   // ============= CADASTRO: INSUMOS =============
   insumos: router({
     list: protectedProcedure.query(async () => db.getInsumos()),

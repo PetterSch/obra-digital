@@ -1,70 +1,91 @@
-# Transferência de Sessão — Mapa de Cotação (implementação completa)
+# Transferência de Sessão — Mapa de Cotação e Pedido de Compra (melhorias e correções)
 
-**Gerado em:** 2026-06-18T21:00:00-03:00
+**Gerado em:** 2026-06-20T00:00:00-03:00
 **Arquivo salvo em:** /Users/pedroemilio/Downloads/obra-digital-completo/session-handoff.md
 
 ## Ponto de partida
 
-O usuário trouxe uma planilha modelo (PLANILHA MODELO S (NÃO MEXER).xlsx) para servir de base e pediu a implementação completa do módulo "Mapa de Cotação" — que estava marcado como "em breve" na sidebar. O módulo permite montar mapas de cotação com até 4 fornecedores por mapa, selecionando itens de pedidos de compra aprovados, inserindo preços por fornecedor e calculando automaticamente o R$ Ideal (menor preço por item). Dois bugs de navegação foram corrigidos durante a sessão: o item da sidebar estava desabilitado e a página global não tinha botão de criação.
+O usuário relatou dois bugs no Mapa de Cotação recém-implementado: ao clicar em "Gerar Mapa" o sistema navegava para dentro da obra (criava um "apêndice"), e ao selecionar itens e montar o mapa aparecia um erro silencioso. A sessão evoluiu para melhorias incrementais no módulo de cotação e no pedido de compra.
 
 ## Decisões tomadas e o que foi entregue
 
-- **4 novas tabelas DB** (migration em `runMigrations()`): `mapas_cotacao`, `mapa_fornecedores`, `mapa_itens`, `mapa_cotacoes`. Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/server/db.ts` (linha ~277).
-- **7 funções DB**: `getMapasByObra`, `getMapaById`, `createMapa`, `updateMapa`, `deleteMapa`, `getAllMapas`, `getItensAprovadosByObra`. Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/server/db.ts` (linha ~1628 em diante).
-- **Router tRPC `mapaCotacao`**: `listAll`, `listByObra`, `getById`, `getItensAprovados`, `create`, `update`, `delete`. Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/server/routers.ts` (antes do fechamento do `appRouter`).
-- **Componente `MapaCotacaoTab.tsx`** (novo): landing com 3 cards (Novo / Em Andamento / Concluídos), seleção de itens aprovados por pedido com checkboxes, editor full-width com tabela de preços por fornecedor, coluna R$ Ideal em verde (mínimo automático), rodapé com subtotal/desconto/frete/total, botões Salvar / Concluir / Exportar (print). Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/MapaCotacaoTab.tsx`.
-- **Página `MapaCotacaoGlobal.tsx`** (nova): visão global de todos os mapas por obra, contadores totais/em andamento/concluídos, botão "Montar Novo Mapa" com dialog de seleção de obra → navega para `/obras/{id}?tab=cotacao`. Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/MapaCotacaoGlobal.tsx`.
-- **ObraDetail.tsx**: import de `MapaCotacaoTab`, tab trigger "Mapa de Cotação" (value=`cotacao`), TabsContent correspondente, e `defaultValue` do `<Tabs>` lê `?tab=` da URL (`new URLSearchParams(window.location.search).get("tab") ?? "diarios"`). Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/ObraDetail.tsx`.
-- **App.tsx**: rota `<Route path="/suprimentos/cotacao" component={MapaCotacaoGlobal} />` adicionada. Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/App.tsx`.
-- **DashboardLayout.tsx**: removido `disabled: true` do item "Mapa de Cotação" na sidebar. Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/DashboardLayout.tsx`.
+- **Mapa de Cotação removido da aba da obra**: a aba "cotacao" e o `MapaCotacaoTab` foram removidos de `ObraDetail.tsx`. O fluxo completo existe apenas em `/suprimentos/cotacao`.
+  Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/ObraDetail.tsx`
+
+- **MapaCotacaoGlobal renderiza tab inline**: ao selecionar uma obra (dialog ou lista), `obraSelecionada` é setado e `MapaCotacaoTab` é exibido dentro da própria página global com botão Voltar — sem navegar para `/obras/:id`. Prop `openMapaId` abre editor diretamente para um mapa específico.
+  Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/MapaCotacaoGlobal.tsx`
+
+- **Erro ao criar mapa corrigido**: `unidade` e `observacao` chegavam como `null` do banco quebrando validação Zod (`z.string().optional()` rejeita `null`). Corrigido com `?? undefined` na função `montarMapa`.
+  Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/MapaCotacaoTab.tsx`
+
+- **Prop `openMapaId` em MapaCotacaoTab**: interface Props ganhou `openMapaId?: number`; useState de `view` e `mapaEditId` inicializam com "editor" e o id se fornecido.
+  Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/MapaCotacaoTab.tsx`
+
+- **Fornecedores dinâmicos com "+"**: mapa agora é criado com 1 fornecedor (era 4). Botão "+" no final dos cards chama mutation `addFornecedor` que insere no banco, retorna `{id, ordem}` e o frontend acrescenta ao estado local sem reload.
+  Arquivos: `server/db.ts` (`addMapaFornecedor`, `createMapa` alterado), `server/routers.ts` (`mapaCotacao.addFornecedor`), `MapaCotacaoTab.tsx`
+
+- **Botão X para remover fornecedor**: aparece em cada card quando `fornecedores.length > 1`. Remove cotações do fornecedor no banco, depois o próprio fornecedor, renumera `ordem` dos restantes no banco (loop UPDATE). Frontend filtra e renumera localmente, e reindexia as chaves de cotações (`iIdx-fIdx`) deslocando índices acima do removido.
+  Arquivos: `server/db.ts` (`removeMapaFornecedor`), `server/routers.ts` (`mapaCotacao.removeFornecedor`), `MapaCotacaoTab.tsx`
+
+- **Desconto e Frete na tabela**: removidos dos cards de fornecedor; reinseridos como `<input type="number" step="any">` editáveis no rodapé da tabela, com `border-b` azul ao focar. Valor 0 exibe vazio; `parseFloat` com fallback para 0.
+
+- **dataAplicacao removido do mapa**: campo removido de estado, useEffect sync, `salvar()`, export HTML e UI do `MapaEditor`. Grade de meta passou de 3 para 2 colunas (título + local de aplicação).
+  Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/MapaCotacaoTab.tsx`
+
+- **dataEntrega no pedido de compra**: coluna `DATE` adicionada à tabela `pedidos_compra` via ALTER TABLE. `createPedido` e `updatePedido` recebem e persistem `dataEntrega`. Router (create + update) tem `dataEntrega: z.string().optional()`. Form do `PedidosCompraTab` tem campo `<Input type="date">`. Lista exibe com ícone `CalendarClock` âmbar quando preenchido.
+  Arquivos: `server/db.ts`, `server/routers.ts`, `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/PedidosCompraTab.tsx`
+
+- **Bug crítico de migração corrigido**: todos os ALTER TABLE estavam num único `try/catch`. No VPS, as colunas antigas já existiam → primeiro ALTER falha → bloco inteiro aborta → `dataEntrega` nunca era criada → INSERT e SELECT de pedidos explodiam. Corrigido com função `runAlter()` que envolve cada statement em try/catch individual.
+  Arquivo: `/Users/pedroemilio/Downloads/obra-digital-completo/server/db.ts` (função `runAlter` e 4 chamadas isoladas)
 
 ## Arquivos-chave para a próxima sessão
 
-- `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/MapaCotacaoTab.tsx` — componente principal do módulo; ler primeiro
-- `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/MapaCotacaoGlobal.tsx` — página global acessada pela sidebar
-- `/Users/pedroemilio/Downloads/obra-digital-completo/server/db.ts` — funções `createMapa`, `updateMapa`, `getItensAprovadosByObra` (lógica de cotações indexada por `itemIndex`)
-- `/Users/pedroemilio/Downloads/obra-digital-completo/server/routers.ts` — router `mapaCotacao`
-- `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/ObraDetail.tsx` — tab "cotacao" + defaultValue via URL param
-- Arquivos de memória: `/Users/pedroemilio/.claude/projects/-Users-pedroemilio-Downloads-obra-digital-completo/memory/MEMORY.md`
+- `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/MapaCotacaoTab.tsx` — componente principal; toda lógica de fornecedores dinâmicos, cotações, desconto/frete, editor
+- `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/MapaCotacaoGlobal.tsx` — página global; gerencia `obraSelecionada` e `openMapaId`
+- `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/components/PedidosCompraTab.tsx` — pedido de compra com `dataEntrega`
+- `/Users/pedroemilio/Downloads/obra-digital-completo/server/db.ts` — funções: `createMapa` (1 fornecedor), `addMapaFornecedor`, `removeMapaFornecedor` (reordena), `createPedido`/`updatePedido` (com `dataEntrega`), `runAlter` isolado
+- `/Users/pedroemilio/Downloads/obra-digital-completo/server/routers.ts` — procedures: `mapaCotacao.addFornecedor`, `mapaCotacao.removeFornecedor`, `pedidos.create`/`update` com `dataEntrega`
+- `/Users/pedroemilio/Downloads/obra-digital-completo/client/src/pages/ObraDetail.tsx` — aba "cotacao" e `MapaCotacaoTab` foram removidos daqui (conferir se import foi limpo)
+- Memória: `/Users/pedroemilio/.claude/projects/-Users-pedroemilio-Downloads-obra-digital-completo/memory/MEMORY.md`
 
 ## Contexto web e integrações externas
 
 ### Sites acessados
-- `http://localhost:3000` — preview server local tentado para validação visual; login falhou (preview não tem acesso ao banco real). Apenas usado para confirmar ausência de erros de compilação — estado atual: servidor rodando na porta 3000.
-- `https://obradigital.cloud/` — produção no VPS; foram feitos dois deploys nesta sessão (ver abaixo).
+- `http://localhost:3000` — preview server local usado para verificar login (preview não autentica; sem acesso à UI logada). Estado atual: servidor rodando porta 3000, serverId `5f25d828-78bb-4ccd-939c-8ac5499a668d`.
+- `https://obradigital.cloud/` — produção no VPS; usuário fez deploy manual após cada conjunto de mudanças via SSH.
 
 ### Uploads e envios realizados
-- Commit 1 → `git push origin main` → VPS fez `git pull + npm run build + pm2 restart obra-digital` — mapa de cotação entregue (versão sem botão criar na global e sem rota).
-- Commit 2 → `git push origin main` → VPS fez `git pull + npm run build + pm2 restart obra-digital` — corrigiu sidebar disabled + adicionou botão criar + rota.
-- Commit 3 (mais recente, ainda local?) — fix da página global com botão "Montar Novo Mapa" e dialog de seleção de obra. **Verificar se o usuário fez o terceiro deploy.**
+- Múltiplos commits + `git push origin main` + deploy SSH ao longo da sessão. Último commit: `fix: migracoes ALTER TABLE isoladas para nao abortar quando coluna ja existe`.
+- Usuário executou `cd /var/www/obra-digital && git pull origin main && npm install && npm run build && pm2 restart obra-digital` a cada deploy.
 
 ### Credenciais e autenticações usadas
-- VPS SSH `root@212.85.22.31` — usada pelo usuário para os deploys; não usada diretamente pelo agente.
-- GitHub push — feito pelo usuário a partir do terminal local.
+- VPS SSH: `root@212.85.22.31` — usada pelo usuário no terminal; não acessada diretamente pelo agente nesta sessão.
+- GitHub: autenticação local do usuário via git.
 
 ### APIs e integrações
-- Nenhuma chamada de API externa nesta sessão; apenas build local e comandos git.
+- Nenhuma API externa. Todos os endpoints são do próprio backend tRPC do projeto.
 
 ## Estado atual
 
-- Processos em background: servidor de preview Vite/Express — serverId `5f25d828-78bb-4ccd-939c-8ac5499a668d`, porta `3000`. Para parar: `preview_stop` com esse serverId ou `kill $(lsof -ti:3000)`.
-- Servidores / portas: `http://localhost:3000` ativo (preview local).
-- Worktrees / branches abertas: nenhum — trabalhando direto em `main`.
+- Processos em background: nenhum iniciado nesta sessão pelo agente.
+- Servidores / portas: preview dev server `http://localhost:3000` (serverId `5f25d828-78bb-4ccd-939c-8ac5499a668d`) — iniciado em sessão anterior, ainda ativo.
+- Worktrees / branches abertas: nenhum — tudo em `main`.
 
-## Verificação
+## Verificação — como confirmar que está funcionando
 
-- `cd /Users/pedroemilio/Downloads/obra-digital-completo && npm run build` — deve compilar sem erros TypeScript.
-- No VPS após deploy: sidebar "Mapa de Cotação" clicável → abre página `/suprimentos/cotacao` com contadores e botão "Montar Novo Mapa".
-- Clicando "Montar Novo Mapa" → dialog com lista de obras → selecionar obra → vai para `/obras/{id}?tab=cotacao` abrindo diretamente na aba certa.
-- Dentro da obra: aba "Mapa de Cotação" → landing com 3 cards → "Montar Novo Mapa" → seleciona itens de pedidos aprovados → cria mapa → editor com tabela de preços e R$ Ideal.
+- `pm2 list` no VPS → `obra-digital` status `online`.
+- `https://obradigital.cloud/suprimentos/cotacao` → lista global de mapas, botão "Montar Novo Mapa", sem redirecionar para `/obras/:id`.
+- Criar pedido de compra → campo "Data de Entrega" visível no formulário; salvar sem erro.
+- Dentro de qualquer obra → aba "Mapa de Cotação" não existe mais.
+- Abrir mapa existente → X nos cards de fornecedor (quando há mais de 1) renumera corretamente após remoção.
 
 ## Pendências e perguntas abertas
 
-- **Pendente (deploy)**: o terceiro commit (fix botão criar na página global) pode ainda não ter sido deployado — confirmar com o usuário se foi executado o passo 4 no VPS.
-- **Em aberto**: a planilha modelo mostrava campos "Condição de Pagamento" por fornecedor — o campo existe no banco (`condicaoPagamento` em `mapa_fornecedores`) mas não tem input no editor (falta implementar na UI se o usuário precisar).
-- **Em aberto**: exportação atual usa `window.print()` com HTML inline — o usuário pode querer um export real para .xlsx que replica exatamente o formato da planilha modelo (com as mesmas colunas e estilo). Não foi solicitado ainda.
-- **Sidebar**: "Ordens de Compra" ainda está `disabled: true` — não foi implementado, previsto para sessão futura.
+- **Em aberto**: o usuário não confirmou explicitamente que os pedidos voltaram a funcionar após o deploy do fix `runAlter`. Última mensagem foi o pedido de handoff.
+- **Pendente**: exportação PDF/Excel do pedido de compra não inclui `dataEntrega` no conteúdo do documento (dados existem mas o HTML de exportação não os exibe). Não foi solicitado ainda.
+- **Pendente**: campo `condicaoPagamento` existe em `mapa_fornecedores` no banco mas não tem input na UI do editor. Não foi solicitado.
+- **Pendente**: "Ordens de Compra" na sidebar ainda está `disabled: true` — não implementado.
 
 ## Por onde continuar
 
-Confirmar com o usuário se o terceiro deploy foi feito; se não, executar os passos de deploy (`cd /Users/pedroemilio/Downloads/obra-digital-completo && git add -A && git commit -m "..." && git push origin main` → ssh → `cd /var/www/obra-digital && git pull origin main && npm install && npm run build && pm2 restart obra-digital`). Depois testar o fluxo completo em produção: criar um mapa de cotação, preencher preços dos fornecedores e verificar se o R$ Ideal calcula corretamente.
+Confirmar com o usuário se os pedidos voltaram a funcionar após o último deploy (fix `runAlter`); se houver novo problema, verificar `pm2 logs obra-digital --lines 50` no VPS para ver o erro real do banco.

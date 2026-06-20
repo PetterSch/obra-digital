@@ -28,6 +28,7 @@ import Presenca from "./pages/Presenca";
 import ConfiguracaoEmpresa from "./pages/ConfiguracaoEmpresa";
 import CategoriasInsumo from "./pages/CategoriasInsumo";
 import Insumos from "./pages/Insumos";
+import Fornecedores from "./pages/Fornecedores";
 import AprovacaoPedidos from "./pages/AprovacaoPedidos";
 import MapaCotacaoGlobal from "./pages/MapaCotacaoGlobal";
 import { useAuth } from "./_core/hooks/useAuth";
@@ -78,6 +79,7 @@ function Router() {
       <Route path={"/configuracoes/empresa"} component={ConfiguracaoEmpresa} />
       <Route path={"/cadastros/categorias-insumo"} component={CategoriasInsumo} />
       <Route path={"/cadastros/insumos"} component={Insumos} />
+      <Route path={"/cadastros/fornecedores"} component={Fornecedores} />
       <Route path={"/suprimentos/aprovacao"} component={AprovacaoPedidos} />
       <Route path={"/suprimentos/cotacao"} component={MapaCotacaoGlobal} />
       <Route path={"/404"} component={NotFound} />

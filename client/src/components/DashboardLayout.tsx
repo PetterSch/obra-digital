@@ -51,6 +51,7 @@ const menuGroups: MenuGroup[] = [
     { icon: Building2, label: "Minha Empresa",          path: "/configuracoes/empresa", adminOnly: true },
     { icon: Tags,      label: "Categorias de Insumos",  path: "/cadastros/categorias-insumo" },
     { icon: Package,   label: "Insumos",                path: "/cadastros/insumos" },
+    { icon: Truck,     label: "Fornecedores",           path: "/cadastros/fornecedores" },
     { icon: UserCog,   label: "Usuários",               path: "/admin", adminOnly: true },
   ]},
 ];

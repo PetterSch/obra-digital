@@ -207,23 +207,23 @@ function EquipeCard({
   return (
     <Card className="overflow-hidden border shadow-sm">
       {/* ── Cabeçalho da equipe ── */}
-      <div className="flex items-center justify-between gap-3 px-4 py-3">
-        <div className="flex items-center gap-3 min-w-0">
-          <div className="w-8 h-8 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
-            <Building2 className="w-4 h-4 text-primary" />
+      <div className="flex items-center justify-between gap-2 px-3 py-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-md bg-primary/10 flex items-center justify-center shrink-0">
+            <Building2 className="w-3.5 h-3.5 text-primary" />
           </div>
           <div className="min-w-0">
-            <h3 className="font-semibold text-sm leading-snug truncate">{equipe.nome}</h3>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0 mt-0.5">
+            <h3 className="font-semibold text-sm leading-tight truncate">{equipe.nome}</h3>
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-0">
               <p className="text-xs text-muted-foreground truncate">{equipe.empresa}</p>
               {equipe.telefone && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Phone className="w-3 h-3" />{equipe.telefone}
+                <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <Phone className="w-2.5 h-2.5" />{equipe.telefone}
                 </span>
               )}
               {equipe.email && (
-                <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                  <Mail className="w-3 h-3" />{equipe.email}
+                <span className="flex items-center gap-0.5 text-xs text-muted-foreground">
+                  <Mail className="w-2.5 h-2.5" />{equipe.email}
                 </span>
               )}
             </div>
@@ -231,11 +231,11 @@ function EquipeCard({
         </div>
 
         {/* Ações */}
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-0.5 shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className="gap-1.5 text-xs h-8 px-2.5"
+            className="gap-1 text-xs h-7 px-2"
             onClick={() => setExpanded(!expanded)}
           >
             <Users className="w-3.5 h-3.5" />
@@ -245,7 +245,7 @@ function EquipeCard({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8"
+            className="h-7 w-7"
             onClick={() => onEdit(equipe)}
             title="Editar equipe"
           >
@@ -254,7 +254,7 @@ function EquipeCard({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive"
+            className="h-7 w-7 text-destructive hover:text-destructive"
             onClick={() => {
               if (confirm(`Excluir a equipe "${equipe.nome}"? Isso removerá todos os colaboradores.`)) {
                 onDelete(equipe.id);

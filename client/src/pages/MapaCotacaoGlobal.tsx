@@ -25,6 +25,7 @@ export default function MapaCotacaoGlobal() {
   const [dialogObra, setDialogObra] = useState(false);
   const [obraSelecionada, setObraSelecionada] = useState<ObraSelecionada | null>(null);
   const [openMapaId, setOpenMapaId] = useState<number | null>(null);
+  const [filtro, setFiltro] = useState<"todos" | "em_andamento" | "concluidos">("todos");
 
   const { data: mapas = [], isLoading } = trpc.mapaCotacao.listAll.useQuery();
   const { data: obras = [], isLoading: carregandoObras } = trpc.obras.list.useQuery();
@@ -39,6 +40,15 @@ export default function MapaCotacaoGlobal() {
 
   const emAndamento = mapas.filter((m: any) => m.status !== "concluido").length;
   const concluidos = mapas.filter((m: any) => m.status === "concluido").length;
+
+  const gruposFiltrados = grupos.map(g => ({
+    ...g,
+    mapas: g.mapas.filter((m: any) => {
+      if (filtro === "em_andamento") return m.status !== "concluido";
+      if (filtro === "concluidos") return m.status === "concluido";
+      return true;
+    }),
+  })).filter(g => g.mapas.length > 0);
 
   function abrirObra(obraId: number, obraNome: string, mapaId?: number) {
     setObraSelecionada({ id: obraId, nome: obraNome });
@@ -96,23 +106,29 @@ export default function MapaCotacaoGlobal() {
 
         {/* Contadores */}
         <div className="grid grid-cols-3 gap-4">
-          <Card>
+          <Card
+            className={`cursor-pointer transition-all ${filtro === "todos" ? "ring-2 ring-slate-500 bg-slate-50" : "hover:bg-muted/40"}`}
+            onClick={() => setFiltro(filtro === "todos" ? "todos" : "todos")}>
             <CardContent className="flex flex-col items-center justify-center py-6 gap-2">
-              <Map className="w-8 h-8 text-slate-500" />
+              <Map className={`w-8 h-8 ${filtro === "todos" ? "text-slate-700" : "text-slate-500"}`} />
               <p className="text-2xl font-bold">{mapas.length}</p>
               <p className="text-xs text-muted-foreground">Total de Mapas</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className={`cursor-pointer transition-all ${filtro === "em_andamento" ? "ring-2 ring-amber-500 bg-amber-50" : "hover:bg-muted/40"}`}
+            onClick={() => setFiltro(f => f === "em_andamento" ? "todos" : "em_andamento")}>
             <CardContent className="flex flex-col items-center justify-center py-6 gap-2">
-              <ClipboardList className="w-8 h-8 text-amber-500" />
+              <ClipboardList className={`w-8 h-8 ${filtro === "em_andamento" ? "text-amber-600" : "text-amber-500"}`} />
               <p className="text-2xl font-bold">{emAndamento}</p>
               <p className="text-xs text-muted-foreground">Em Andamento</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card
+            className={`cursor-pointer transition-all ${filtro === "concluidos" ? "ring-2 ring-green-500 bg-green-50" : "hover:bg-muted/40"}`}
+            onClick={() => setFiltro(f => f === "concluidos" ? "todos" : "concluidos")}>
             <CardContent className="flex flex-col items-center justify-center py-6 gap-2">
-              <CheckCircle2 className="w-8 h-8 text-green-500" />
+              <CheckCircle2 className={`w-8 h-8 ${filtro === "concluidos" ? "text-green-600" : "text-green-500"}`} />
               <p className="text-2xl font-bold">{concluidos}</p>
               <p className="text-xs text-muted-foreground">Concluídos</p>
             </CardContent>
@@ -122,22 +138,30 @@ export default function MapaCotacaoGlobal() {
         {/* Lista por obra */}
         {isLoading ? (
           <div className="flex justify-center py-16"><Spinner /></div>
-        ) : grupos.length === 0 ? (
+        ) : gruposFiltrados.length === 0 ? (
           <Card>
             <CardContent className="py-16 text-center space-y-4">
               <Map className="w-10 h-10 mx-auto opacity-30" />
               <div>
-                <p className="text-muted-foreground">Nenhum mapa de cotação criado ainda.</p>
-                <p className="text-sm text-muted-foreground mt-1">Clique em <strong>Montar Novo Mapa</strong> para começar.</p>
+                {grupos.length === 0 ? (
+                  <>
+                    <p className="text-muted-foreground">Nenhum mapa de cotação criado ainda.</p>
+                    <p className="text-sm text-muted-foreground mt-1">Clique em <strong>Montar Novo Mapa</strong> para começar.</p>
+                  </>
+                ) : (
+                  <p className="text-muted-foreground">Nenhum mapa encontrado para o filtro selecionado.</p>
+                )}
               </div>
-              <Button onClick={() => setDialogObra(true)} className="gap-2">
-                <Plus className="w-4 h-4" /> Montar Novo Mapa
-              </Button>
+              {grupos.length === 0 && (
+                <Button onClick={() => setDialogObra(true)} className="gap-2">
+                  <Plus className="w-4 h-4" /> Montar Novo Mapa
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
           <div className="space-y-5">
-            {grupos.map(({ obraId, obraNome, mapas: ms }) => (
+            {gruposFiltrados.map(({ obraId, obraNome, mapas: ms }) => (
               <div key={obraId}>
                 <div className="flex items-center justify-between mb-2">
                   <h3 className="font-semibold flex items-center gap-2 text-sm">

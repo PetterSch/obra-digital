@@ -205,7 +205,7 @@ function EquipeCard({
   const inativos = colaboradores.filter((c: any) => c.ativo === false);
 
   return (
-    <Card className="overflow-hidden border shadow-sm">
+    <Card className="overflow-hidden border shadow-sm py-0 gap-0">
       {/* ── Cabeçalho da equipe ── */}
       <div className="flex items-center justify-between gap-2 px-3 py-2">
         <div className="flex items-center gap-2.5 min-w-0">

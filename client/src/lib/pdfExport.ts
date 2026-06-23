@@ -440,6 +440,10 @@ export interface DiarioPDFData {
     criticidade?: string;
     responsavel?: string;
   }>;
+  fotos?: Array<{
+    src: string;
+    descricao?: string;
+  }>;
 }
 
 // ─── exportDiarioPDF ───────────────────────────────────────────────────────
@@ -584,6 +588,19 @@ ${cover}
   <div class="section">
     <div class="section-title">Observações Gerais</div>
     <div class="obs-box">${data.diario.observacoesGerais}</div>
+  </div>` : ""}
+
+  ${data.fotos && data.fotos.length > 0 ? `
+  <div class="section" style="page-break-before:always">
+    <div class="section-title">Registro Fotográfico (${data.fotos.length} foto${data.fotos.length !== 1 ? "s" : ""})</div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:10px">
+      ${data.fotos.map(f => `
+        <div style="break-inside:avoid">
+          <img src="${f.src}" alt="${f.descricao || 'Foto'}"
+            style="width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:6px;border:1px solid #e5e7eb" />
+          ${f.descricao ? `<p style="font-size:9px;color:#6b7280;margin:3px 0 0;text-align:center;line-height:1.3">${f.descricao}</p>` : ""}
+        </div>`).join("")}
+    </div>
   </div>` : ""}
 
   <div class="section" style="margin-top:24px">

@@ -82,6 +82,7 @@ export default function DiarioView() {
   const { data: maoDeObra = [] } = trpc.maoDeObra.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: maoObraResumo = [] } = trpc.presenca.resumoByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
   const { data: ocorrencias = [] } = trpc.ocorrencias.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
+  const { data: fotos = [] } = trpc.midia.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
 
   const handleExportPDF = () => {
     if (!diario || !obra) { toast.error("Dados ainda carregando"); return; }
@@ -122,6 +123,10 @@ export default function DiarioView() {
         tipo: o.tipo ?? undefined,
         criticidade: o.criticidade ?? undefined,
         responsavel: o.responsavel ?? undefined,
+      })),
+      fotos: (fotos as any[]).map((f) => ({
+        src: f.caminhoArmazenamento,
+        descricao: f.descricao ?? undefined,
       })),
     });
     toast.success("PDF gerado! Confirme a impressão na janela que abriu.");

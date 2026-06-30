@@ -103,6 +103,24 @@ export default function ObraEdit() {
     });
   }, [obra]);
 
+  const { data: fornecedores = [] } = trpc.fornecedores.list.useQuery();
+
+  // Preenche o Endereço de Entrega com os dados de um fornecedor cadastrado
+  const aplicarFornecedor = (id: string) => {
+    const f = fornecedores.find((x: any) => String(x.id) === id);
+    if (!f) return;
+    const endereco = [f.endereco, f.numero, f.complemento, f.bairro]
+      .filter(Boolean).join(", ");
+    setForm(prev => ({
+      ...prev,
+      enderecoEntrega: endereco,
+      cidadeEntrega: f.cidade ?? "",
+      estadoEntrega: (f.uf ?? "").toUpperCase(),
+      cepEntrega: f.cep ?? "",
+    }));
+    toast.success(`Dados de "${f.nomeFantasia || f.nome}" aplicados`);
+  };
+
   const updateMutation = trpc.obras.update.useMutation({
     onSuccess: () => {
       toast.success("Obra atualizada com sucesso!");
@@ -225,6 +243,23 @@ export default function ObraEdit() {
           <Card>
             <CardHeader><CardTitle className="text-base">Endereço de Entrega</CardTitle></CardHeader>
             <CardContent className="space-y-4">
+              {fornecedores.length > 0 && (
+                <div className="space-y-1.5">
+                  <Label className="text-muted-foreground text-xs">Preencher a partir de um fornecedor cadastrado</Label>
+                  <Select onValueChange={aplicarFornecedor}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecionar fornecedor..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fornecedores.map((f: any) => (
+                        <SelectItem key={f.id} value={String(f.id)}>
+                          {f.nomeFantasia || f.nome}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="space-y-1.5">
                 <Label>Endereço</Label>
                 <Input value={form.enderecoEntrega} onChange={set("enderecoEntrega")} placeholder="Rua, número, complemento" />

@@ -10,6 +10,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import { z, ZodError } from "zod";
 
@@ -53,6 +54,23 @@ export default function ObrasList() {
   });
 
   const { data: obras = [], refetch } = trpc.obras.list.useQuery();
+  const { data: fornecedores = [] } = trpc.fornecedores.list.useQuery();
+
+  // Preenche o Endereço de Entrega com os dados de um fornecedor cadastrado
+  const aplicarFornecedor = (id: string) => {
+    const f = fornecedores.find((x: any) => String(x.id) === id);
+    if (!f) return;
+    const endereco = [f.endereco, f.numero, f.complemento, f.bairro]
+      .filter(Boolean).join(", ");
+    setFormData(prev => ({
+      ...prev,
+      enderecoEntrega: endereco,
+      cidadeEntrega: f.cidade ?? "",
+      estadoEntrega: (f.uf ?? "").toUpperCase(),
+      cepEntrega: f.cep ?? "",
+    }));
+    toast.success(`Dados de "${f.nomeFantasia || f.nome}" aplicados`);
+  };
   const createMutation = trpc.obras.create.useMutation({
     onSuccess: () => {
       toast.success("Obra criada com sucesso!");
@@ -190,7 +208,21 @@ export default function ObrasList() {
                 </div>
 
                 <div className="space-y-2 pt-2 border-t">
-                  <Label htmlFor="enderecoEntrega" className="font-semibold">Endereço de Entrega</Label>
+                  <Label className="font-semibold">Endereço de Entrega</Label>
+                  {fornecedores.length > 0 && (
+                    <Select onValueChange={aplicarFornecedor}>
+                      <SelectTrigger className="text-muted-foreground">
+                        <SelectValue placeholder="Usar dados de um fornecedor cadastrado..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {fornecedores.map((f: any) => (
+                          <SelectItem key={f.id} value={String(f.id)}>
+                            {f.nomeFantasia || f.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
                   <Input
                     id="enderecoEntrega"
                     value={formData.enderecoEntrega}

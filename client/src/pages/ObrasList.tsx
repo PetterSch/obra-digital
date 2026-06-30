@@ -17,6 +17,7 @@ import { z, ZodError } from "zod";
 const createObraSchema = z.object({
   codigo: z.string().min(1, "Código é obrigatório"),
   nome: z.string().min(1, "Nome é obrigatório"),
+  cno: z.string().optional(),
   cliente: z.string().min(1, "Cliente é obrigatório"),
   endereco: z.string().min(1, "Endereço é obrigatório"),
   cidade: z.string().min(1, "Cidade é obrigatória"),
@@ -39,6 +40,7 @@ export default function ObrasList() {
   const [formData, setFormData] = useState({
     codigo: "",
     nome: "",
+    cno: "",
     cliente: "",
     endereco: "",
     cidade: "",
@@ -154,6 +156,16 @@ export default function ObrasList() {
                       placeholder="Ex: Edifício Comercial"
                     />
                   </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="cno">CNO <span className="text-muted-foreground text-xs font-normal">(Cadastro Nacional de Obra)</span></Label>
+                  <Input
+                    id="cno"
+                    value={formData.cno}
+                    onChange={(e) => setFormData({ ...formData, cno: e.target.value })}
+                    placeholder="00.000.00000/00"
+                  />
                 </div>
 
                 <div className="space-y-2">

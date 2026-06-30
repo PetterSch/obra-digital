@@ -52,6 +52,7 @@ export default function ObraEdit() {
     // Identificação
     codigo:             "",
     nome:               "",
+    cno:                "",
     // Cliente
     cliente:            "",
     // Localização
@@ -83,6 +84,7 @@ export default function ObraEdit() {
     setForm({
       codigo:             obra.codigo              ?? "",
       nome:               obra.nome                ?? "",
+      cno:                (obra as any).cno        ?? "",
       cliente:            obra.cliente             ?? "",
       endereco:           obra.endereco            ?? "",
       cidade:             obra.cidade              ?? "",
@@ -189,6 +191,10 @@ export default function ObraEdit() {
                   <Label>Nome da Obra *</Label>
                   <Input value={form.nome} onChange={set("nome")} placeholder="Nome da obra" required />
                 </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>CNO <span className="text-muted-foreground text-xs">(Cadastro Nacional de Obra)</span></Label>
+                <Input value={form.cno} onChange={set("cno")} placeholder="00.000.00000/00" />
               </div>
             </CardContent>
           </Card>

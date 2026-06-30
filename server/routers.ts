@@ -193,6 +193,7 @@ export const appRouter = router({
       .input(z.object({
         codigo: z.string().min(1),
         nome: z.string().min(1),
+        cno: z.string().optional(),
         cliente: z.string().min(1),
         endereco: z.string().min(1),
         cidade: z.string().min(1),
@@ -226,6 +227,7 @@ export const appRouter = router({
         id: z.number(),
         codigo: z.string().min(1).optional(),
         nome: z.string().min(1).optional(),
+        cno: z.string().optional(),
         cliente: z.string().optional(),
         endereco: z.string().optional(),
         cidade: z.string().optional(),

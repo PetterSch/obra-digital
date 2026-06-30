@@ -181,6 +181,12 @@ export async function runMigrations() {
     )`);
   } catch { /* já existe */ }
 
+  // CNO — Cadastro Nacional de Obras (adiciona se ainda não existir)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE obras ADD COLUMN cno VARCHAR(30)`);
+  } catch { /* já existe */ }
+
   // Endereço de entrega da obra (adiciona se ainda não existir)
   for (const col of [
     "enderecoEntrega TEXT", "cidadeEntrega VARCHAR(100)",

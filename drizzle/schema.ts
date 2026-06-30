@@ -39,6 +39,7 @@ export const obras = mysqlTable("obras", {
   id: int("id").autoincrement().primaryKey(),
   codigo: varchar("codigo", { length: 50 }).notNull().unique(),
   nome: varchar("nome", { length: 255 }).notNull(),
+  cno: varchar("cno", { length: 30 }),
   cliente: varchar("cliente", { length: 255 }).notNull(),
   endereco: text("endereco").notNull(),
   cidade: varchar("cidade", { length: 100 }).notNull(),

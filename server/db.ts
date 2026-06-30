@@ -181,6 +181,12 @@ export async function runMigrations() {
     )`);
   } catch { /* já existe */ }
 
+  // Endereço de entrega da obra (adiciona se ainda não existir)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE obras ADD COLUMN enderecoEntrega TEXT`);
+  } catch { /* já existe */ }
+
   // Tabela de planejamentos
   try {
     const db = await getDb();

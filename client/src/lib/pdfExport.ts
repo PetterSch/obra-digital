@@ -1128,6 +1128,7 @@ export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>OC-${numeroFmt}-${data.obraNome}</title><style>${BASE_CSS}
+  @page { size: A4 portrait; margin: 0; }
   .oc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-bottom: 14px; }
   .oc-meta .lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; }
   .oc-meta .val { font-size: 13px; font-weight: 600; color: #1e3a5f; }

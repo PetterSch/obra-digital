@@ -270,8 +270,26 @@ function RevisaoPrevias({ ocs, onFechar }: { ocs: any[]; onFechar: () => void })
 
   const todasTratadas = ocs.every(oc => tratadas[oc.id]);
 
+  // Ao fechar sem confirmar, cancela as prévias pendentes (itens voltam ao pool).
+  // Evita prévias órfãs que "somem" da tela sem virar OC gerada.
+  const fecharComLimpeza = async () => {
+    const pendentes = ocs.filter(oc => !tratadas[oc.id]);
+    if (pendentes.length) {
+      for (const oc of pendentes) {
+        try { await cancelarMut.mutateAsync({ id: oc.id }); } catch { /* ignore */ }
+      }
+      invalidar();
+      toast.info(
+        pendentes.length === 1
+          ? "Prévia não confirmada foi descartada. Os itens voltaram para Pedidos Prontos."
+          : `${pendentes.length} prévias não confirmadas foram descartadas. Os itens voltaram para Pedidos Prontos.`
+      );
+    }
+    onFechar();
+  };
+
   return (
-    <Dialog open onOpenChange={(o) => { if (!o) onFechar(); }}>
+    <Dialog open onOpenChange={(o) => { if (!o) fecharComLimpeza(); }}>
       <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
@@ -369,8 +387,8 @@ function RevisaoPrevias({ ocs, onFechar }: { ocs: any[]; onFechar: () => void })
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button variant={todasTratadas ? "default" : "outline"} onClick={onFechar}>
-            {todasTratadas ? "Concluir" : "Fechar"}
+          <Button variant={todasTratadas ? "default" : "outline"} onClick={fecharComLimpeza}>
+            {todasTratadas ? "Concluir" : "Fechar e descartar pendentes"}
           </Button>
         </div>
       </DialogContent>

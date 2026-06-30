@@ -47,8 +47,8 @@ export default function DiarioEdit() {
   }, [diario, diarioId]);
 
   const updateHeader = trpc.diarios.update.useMutation({
-    onSuccess: () => { toast.success("Informações salvas!"); utils.diarios.getById.invalidate({ id: diarioId! }); },
-    onError: (e) => toast.error(e.message || "Erro ao salvar"),
+    onSuccess: () => { utils.diarios.getById.invalidate({ id: diarioId! }); },
+    onError: (e) => toast.error(e.message || "Erro ao salvar informações"),
   });
 
   // ── Atividades ──
@@ -82,9 +82,23 @@ export default function DiarioEdit() {
     }
   }, [resumo, diarioId]);
   const saveMao = trpc.presenca.setForDiario.useMutation({
-    onSuccess: () => { toast.success("Mão de obra salva!"); utils.presenca.resumoByDiario.invalidate({ diarioId: diarioId! }); },
+    onSuccess: () => { utils.presenca.resumoByDiario.invalidate({ diarioId: diarioId! }); },
     onError: (e) => toast.error(e.message || "Erro ao salvar mão de obra"),
   });
+
+  const salvandoTudo = updateHeader.isPending || saveMao.isPending;
+
+  const handleSalvarTudo = async () => {
+    try {
+      await Promise.all([
+        updateHeader.mutateAsync({ id: diarioId!, clima: (header.clima || undefined) as any, temperatura: header.temperatura || undefined, umidade: header.umidade ? parseInt(header.umidade) : undefined, observacoesGerais: header.observacoesGerais ?? "" }),
+        saveMao.mutateAsync({ diarioId: diarioId!, data: dataISO(diario!.data), maoDeObra }),
+      ]);
+      toast.success("Diário salvo com sucesso!");
+    } catch {
+      // erros já tratados individualmente nos onError
+    }
+  };
 
   // ── Fotos ──
   const { data: fotos = [] } = trpc.midia.listByDiario.useQuery({ diarioId: diarioId! }, { enabled: !!diarioId });
@@ -127,6 +141,9 @@ export default function DiarioEdit() {
             <p className="text-muted-foreground mt-1">{fmtDataBR(diario.data)}</p>
           </div>
           <Button variant="outline" onClick={verDiario} className="gap-2"><X className="w-4 h-4" /> Fechar</Button>
+          <Button className="gap-2" disabled={salvandoTudo} onClick={handleSalvarTudo}>
+            <Save className="w-4 h-4" /> {salvandoTudo ? "Salvando..." : "Salvar"}
+          </Button>
         </div>
 
         {/* Cabeçalho */}
@@ -151,10 +168,6 @@ export default function DiarioEdit() {
                 <Label>Observações Gerais</Label>
                 <textarea value={header.observacoesGerais} onChange={(e) => setHeader({ ...header, observacoesGerais: e.target.value })} rows={4} className="w-full px-3 py-2 border border-input rounded-md bg-background" placeholder="Descreva as observações gerais do dia..." />
               </div>
-              <Button className="gap-2" disabled={updateHeader.isPending}
-                onClick={() => updateHeader.mutate({ id: diarioId!, clima: (header.clima || undefined) as any, temperatura: header.temperatura || undefined, umidade: header.umidade ? parseInt(header.umidade) : undefined, observacoesGerais: header.observacoesGerais ?? "" })}>
-                <Save className="w-4 h-4" /> {updateHeader.isPending ? "Salvando..." : "Salvar informações"}
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -255,10 +268,6 @@ export default function DiarioEdit() {
           <TabsContent value="mao-obra" className="space-y-3 mt-4">
             <Card><CardContent className="pt-4 space-y-4">
               <MaoDeObraSelector value={maoDeObra} onChange={setMaoDeObra} />
-              <Button className="gap-2" disabled={saveMao.isPending}
-                onClick={() => saveMao.mutate({ diarioId: diarioId!, data: dataISO(diario.data), maoDeObra })}>
-                <Save className="w-4 h-4" /> {saveMao.isPending ? "Salvando..." : "Salvar mão de obra"}
-              </Button>
             </CardContent></Card>
           </TabsContent>
 

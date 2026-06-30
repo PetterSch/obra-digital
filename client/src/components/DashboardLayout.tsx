@@ -45,7 +45,7 @@ const menuGroups: MenuGroup[] = [
   { label: "Suprimentos", items: [
     { icon: Truck,      label: "Aprovação de Pedidos", path: "/suprimentos/aprovacao" },
     { icon: Map,        label: "Mapa de Cotação",      path: "/suprimentos/cotacao" },
-    { icon: ShoppingBag,label: "Ordens de Compra",     path: "/suprimentos/ordens",   disabled: true },
+    { icon: ShoppingBag,label: "Ordens de Compra",     path: "/suprimentos/ordens" },
   ]},
   { label: "Cadastros", items: [
     { icon: Building2, label: "Minha Empresa",          path: "/configuracoes/empresa", adminOnly: true },

@@ -1623,6 +1623,59 @@ Gere um resumo executivo profissional em português que:
         return { success: true };
       }),
   }),
+
+  // ============= ORDENS DE COMPRA =============
+  ordensCompra: router({
+    // Aba "Pedidos Prontos": mapas concluídos com itens ainda não consumidos.
+    pedidosProntos: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getPedidosProntos(input.obraId)),
+
+    // Aba "Ordens de Compras Geradas".
+    listGeradas: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getOrdensCompra(input.obraId, "gerada")),
+
+    getById: protectedProcedure
+      .input(z.object({ id: z.number() }))
+      .query(async ({ input }) => db.getOrdemCompraById(input.id)),
+
+    // Gera 1+ OCs em prévia, agrupadas por fornecedor escolhido.
+    gerar: engineerProcedure
+      .input(z.object({
+        obraId: z.number(),
+        itens: z.array(z.object({
+          mapaItemId: z.number(),
+          mapaFornecedorId: z.number(),
+          quantidade: z.number().optional(),
+        })).min(1),
+      }))
+      .mutation(async ({ input, ctx }) => {
+        const geradoPor = (ctx.user as any).name ?? (ctx.user as any).username;
+        return db.createOrdensCompra(input.obraId, input.itens, geradoPor);
+      }),
+
+    // Edita frete/observação de uma prévia.
+    update: engineerProcedure
+      .input(z.object({
+        id: z.number(),
+        frete: z.number().optional(),
+        observacao: z.string().optional(),
+      }))
+      .mutation(async ({ input }) => {
+        const { id, ...d } = input;
+        return db.updateOrdemCompra(id, d);
+      }),
+
+    confirmar: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => db.confirmarOrdemCompra(input.id)),
+
+    // Cancela uma prévia não confirmada (itens voltam para Pedidos Prontos).
+    cancelar: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => db.cancelarOrdemCompra(input.id)),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

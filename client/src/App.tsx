@@ -31,6 +31,7 @@ import Insumos from "./pages/Insumos";
 import Fornecedores from "./pages/Fornecedores";
 import AprovacaoPedidos from "./pages/AprovacaoPedidos";
 import MapaCotacaoGlobal from "./pages/MapaCotacaoGlobal";
+import OrdensCompra from "./pages/OrdensCompra";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Spinner } from "./components/ui/spinner";
 
@@ -82,6 +83,7 @@ function Router() {
       <Route path={"/cadastros/fornecedores"} component={Fornecedores} />
       <Route path={"/suprimentos/aprovacao"} component={AprovacaoPedidos} />
       <Route path={"/suprimentos/cotacao"} component={MapaCotacaoGlobal} />
+      <Route path={"/suprimentos/ordens"} component={OrdensCompra} />
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>

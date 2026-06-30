@@ -23,6 +23,7 @@ import {
   orcamentoItens
 } from "../drizzle/schema";
 import * as demo from "./demo-store";
+import { agruparItensPorFornecedor, proximoNumeroOC, type ItemSelecionadoOC } from "@shared/ordensCompra";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -369,6 +370,36 @@ export async function runMigrations() {
         mapaFornecedorId INT NOT NULL,
         valorUnitario DECIMAL(15,4) DEFAULT 0,
         UNIQUE KEY uq_item_forn (mapaItemId, mapaFornecedorId)
+      )`);
+    }
+  } catch { /* já existe */ }
+
+  // Ordens de Compra (geradas a partir dos mapas concluídos)
+  try {
+    const db = await getDb();
+    if (db) {
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS ordens_compra (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        numero INT NOT NULL,
+        obraId INT NOT NULL,
+        fornecedorNome VARCHAR(255),
+        fornecedorId INT,
+        status VARCHAR(20) DEFAULT 'previa',
+        frete DECIMAL(15,2) DEFAULT 0,
+        observacao TEXT,
+        geradoPor VARCHAR(255),
+        criadoEm TIMESTAMP DEFAULT NOW()
+      )`);
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS ordem_compra_itens (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        ordemId INT NOT NULL,
+        mapaItemId INT,
+        mapaId INT,
+        mapaFornecedorId INT,
+        descricao VARCHAR(500),
+        unidade VARCHAR(20),
+        quantidade DECIMAL(12,2),
+        valorUnitario DECIMAL(15,4)
       )`);
     }
   } catch { /* já existe */ }
@@ -1843,6 +1874,225 @@ export async function getItensAprovadosByObra(obraId: number) {
     WHERE p.obraId = ${obraId} AND i.statusAprovacao = 'aprovado'
     ORDER BY p.numero, i.ordem`);
   return (r[0] ?? r) as any[];
+}
+
+// ============= ORDENS DE COMPRA =============
+
+/** IDs de itens de mapa já consumidos por alguma OC ativa (prévia ou gerada). */
+async function getMapaItensConsumidos(db: any): Promise<Set<number>> {
+  const cr: any = await db.execute(sql`
+    SELECT DISTINCT oci.mapaItemId FROM ordem_compra_itens oci
+    JOIN ordens_compra oc ON oci.ordemId = oc.id
+    WHERE oc.status IN ('previa','gerada') AND oci.mapaItemId IS NOT NULL`);
+  return new Set(((cr[0] ?? cr) as any[]).map((r: any) => Number(r.mapaItemId)));
+}
+
+/**
+ * "PEDIDOS PRONTOS": mapas concluídos da obra com seus itens ainda não
+ * consumidos por nenhuma OC. Cada item traz a lista de fornecedores que o
+ * cotaram (com preço e frete) e a marcação do melhor preço.
+ */
+export async function getPedidosProntos(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const mr: any = await db.execute(sql`
+    SELECT * FROM mapas_cotacao WHERE obraId = ${obraId} AND status = 'concluido' ORDER BY numero`);
+  const mapas = (mr[0] ?? mr) as any[];
+  if (!mapas.length) return [];
+  const consumidos = await getMapaItensConsumidos(db);
+
+  const resultado: any[] = [];
+  for (const mapa of mapas) {
+    const ir: any = await db.execute(sql`SELECT * FROM mapa_itens WHERE mapaId = ${mapa.id} ORDER BY ordem`);
+    const itens = ((ir[0] ?? ir) as any[]).filter((it: any) => !consumidos.has(Number(it.id)));
+    if (!itens.length) continue;
+
+    const fr: any = await db.execute(sql`
+      SELECT * FROM mapa_fornecedores WHERE mapaId = ${mapa.id} AND nome IS NOT NULL AND nome != '' ORDER BY ordem`);
+    const fornecedores = (fr[0] ?? fr) as any[];
+
+    const qr: any = await db.execute(sql`
+      SELECT mc.* FROM mapa_cotacoes mc JOIN mapa_itens mi ON mc.mapaItemId = mi.id
+      WHERE mi.mapaId = ${mapa.id}`);
+    const cotacoes = (qr[0] ?? qr) as any[];
+
+    const itensOut = itens.map((it: any) => {
+      const cots = cotacoes
+        .filter((c: any) => Number(c.mapaItemId) === Number(it.id) && Number(c.valorUnitario) > 0)
+        .map((c: any) => {
+          const f = fornecedores.find((ff: any) => Number(ff.id) === Number(c.mapaFornecedorId));
+          if (!f) return null;
+          return {
+            mapaFornecedorId: Number(f.id),
+            nome: f.nome,
+            valorUnitario: Number(c.valorUnitario),
+            frete: Number(f.frete ?? 0),
+            melhor: false,
+          };
+        })
+        .filter(Boolean) as any[];
+      const min = cots.reduce((m: number, c: any) => Math.min(m, c.valorUnitario), Infinity);
+      cots.forEach((c: any) => { c.melhor = c.valorUnitario === min; });
+      return {
+        mapaItemId: Number(it.id),
+        descricao: it.descricao,
+        unidade: it.unidade,
+        quantidade: Number(it.quantidade ?? 1),
+        fornecedores: cots,
+      };
+    }).filter((it: any) => it.fornecedores.length > 0);
+
+    if (itensOut.length) {
+      resultado.push({ mapaId: Number(mapa.id), numero: mapa.numero, titulo: mapa.titulo, itens: itensOut });
+    }
+  }
+  return resultado;
+}
+
+/** OC completa (cabeçalho + itens + dados da obra). */
+export async function getOrdemCompraById(id: number) {
+  const db = await getDb();
+  if (!db) return null;
+  const r: any = await db.execute(sql`
+    SELECT oc.*, o.nome AS obraNome, o.codigo AS obraCodigo, o.endereco AS obraEndereco,
+           o.enderecoEntrega AS obraEnderecoEntrega
+    FROM ordens_compra oc JOIN obras o ON oc.obraId = o.id WHERE oc.id = ${id} LIMIT 1`);
+  const oc = ((r[0] ?? r) as any[])[0];
+  if (!oc) return null;
+  const ir: any = await db.execute(sql`SELECT * FROM ordem_compra_itens WHERE ordemId = ${id} ORDER BY id`);
+  const itens = ((ir[0] ?? ir) as any[]).map((it: any) => ({
+    ...it,
+    quantidade: Number(it.quantidade ?? 0),
+    valorUnitario: Number(it.valorUnitario ?? 0),
+  }));
+  return { ...oc, frete: Number(oc.frete ?? 0), itens };
+}
+
+/** Lista OCs da obra por status, com total calculado. */
+export async function getOrdensCompra(obraId: number, status?: string) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = status
+    ? await db.execute(sql`
+        SELECT oc.*,
+          (SELECT COALESCE(SUM(quantidade * valorUnitario), 0) FROM ordem_compra_itens WHERE ordemId = oc.id) AS totalItens,
+          (SELECT COUNT(*) FROM ordem_compra_itens WHERE ordemId = oc.id) AS qtdItens
+        FROM ordens_compra oc WHERE oc.obraId = ${obraId} AND oc.status = ${status} ORDER BY oc.numero`)
+    : await db.execute(sql`
+        SELECT oc.*,
+          (SELECT COALESCE(SUM(quantidade * valorUnitario), 0) FROM ordem_compra_itens WHERE ordemId = oc.id) AS totalItens,
+          (SELECT COUNT(*) FROM ordem_compra_itens WHERE ordemId = oc.id) AS qtdItens
+        FROM ordens_compra oc WHERE oc.obraId = ${obraId} ORDER BY oc.numero`);
+  return ((r[0] ?? r) as any[]).map((oc: any) => {
+    const totalItens = Number(oc.totalItens ?? 0);
+    const frete = Number(oc.frete ?? 0);
+    return { ...oc, totalItens, frete, valorTotal: totalItens + frete };
+  });
+}
+
+/**
+ * Gera 1+ OCs em status "prévia" a partir dos itens selecionados,
+ * agrupando por fornecedor escolhido. Frete é importado do mapa por fornecedor
+ * (somado entre mapas distintos quando o grupo abrange mais de um mapa).
+ * Retorna as OCs criadas (completas).
+ */
+export async function createOrdensCompra(
+  obraId: number,
+  selecionados: { mapaItemId: number; mapaFornecedorId: number; quantidade?: number }[],
+  geradoPor?: string,
+) {
+  const db = await getDb();
+  if (!db) return [];
+
+  // Enriquecer cada item com dados do mapa, fornecedor e preço cotado.
+  const enriched: ItemSelecionadoOC[] = [];
+  for (const sel of selecionados) {
+    const ir: any = await db.execute(sql`SELECT * FROM mapa_itens WHERE id = ${sel.mapaItemId} LIMIT 1`);
+    const item = ((ir[0] ?? ir) as any[])[0];
+    if (!item) continue;
+    const fr: any = await db.execute(sql`SELECT * FROM mapa_fornecedores WHERE id = ${sel.mapaFornecedorId} LIMIT 1`);
+    const forn = ((fr[0] ?? fr) as any[])[0];
+    if (!forn) continue;
+    const qr: any = await db.execute(sql`
+      SELECT valorUnitario FROM mapa_cotacoes WHERE mapaItemId = ${sel.mapaItemId} AND mapaFornecedorId = ${sel.mapaFornecedorId} LIMIT 1`);
+    const cot = ((qr[0] ?? qr) as any[])[0];
+    enriched.push({
+      mapaItemId: sel.mapaItemId,
+      mapaId: Number(item.mapaId),
+      mapaFornecedorId: sel.mapaFornecedorId,
+      fornecedorNome: forn.nome ?? "",
+      descricao: item.descricao,
+      unidade: item.unidade,
+      quantidade: sel.quantidade != null ? Number(sel.quantidade) : Number(item.quantidade ?? 1),
+      valorUnitario: cot ? Number(cot.valorUnitario) : 0,
+    });
+  }
+  if (!enriched.length) return [];
+
+  const grupos = agruparItensPorFornecedor(enriched);
+  const criadasIds: number[] = [];
+  for (const g of grupos) {
+    // Frete: soma do frete do fornecedor (por nome) em cada mapa distinto do grupo.
+    let frete = 0;
+    for (const mapaId of g.mapaIds) {
+      const fr: any = await db.execute(sql`
+        SELECT frete FROM mapa_fornecedores WHERE mapaId = ${mapaId} AND nome = ${g.fornecedorNome} LIMIT 1`);
+      const row = ((fr[0] ?? fr) as any[])[0];
+      frete += row ? Number(row.frete ?? 0) : 0;
+    }
+    // Próximo número global.
+    const nr: any = await db.execute(sql`SELECT numero FROM ordens_compra`);
+    const numeros = ((nr[0] ?? nr) as any[]).map((r: any) => Number(r.numero));
+    const numero = proximoNumeroOC(numeros);
+
+    const res: any = await db.execute(sql`
+      INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, geradoPor)
+      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${geradoPor ?? null})`);
+    const ordemId = (res[0]?.insertId ?? res.insertId) as number;
+
+    for (const it of g.itens) {
+      await db.execute(sql`
+        INSERT INTO ordem_compra_itens (ordemId, mapaItemId, mapaId, mapaFornecedorId, descricao, unidade, quantidade, valorUnitario)
+        VALUES (${ordemId}, ${it.mapaItemId}, ${it.mapaId}, ${it.mapaFornecedorId}, ${it.descricao}, ${it.unidade ?? null}, ${it.quantidade}, ${it.valorUnitario})`);
+    }
+    criadasIds.push(ordemId);
+  }
+  const ocs = await Promise.all(criadasIds.map(id => getOrdemCompraById(id)));
+  return ocs.filter(Boolean);
+}
+
+/** Edita frete/observação de uma OC ainda em prévia. */
+export async function updateOrdemCompra(id: number, data: { frete?: number; observacao?: string }) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  const r: any = await db.execute(sql`SELECT status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
+  const st = ((r[0] ?? r) as any[])[0]?.status;
+  if (st !== "previa") return { success: false, message: "Só é possível editar OCs em prévia." };
+  await db.execute(sql`UPDATE ordens_compra SET
+    frete = COALESCE(${data.frete ?? null}, frete),
+    observacao = COALESCE(${data.observacao ?? null}, observacao)
+    WHERE id = ${id}`);
+  return { success: true };
+}
+
+/** Confirma a prévia: status passa para "gerada". */
+export async function confirmarOrdemCompra(id: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.execute(sql`UPDATE ordens_compra SET status = 'gerada' WHERE id = ${id} AND status = 'previa'`);
+  return { success: true };
+}
+
+/** Cancela uma prévia (não confirmada) — os itens voltam para PEDIDOS PRONTOS. */
+export async function cancelarOrdemCompra(id: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  const r: any = await db.execute(sql`SELECT status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
+  const st = ((r[0] ?? r) as any[])[0]?.status;
+  if (st !== "previa") return { success: false, message: "Só prévias podem ser canceladas." };
+  await db.execute(sql`DELETE FROM ordem_compra_itens WHERE ordemId = ${id}`);
+  await db.execute(sql`DELETE FROM ordens_compra WHERE id = ${id}`);
+  return { success: true };
 }
 
 // ============= CADASTRO: FORNECEDORES =============

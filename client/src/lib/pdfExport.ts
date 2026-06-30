@@ -1062,3 +1062,116 @@ ${cover}
 
   openPrint(html);
 }
+
+// ─── Ordem de Compra ───────────────────────────────────────────────────────
+
+export interface OrdemCompraPDFData {
+  numero: number;            // número da OC (será formatado com 2 dígitos)
+  dataEmissao: string;       // data/hora de geração (ISO ou já formatada)
+  obraNome: string;
+  obraCodigo: string;
+  obraEndereco: string;
+  fornecedorNome: string;
+  fornecedorId?: string | null;   // identificador (CNPJ/CPF), se houver
+  geradoPor: string;
+  itens: { descricao: string; unidade?: string | null; quantidade: number; valorUnitario: number }[];
+  frete: number;
+  observacao?: string | null;
+}
+
+/**
+ * Exporta o PDF de uma Ordem de Compra (apenas OCs "Gerada").
+ * Estrutura de dados desacoplada do layout — o visual final pode ser ajustado
+ * depois sem alterar a lógica de montagem/cálculo dos totais.
+ */
+export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
+  const config = getPDFConfig();
+  const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const numeroFmt = String(data.numero).padStart(2, "0");
+  const docId = `OC #${numeroFmt}`;
+  const dataEmissao = (() => {
+    const d = new Date(data.dataEmissao);
+    return isNaN(d.getTime()) ? data.dataEmissao : d.toLocaleString("pt-BR");
+  })();
+
+  const cover = buildCoverPage({
+    docType: "Ordem de Compra",
+    docTitle: `Ordem de Compra nº ${numeroFmt}`,
+    docId,
+    obraNome: data.obraNome,
+    obraCliente: data.fornecedorNome,
+    obraCodigo: data.obraCodigo,
+    obraResponsavel: data.geradoPor,
+    obraEndereco: data.obraEndereco,
+    dataReferencia: `Fornecedor: ${data.fornecedorNome}`,
+    config,
+  });
+
+  const header = buildPageHeader({
+    obraNome: data.obraNome, obraCodigo: data.obraCodigo, docId,
+    dataRef: `OC nº ${numeroFmt}`, config,
+  });
+  const footer = buildPageFooter(docId, data.obraNome);
+
+  const totalItens = data.itens.reduce((s, it) => s + it.quantidade * it.valorUnitario, 0);
+  const totalGeral = totalItens + (data.frete || 0);
+
+  const linhas = data.itens.map(it => `<tr>
+    <td>${it.descricao}</td>
+    <td style="text-align:center">${it.unidade ?? "—"}</td>
+    <td style="text-align:right">${it.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
+    <td style="text-align:right">${brl(it.valorUnitario)}</td>
+    <td style="text-align:right;font-weight:600">${brl(it.quantidade * it.valorUnitario)}</td>
+  </tr>`).join("");
+
+  const fornecedorLinha = [data.fornecedorNome, data.fornecedorId ? `(${data.fornecedorId})` : ""].filter(Boolean).join(" ");
+
+  const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
+<title>OC-${numeroFmt}-${data.obraNome}</title><style>${BASE_CSS}
+  .oc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-bottom: 14px; }
+  .oc-meta .lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; }
+  .oc-meta .val { font-size: 13px; font-weight: 600; color: #1e3a5f; }
+  .oc-resumo { width: 50%; margin-left: auto; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-top: 14px; }
+  .oc-resumo div { display: flex; justify-content: space-between; padding: 7px 12px; font-size: 12px; border-bottom: 1px solid #f0f0f0; }
+  .oc-resumo .total { background: #1e3a5f; color: #fff; font-weight: 700; font-size: 14px; }
+  .oc-obs { margin-top: 14px; padding: 10px 12px; background: #f9fafb; border-left: 3px solid #1e3a5f; border-radius: 4px; font-size: 12px; }
+</style></head><body>
+${cover}
+<div class="page">
+  ${header}
+  <div class="section">
+    <div class="section-title">Dados da Ordem de Compra</div>
+    <div class="oc-meta">
+      <div><div class="lbl">Número da OC</div><div class="val">${numeroFmt}</div></div>
+      <div><div class="lbl">Data de emissão</div><div class="val">${dataEmissao}</div></div>
+      <div><div class="lbl">Obra</div><div class="val">${data.obraNome} (${data.obraCodigo})</div></div>
+      <div><div class="lbl">Fornecedor</div><div class="val">${fornecedorLinha}</div></div>
+      <div><div class="lbl">Gerado por</div><div class="val">${data.geradoPor || "—"}</div></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Itens</div>
+    <table>
+      <thead><tr>
+        <th>Insumo / Descrição</th><th style="text-align:center">Un.</th>
+        <th style="text-align:right">Qtd.</th><th style="text-align:right">Valor Unit.</th><th style="text-align:right">Valor Total</th>
+      </tr></thead>
+      <tbody>${linhas || `<tr><td colspan="5" style="color:#666;font-style:italic;padding:10px">Nenhum item</td></tr>`}</tbody>
+    </table>
+
+    <div class="oc-resumo">
+      <div><span>Subtotal dos itens</span><span>${brl(totalItens)}</span></div>
+      <div><span>Frete</span><span>${brl(data.frete || 0)}</span></div>
+      <div class="total"><span>TOTAL GERAL</span><span>${brl(totalGeral)}</span></div>
+    </div>
+
+    ${data.observacao ? `<div class="oc-obs"><strong>Observações:</strong> ${data.observacao}</div>` : ""}
+  </div>
+  ${footer}
+</div>
+<script>window.onload=()=>window.print();window.onafterprint=()=>window.close();</script>
+</body></html>`;
+
+  openPrint(html);
+}

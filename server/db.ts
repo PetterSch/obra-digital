@@ -1954,8 +1954,11 @@ export async function getOrdemCompraById(id: number) {
   const db = await getDb();
   if (!db) return null;
   const r: any = await db.execute(sql`
-    SELECT oc.*, o.nome AS obraNome, o.codigo AS obraCodigo, o.endereco AS obraEndereco,
-           o.enderecoEntrega AS obraEnderecoEntrega
+    SELECT oc.*, o.nome AS obraNome, o.codigo AS obraCodigo, o.cno AS obraCno,
+           o.cliente AS obraCliente, o.responsavelTecnico AS obraResponsavel, o.crea AS obraCrea,
+           o.endereco AS obraEndereco, o.cidade AS obraCidade, o.estado AS obraEstado, o.cep AS obraCep,
+           o.enderecoEntrega AS obraEnderecoEntrega, o.cidadeEntrega AS obraCidadeEntrega,
+           o.estadoEntrega AS obraEstadoEntrega, o.cepEntrega AS obraCepEntrega
     FROM ordens_compra oc JOIN obras o ON oc.obraId = o.id WHERE oc.id = ${id} LIMIT 1`);
   const oc = ((r[0] ?? r) as any[])[0];
   if (!oc) return null;

@@ -1071,12 +1071,35 @@ export interface OrdemCompraPDFData {
   obraNome: string;
   obraCodigo: string;
   obraEndereco: string;
+  obraCno?: string | null;
   fornecedorNome: string;
   fornecedorId?: string | null;   // identificador (CNPJ/CPF), se houver
   geradoPor: string;
+  // Faturar para: dados cadastrais do cliente da obra (destinatário da fatura)
+  faturarPara?: {
+    nome?: string | null;
+    endereco?: string | null;
+    cidade?: string | null;
+    estado?: string | null;
+    cep?: string | null;
+  };
+  // Endereço de entrega da obra
+  entrega?: {
+    endereco?: string | null;
+    cidade?: string | null;
+    estado?: string | null;
+    cep?: string | null;
+  };
   itens: { descricao: string; unidade?: string | null; quantidade: number; valorUnitario: number }[];
   frete: number;
   observacao?: string | null;
+}
+
+/** Monta "Rua, ... – Cidade/UF – CEP" a partir das partes, ignorando vazios. */
+function _enderecoCompleto(p?: { endereco?: string | null; cidade?: string | null; estado?: string | null; cep?: string | null }): string {
+  if (!p) return "";
+  const cidadeUf = [p.cidade, p.estado].filter(Boolean).join("/");
+  return [p.endereco, cidadeUf, p.cep].filter(Boolean).join(" – ");
 }
 
 /**
@@ -1125,6 +1148,22 @@ export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
   </tr>`).join("");
 
   const fornecedorLinha = [data.fornecedorNome, data.fornecedorId ? `(${data.fornecedorId})` : ""].filter(Boolean).join(" ");
+  const faturarEndereco = _enderecoCompleto(data.faturarPara);
+  const entregaEndereco = _enderecoCompleto(data.entrega);
+
+  const blocoFaturarEntrega = `
+  <div class="oc-blocos">
+    <div class="oc-bloco">
+      <div class="oc-bloco-titulo">Faturar para</div>
+      <div class="oc-bloco-nome">${data.faturarPara?.nome || "—"}</div>
+      ${faturarEndereco ? `<div class="oc-bloco-linha">${faturarEndereco}</div>` : ""}
+    </div>
+    <div class="oc-bloco">
+      <div class="oc-bloco-titulo">Endereço de entrega</div>
+      <div class="oc-bloco-nome">${data.obraNome}</div>
+      <div class="oc-bloco-linha">${entregaEndereco || data.obraEndereco || "—"}</div>
+    </div>
+  </div>`;
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
 <title>OC-${numeroFmt}-${data.obraNome}</title><style>${BASE_CSS}
@@ -1136,6 +1175,11 @@ export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
   .oc-resumo div { display: flex; justify-content: space-between; padding: 7px 12px; font-size: 12px; border-bottom: 1px solid #f0f0f0; }
   .oc-resumo .total { background: #1e3a5f; color: #fff; font-weight: 700; font-size: 14px; }
   .oc-obs { margin-top: 14px; padding: 10px 12px; background: #f9fafb; border-left: 3px solid #1e3a5f; border-radius: 4px; font-size: 12px; }
+  .oc-blocos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+  .oc-bloco { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; }
+  .oc-bloco-titulo { font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 4px; }
+  .oc-bloco-nome { font-size: 13px; font-weight: 700; color: #1e3a5f; }
+  .oc-bloco-linha { font-size: 11px; color: #444; margin-top: 2px; line-height: 1.4; }
 </style></head><body>
 ${cover}
 <div class="page">
@@ -1146,9 +1190,14 @@ ${cover}
       <div><div class="lbl">Número da OC</div><div class="val">${numeroFmt}</div></div>
       <div><div class="lbl">Data de emissão</div><div class="val">${dataEmissao}</div></div>
       <div><div class="lbl">Obra</div><div class="val">${data.obraNome} (${data.obraCodigo})</div></div>
+      ${data.obraCno ? `<div><div class="lbl">CNO</div><div class="val">${data.obraCno}</div></div>` : ""}
       <div><div class="lbl">Fornecedor</div><div class="val">${fornecedorLinha}</div></div>
       <div><div class="lbl">Gerado por</div><div class="val">${data.geradoPor || "—"}</div></div>
     </div>
+  </div>
+
+  <div class="section">
+    ${blocoFaturarEntrega}
   </div>
 
   <div class="section">

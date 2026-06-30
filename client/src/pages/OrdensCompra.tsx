@@ -459,8 +459,22 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
       obraNome: oc.obraNome,
       obraCodigo: oc.obraCodigo,
       obraEndereco: oc.obraEndereco ?? "",
+      obraCno: oc.obraCno,
       fornecedorNome: oc.fornecedorNome,
       geradoPor: oc.geradoPor ?? "",
+      faturarPara: {
+        nome: oc.obraCliente,
+        endereco: oc.obraEndereco,
+        cidade: oc.obraCidade,
+        estado: oc.obraEstado,
+        cep: oc.obraCep,
+      },
+      entrega: {
+        endereco: oc.obraEnderecoEntrega,
+        cidade: oc.obraCidadeEntrega,
+        estado: oc.obraEstadoEntrega,
+        cep: oc.obraCepEntrega,
+      },
       itens: (oc.itens ?? []).map((it: any) => ({
         descricao: it.descricao, unidade: it.unidade, quantidade: it.quantidade, valorUnitario: it.valorUnitario,
       })),
@@ -490,7 +504,25 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
               <div><span className="text-muted-foreground text-xs block">Data de emissão</span>{new Date(oc.criadoEm).toLocaleString("pt-BR")}</div>
               <div><span className="text-muted-foreground text-xs block">Gerado por</span>{oc.geradoPor ?? "—"}</div>
               <div><span className="text-muted-foreground text-xs block">Obra</span>{oc.obraNome} ({oc.obraCodigo})</div>
+              {oc.obraCno && <div><span className="text-muted-foreground text-xs block">CNO</span>{oc.obraCno}</div>}
               <div><span className="text-muted-foreground text-xs block">Fornecedor</span>{oc.fornecedorNome}</div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
+              <div className="rounded-lg border p-3">
+                <div className="text-[11px] uppercase text-muted-foreground font-semibold">Faturar para</div>
+                <div className="text-sm font-semibold text-primary">{oc.obraCliente || "—"}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {[oc.obraEndereco, [oc.obraCidade, oc.obraEstado].filter(Boolean).join("/"), oc.obraCep].filter(Boolean).join(" – ") || "—"}
+                </div>
+              </div>
+              <div className="rounded-lg border p-3">
+                <div className="text-[11px] uppercase text-muted-foreground font-semibold">Endereço de entrega</div>
+                <div className="text-sm font-semibold text-primary">{oc.obraNome}</div>
+                <div className="text-xs text-muted-foreground mt-0.5">
+                  {[oc.obraEnderecoEntrega, [oc.obraCidadeEntrega, oc.obraEstadoEntrega].filter(Boolean).join("/"), oc.obraCepEntrega].filter(Boolean).join(" – ") || oc.obraEndereco || "—"}
+                </div>
+              </div>
             </div>
 
             <table className="w-full text-sm mt-3">

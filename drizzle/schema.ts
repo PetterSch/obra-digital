@@ -44,6 +44,7 @@ export const obras = mysqlTable("obras", {
   cidade: varchar("cidade", { length: 100 }).notNull(),
   estado: varchar("estado", { length: 2 }).notNull(),
   cep: varchar("cep", { length: 10 }).notNull(),
+  enderecoEntrega: text("enderecoEntrega"),
   responsavelTecnico: varchar("responsavelTecnico", { length: 255 }).notNull(),
   crea: varchar("crea", { length: 50 }),
   dataInicio: date("dataInicio").notNull(),

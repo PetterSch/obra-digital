@@ -59,6 +59,7 @@ export default function ObraEdit() {
     cidade:             "",
     estado:             "",
     cep:                "",
+    enderecoEntrega:    "",
     // Responsável
     responsavelTecnico: "",
     crea:               "",
@@ -84,6 +85,7 @@ export default function ObraEdit() {
       cidade:             obra.cidade              ?? "",
       estado:             obra.estado              ?? "",
       cep:                obra.cep                 ?? "",
+      enderecoEntrega:    (obra as any).enderecoEntrega ?? "",
       responsavelTecnico: obra.responsavelTecnico  ?? "",
       crea:               obra.crea                ?? "",
       dataInicio:         toDateInput(obra.dataInicio),
@@ -209,6 +211,17 @@ export default function ObraEdit() {
                   <Label>CEP</Label>
                   <Input value={form.cep} onChange={set("cep")} placeholder="00000-000" />
                 </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* ── Endereço de Entrega ── */}
+          <Card>
+            <CardHeader><CardTitle className="text-base">Endereço de Entrega</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Endereço</Label>
+                <Input value={form.enderecoEntrega} onChange={set("enderecoEntrega")} placeholder="Rua, número, complemento" />
               </div>
             </CardContent>
           </Card>

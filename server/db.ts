@@ -182,10 +182,15 @@ export async function runMigrations() {
   } catch { /* já existe */ }
 
   // Endereço de entrega da obra (adiciona se ainda não existir)
-  try {
-    const db = await getDb();
-    if (db) await db.execute(sql`ALTER TABLE obras ADD COLUMN enderecoEntrega TEXT`);
-  } catch { /* já existe */ }
+  for (const col of [
+    "enderecoEntrega TEXT", "cidadeEntrega VARCHAR(100)",
+    "estadoEntrega VARCHAR(2)", "cepEntrega VARCHAR(10)",
+  ]) {
+    try {
+      const db = await getDb();
+      if (db) await db.execute(sql.raw(`ALTER TABLE obras ADD COLUMN ${col}`));
+    } catch { /* já existe */ }
+  }
 
   // Tabela de planejamentos
   try {

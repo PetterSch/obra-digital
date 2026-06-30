@@ -60,6 +60,9 @@ export default function ObraEdit() {
     estado:             "",
     cep:                "",
     enderecoEntrega:    "",
+    cidadeEntrega:      "",
+    estadoEntrega:      "",
+    cepEntrega:         "",
     // Responsável
     responsavelTecnico: "",
     crea:               "",
@@ -86,6 +89,9 @@ export default function ObraEdit() {
       estado:             obra.estado              ?? "",
       cep:                obra.cep                 ?? "",
       enderecoEntrega:    (obra as any).enderecoEntrega ?? "",
+      cidadeEntrega:      (obra as any).cidadeEntrega ?? "",
+      estadoEntrega:      (obra as any).estadoEntrega ?? "",
+      cepEntrega:         (obra as any).cepEntrega ?? "",
       responsavelTecnico: obra.responsavelTecnico  ?? "",
       crea:               obra.crea                ?? "",
       dataInicio:         toDateInput(obra.dataInicio),
@@ -222,6 +228,20 @@ export default function ObraEdit() {
               <div className="space-y-1.5">
                 <Label>Endereço</Label>
                 <Input value={form.enderecoEntrega} onChange={set("enderecoEntrega")} placeholder="Rua, número, complemento" />
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                <div className="space-y-1.5 col-span-2">
+                  <Label>Cidade</Label>
+                  <Input value={form.cidadeEntrega} onChange={set("cidadeEntrega")} placeholder="Cidade" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Estado</Label>
+                  <Input value={form.estadoEntrega} onChange={set("estadoEntrega")} placeholder="SP" maxLength={2} className="uppercase" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>CEP</Label>
+                  <Input value={form.cepEntrega} onChange={set("cepEntrega")} placeholder="00000-000" />
+                </div>
               </div>
             </CardContent>
           </Card>

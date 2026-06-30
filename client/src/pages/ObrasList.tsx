@@ -21,6 +21,10 @@ const createObraSchema = z.object({
   cidade: z.string().min(1, "Cidade é obrigatória"),
   estado: z.string().length(2, "Estado deve ter 2 caracteres"),
   cep: z.string().min(1, "CEP é obrigatório"),
+  enderecoEntrega: z.string().optional(),
+  cidadeEntrega: z.string().optional(),
+  estadoEntrega: z.string().optional(),
+  cepEntrega: z.string().optional(),
   responsavelTecnico: z.string().min(1, "Responsável técnico é obrigatório"),
   dataInicio: z.string().min(1, "Data de início é obrigatória"),
   dataPrevistTermino: z.string().min(1, "Data prevista de término é obrigatória"),
@@ -39,6 +43,10 @@ export default function ObrasList() {
     cidade: "",
     estado: "",
     cep: "",
+    enderecoEntrega: "",
+    cidadeEntrega: "",
+    estadoEntrega: "",
+    cepEntrega: "",
     responsavelTecnico: "",
     dataInicio: "",
     dataPrevistTermino: "",
@@ -57,6 +65,10 @@ export default function ObrasList() {
         cidade: "",
         estado: "",
         cep: "",
+        enderecoEntrega: "",
+        cidadeEntrega: "",
+        estadoEntrega: "",
+        cepEntrega: "",
         responsavelTecnico: "",
         dataInicio: "",
         dataPrevistTermino: "",
@@ -172,6 +184,47 @@ export default function ObrasList() {
                       id="cep"
                       value={formData.cep}
                       onChange={(e) => setFormData({ ...formData, cep: e.target.value })}
+                      placeholder="00000-000"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2 pt-2 border-t">
+                  <Label htmlFor="enderecoEntrega" className="font-semibold">Endereço de Entrega</Label>
+                  <Input
+                    id="enderecoEntrega"
+                    value={formData.enderecoEntrega}
+                    onChange={(e) => setFormData({ ...formData, enderecoEntrega: e.target.value })}
+                    placeholder="Rua, número, complemento"
+                  />
+                </div>
+
+                <div className="grid grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cidadeEntrega">Cidade</Label>
+                    <Input
+                      id="cidadeEntrega"
+                      value={formData.cidadeEntrega}
+                      onChange={(e) => setFormData({ ...formData, cidadeEntrega: e.target.value })}
+                      placeholder="Cidade"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="estadoEntrega">Estado</Label>
+                    <Input
+                      id="estadoEntrega"
+                      value={formData.estadoEntrega}
+                      onChange={(e) => setFormData({ ...formData, estadoEntrega: e.target.value.toUpperCase() })}
+                      placeholder="SP"
+                      maxLength={2}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="cepEntrega">CEP</Label>
+                    <Input
+                      id="cepEntrega"
+                      value={formData.cepEntrega}
+                      onChange={(e) => setFormData({ ...formData, cepEntrega: e.target.value })}
                       placeholder="00000-000"
                     />
                   </div>

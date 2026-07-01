@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, X, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil } from "lucide-react";
+import { Plus, X, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil, RefreshCw, PackagePlus } from "lucide-react";
 import { getPDFConfig } from "@/lib/pdfExport";
 
 interface Props { obraId: number; obraNome: string; openMapaId?: number; }
@@ -526,6 +526,70 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     onError: () => toast.error("Erro ao salvar mapa"),
   });
 
+  // Excluir mapa (disponível de dentro do editor)
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const deleteMut = trpc.mapaCotacao.delete.useMutation({
+    onSuccess: () => { toast.success("Mapa excluído"); onBack(); },
+    onError: () => toast.error("Erro ao excluir mapa"),
+  });
+
+  // Itens aprovados da obra (para sincronizar quantidades e adicionar novos itens)
+  const { data: itensAprovados = [] } = trpc.mapaCotacao.getItensAprovados.useQuery(
+    { obraId: Number(mapa?.obraId ?? 0) },
+    { enabled: mapa?.obraId != null }
+  );
+
+  // Índice: pedidoItemId -> item aprovado atual
+  const aprovadosPorId = useMemo(() => {
+    const m = new Map<number, any>();
+    (itensAprovados as any[]).forEach((i: any) => m.set(Number(i.id), i));
+    return m;
+  }, [itensAprovados]);
+
+  // Atualiza as quantidades do mapa com a quantidade atual aprovada no pedido.
+  function atualizarQuantidades() {
+    let alterados = 0;
+    setItens(prev => prev.map(it => {
+      if (it.pedidoItemId == null) return it;
+      const aprov = aprovadosPorId.get(Number(it.pedidoItemId));
+      if (!aprov || aprov.quantidade == null) return it;
+      const novaQtd = Number(aprov.quantidade);
+      if (novaQtd !== Number(it.quantidade)) { alterados++; return { ...it, quantidade: novaQtd }; }
+      return it;
+    }));
+    if (alterados > 0) toast.success(`${alterados} quantidade(s) atualizada(s). Clique em Salvar para gravar.`);
+    else toast.info("As quantidades já estão iguais às aprovadas nos pedidos.");
+  }
+
+  // Itens aprovados que ainda NÃO estão no mapa (por pedidoItemId)
+  const itensDisponiveis = useMemo(() => {
+    const jaNoMapa = new Set(itens.map(it => it.pedidoItemId != null ? Number(it.pedidoItemId) : null).filter(v => v != null));
+    return (itensAprovados as any[]).filter((i: any) => !jaNoMapa.has(Number(i.id)));
+  }, [itensAprovados, itens]);
+
+  const [addItemOpen, setAddItemOpen] = useState(false);
+  const [selecaoAdd, setSelecaoAdd] = useState<Set<number>>(new Set());
+
+  function adicionarItensSelecionados() {
+    const novos = (itensAprovados as any[])
+      .filter((i: any) => selecaoAdd.has(Number(i.id)))
+      .map((i: any) => ({
+        id: undefined,
+        pedidoItemId: Number(i.id),
+        descricao: String(i.descricao ?? ""),
+        unidade: i.unidade ?? null,
+        quantidade: Number(i.quantidade ?? 1),
+        observacao: i.observacao ?? null,
+        dataEntrega: i.pedidoDataEntrega ? String(i.pedidoDataEntrega).slice(0, 10) : null,
+      }));
+    if (novos.length) {
+      setItens(prev => [...prev, ...novos]);
+      toast.success(`${novos.length} item(ns) adicionado(s). Clique em Salvar para gravar.`);
+    }
+    setSelecaoAdd(new Set());
+    setAddItemOpen(false);
+  }
+
   function getPreco(iIdx: number, fIdx: number): number {
     const v = parseFloat(cotacoes[`${iIdx}-${fIdx}`] ?? "");
     return isNaN(v) || v <= 0 ? 0 : v;
@@ -867,10 +931,13 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
             {STATUS_LABEL[mapa.status] ?? mapa.status}
           </span>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <Button variant="outline" size="sm" onClick={exportarExcel}><FileDown className="w-4 h-4 mr-1" />Exportar</Button>
           {!isConcluido && (
             <>
+              <Button variant="outline" size="sm" onClick={atualizarQuantidades} title="Sincroniza as quantidades com o que está aprovado nos pedidos">
+                <RefreshCw className="w-4 h-4 mr-1" />Atualizar quantidades
+              </Button>
               <Button variant="outline" size="sm" disabled={updateMut.isPending} onClick={() => salvar()}>
                 {updateMut.isPending ? "Salvando..." : "Salvar"}
               </Button>
@@ -882,6 +949,9 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
           {isConcluido && (
             <Button variant="outline" size="sm" onClick={() => salvar("em_andamento")}>Reabrir</Button>
           )}
+          <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => setConfirmDelete(true)}>
+            <Trash2 className="w-4 h-4 mr-1" />Excluir
+          </Button>
         </div>
       </div>
 
@@ -936,6 +1006,17 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
           </div>
         </CardContent>
       </Card>
+
+      {/* Barra de ações da tabela */}
+      {!isConcluido && (
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Itens do Mapa</p>
+          <Button variant="outline" size="sm" onClick={() => { setSelecaoAdd(new Set()); setAddItemOpen(true); }} disabled={itensDisponiveis.length === 0}
+            title={itensDisponiveis.length === 0 ? "Não há itens aprovados fora do mapa" : "Adicionar item aprovado que não está no mapa"}>
+            <PackagePlus className="w-4 h-4 mr-1" />Adicionar item{itensDisponiveis.length > 0 ? ` (${itensDisponiveis.length})` : ""}
+          </Button>
+        </div>
+      )}
 
       {/* Tabela de preços */}
       <Card>
@@ -1114,6 +1195,70 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
           <Input value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Observações gerais..." />
         </div>
       )}
+
+      {/* Dialog: adicionar itens aprovados que não estão no mapa */}
+      <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Adicionar item ao mapa</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground -mt-1">
+            Itens aprovados nos pedidos desta obra que ainda não estão neste mapa.
+          </p>
+          {itensDisponiveis.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8 text-sm">Nenhum item aprovado disponível fora do mapa.</p>
+          ) : (
+            <div className="space-y-1 mt-1">
+              {itensDisponiveis.map((i: any) => {
+                const marcado = selecaoAdd.has(Number(i.id));
+                return (
+                  <label key={i.id} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5">
+                    <input
+                      type="checkbox"
+                      checked={marcado}
+                      onChange={() => setSelecaoAdd(prev => {
+                        const next = new Set(prev);
+                        if (next.has(Number(i.id))) next.delete(Number(i.id)); else next.add(Number(i.id));
+                        return next;
+                      })}
+                      className="w-4 h-4 accent-blue-600 cursor-pointer"
+                    />
+                    <span className="text-sm flex-1">{i.descricao}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {Number(i.quantidade).toLocaleString("pt-BR")} {i.unidade ?? ""}
+                      {i.pedidoNumero ? ` · Ped. #${i.pedidoNumero}` : ""}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancelar</Button>
+            <Button disabled={selecaoAdd.size === 0} onClick={adicionarItensSelecionados}>
+              Adicionar {selecaoAdd.size > 0 ? `(${selecaoAdd.size})` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirmação de exclusão do mapa */}
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Mapa de Cotação?</AlertDialogTitle>
+            <AlertDialogDescription>Esta ação não pode ser desfeita. Todos os preços inseridos serão perdidos.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              disabled={deleteMut.isPending}
+              onClick={() => mapa && deleteMut.mutate({ id: mapa.id })}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

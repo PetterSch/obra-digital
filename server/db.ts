@@ -1968,7 +1968,13 @@ export async function getOrdemCompraById(id: number) {
     quantidade: Number(it.quantidade ?? 0),
     valorUnitario: Number(it.valorUnitario ?? 0),
   }));
-  return { ...oc, frete: Number(oc.frete ?? 0), itens };
+  // Dados cadastrais completos do fornecedor (busca no cadastro pelo nome cotado)
+  let fornecedor: any = null;
+  if (oc.fornecedorNome) {
+    const fr: any = await db.execute(sql`SELECT * FROM fornecedores WHERE nome = ${oc.fornecedorNome} ORDER BY ativo DESC LIMIT 1`);
+    fornecedor = ((fr[0] ?? fr) as any[])[0] ?? null;
+  }
+  return { ...oc, frete: Number(oc.frete ?? 0), itens, fornecedor };
 }
 
 /** Lista OCs da obra por status, com total calculado. */

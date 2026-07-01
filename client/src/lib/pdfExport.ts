@@ -1090,6 +1090,23 @@ export interface OrdemCompraPDFData {
     estado?: string | null;
     cep?: string | null;
   };
+  // Dados cadastrais completos do fornecedor (do cadastro de Fornecedores)
+  fornecedor?: {
+    cpfCnpj?: string | null;
+    inscEstadual?: string | null;
+    inscMunicipal?: string | null;
+    endereco?: string | null;
+    numero?: string | null;
+    bairro?: string | null;
+    cidade?: string | null;
+    uf?: string | null;
+    cep?: string | null;
+    telefone?: string | null;
+    contato?: string | null;
+    email?: string | null;
+  } | null;
+  // Faturar para (cliente da obra)
+  faturarCnpj?: string | null;
   itens: { descricao: string; unidade?: string | null; quantidade: number; valorUnitario: number }[];
   frete: number;
   observacao?: string | null;
@@ -1109,117 +1126,203 @@ function _enderecoCompleto(p?: { endereco?: string | null; cidade?: string | nul
  */
 export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
   const config = getPDFConfig();
-  const brl = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  const esc = (s: any) => String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const num = (n: number, dec = 2) => (Number(n) || 0).toLocaleString("pt-BR", { minimumFractionDigits: dec, maximumFractionDigits: dec });
   const numeroFmt = String(data.numero).padStart(2, "0");
-  const docId = `OC #${numeroFmt}`;
-  const dataEmissao = (() => {
-    const d = new Date(data.dataEmissao);
-    return isNaN(d.getTime()) ? data.dataEmissao : d.toLocaleString("pt-BR");
-  })();
-
-  const cover = buildCoverPage({
-    docType: "Ordem de Compra",
-    docTitle: `Ordem de Compra nº ${numeroFmt}`,
-    docId,
-    obraNome: data.obraNome,
-    obraCliente: data.fornecedorNome,
-    obraCodigo: data.obraCodigo,
-    obraResponsavel: data.geradoPor,
-    obraEndereco: data.obraEndereco,
-    dataReferencia: `Fornecedor: ${data.fornecedorNome}`,
-    config,
-  });
-
-  const header = buildPageHeader({
-    obraNome: data.obraNome, obraCodigo: data.obraCodigo, docId,
-    dataRef: `OC nº ${numeroFmt}`, config,
-  });
-  const footer = buildPageFooter(docId, data.obraNome);
+  const emissao = new Date(data.dataEmissao);
+  const dataDia = isNaN(emissao.getTime()) ? String(data.dataEmissao) : emissao.toLocaleDateString("pt-BR");
+  const dataHora = isNaN(emissao.getTime()) ? String(data.dataEmissao) : emissao.toLocaleString("pt-BR");
 
   const totalItens = data.itens.reduce((s, it) => s + it.quantidade * it.valorUnitario, 0);
-  const totalGeral = totalItens + (data.frete || 0);
+  const frete = data.frete || 0;
+  const totalGeral = totalItens + frete;
+  const desconto = 0;
+  const totalLiquido = totalGeral - desconto;
 
-  const linhas = data.itens.map(it => `<tr>
-    <td>${it.descricao}</td>
-    <td style="text-align:center">${it.unidade ?? "—"}</td>
-    <td style="text-align:right">${it.quantidade.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}</td>
-    <td style="text-align:right">${brl(it.valorUnitario)}</td>
-    <td style="text-align:right;font-weight:600">${brl(it.quantidade * it.valorUnitario)}</td>
+  // ── Empresa emissora ──
+  const empresaNome = config.empresaNome || "Obra Digital";
+  const logoHTML = config.logoBase64
+    ? `<img src="${config.logoBase64}" alt="Logo" style="height:40px;max-width:130px;object-fit:contain" />`
+    : "";
+
+  // ── Endereços ──
+  const f = data.fornecedor;
+  const fornEndereco = f
+    ? [ [f.endereco, f.numero].filter(Boolean).join(", "), f.bairro,
+        [f.cidade, f.uf].filter(Boolean).join(" - "), f.cep ? `CEP:${f.cep}` : "" ].filter(Boolean).join(", ")
+    : "";
+  const faturarEndereco = (() => {
+    const p = data.faturarPara;
+    if (!p) return "";
+    return [p.endereco, [p.cidade, p.estado].filter(Boolean).join(" - "), p.cep ? `CEP:${p.cep}` : ""].filter(Boolean).join(", ");
+  })();
+  const entregaEndereco = _enderecoCompleto(data.entrega) || data.obraEndereco || "";
+
+  // ── Itens (Item | Descrição | Un. | Marca | Qtde | Preço Unit. | Total) ──
+  const linhas = data.itens.map((it, i) => `<tr>
+    <td class="c">${i + 1}</td>
+    <td>${esc(it.descricao)}</td>
+    <td class="c">${esc(it.unidade ?? "")}</td>
+    <td class="c"></td>
+    <td class="r">${num(it.quantidade, 4)}</td>
+    <td class="r">${num(it.valorUnitario, 4)}</td>
+    <td class="r">${num(it.quantidade * it.valorUnitario, 2)}</td>
   </tr>`).join("");
 
-  const fornecedorLinha = [data.fornecedorNome, data.fornecedorId ? `(${data.fornecedorId})` : ""].filter(Boolean).join(" ");
-  const faturarEndereco = _enderecoCompleto(data.faturarPara);
-  const entregaEndereco = _enderecoCompleto(data.entrega);
-
-  const blocoFaturarEntrega = `
-  <div class="oc-blocos">
-    <div class="oc-bloco">
-      <div class="oc-bloco-titulo">Faturar para</div>
-      <div class="oc-bloco-nome">${data.faturarPara?.nome || "—"}</div>
-      ${faturarEndereco ? `<div class="oc-bloco-linha">${faturarEndereco}</div>` : ""}
-    </div>
-    <div class="oc-bloco">
-      <div class="oc-bloco-titulo">Endereço de entrega</div>
-      <div class="oc-bloco-nome">${data.obraNome}</div>
-      <div class="oc-bloco-linha">${entregaEndereco || data.obraEndereco || "—"}</div>
-    </div>
-  </div>`;
+  // Observação do fornecedor: reforço do CNO na nota (como no modelo)
+  const obsFornecedor = data.obraCno ? `FAVOR INFORMAR O CNO NA NOTA FISCAL — CNO: ${esc(data.obraCno)}` : "";
 
   const html = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8">
-<title>OC-${numeroFmt}-${data.obraNome}</title><style>${BASE_CSS}
-  @page { size: A4 portrait; margin: 0; }
-  .oc-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 24px; margin-bottom: 14px; }
-  .oc-meta .lbl { font-size: 10px; color: #6b7280; text-transform: uppercase; }
-  .oc-meta .val { font-size: 13px; font-weight: 600; color: #1e3a5f; }
-  .oc-resumo { width: 50%; margin-left: auto; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; margin-top: 14px; }
-  .oc-resumo div { display: flex; justify-content: space-between; padding: 7px 12px; font-size: 12px; border-bottom: 1px solid #f0f0f0; }
-  .oc-resumo .total { background: #1e3a5f; color: #fff; font-weight: 700; font-size: 14px; }
-  .oc-obs { margin-top: 14px; padding: 10px 12px; background: #f9fafb; border-left: 3px solid #1e3a5f; border-radius: 4px; font-size: 12px; }
-  .oc-blocos { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
-  .oc-bloco { border: 1px solid #e5e7eb; border-radius: 6px; padding: 10px 12px; }
-  .oc-bloco-titulo { font-size: 9px; color: #6b7280; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; margin-bottom: 4px; }
-  .oc-bloco-nome { font-size: 13px; font-weight: 700; color: #1e3a5f; }
-  .oc-bloco-linha { font-size: 11px; color: #444; margin-top: 2px; line-height: 1.4; }
+<title>OC-${numeroFmt}-${esc(data.obraNome)}</title><style>
+  @page { size: A4 portrait; margin: 8mm; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: Arial, Helvetica, sans-serif; color: #000; font-size: 8.5px; }
+  table { width: 100%; border-collapse: collapse; }
+  td, th { border: 0.6px solid #000; padding: 2px 5px; vertical-align: top; text-align: left; }
+  .lbl { font-weight: bold; }
+  .c { text-align: center; } .r { text-align: right; } .b { font-weight: bold; }
+  .no-b, .no-b td { border: none; }
+  /* Cabeçalho */
+  .hd-title { font-size: 16px; font-weight: bold; letter-spacing: 0.5px; }
+  .hd-emp { font-size: 9px; font-weight: bold; }
+  .hd-cell { font-size: 8px; white-space: nowrap; }
+  /* Itens */
+  .itens th { background: #e9e9e9; font-weight: bold; text-align: center; font-size: 8px; }
+  .itens td { font-size: 8.5px; }
+  /* Totais */
+  .tot td { font-size: 8.5px; }
+  .tot .v { text-align: right; width: 90px; }
+  .aprov { height: 96px; position: relative; }
+  .aprov-b { position: absolute; bottom: 3px; left: 0; right: 0; display: flex; justify-content: space-around; font-size: 8px; }
+  .liq td { background: #e9e9e9; font-weight: bold; }
+  /* Observações */
+  .obs td { height: 26px; }
+  .foot { display: flex; justify-content: space-between; margin-top: 6px; font-size: 7.5px; color: #444; }
+  @media print { body { -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+  .band { margin-top: 4px; }
 </style></head><body>
-${cover}
-<div class="page">
-  ${header}
-  <div class="section">
-    <div class="section-title">Dados da Ordem de Compra</div>
-    <div class="oc-meta">
-      <div><div class="lbl">Número da OC</div><div class="val">${numeroFmt}</div></div>
-      <div><div class="lbl">Data de emissão</div><div class="val">${dataEmissao}</div></div>
-      <div><div class="lbl">Obra</div><div class="val">${data.obraNome} (${data.obraCodigo})</div></div>
-      ${data.obraCno ? `<div><div class="lbl">CNO</div><div class="val">${data.obraCno}</div></div>` : ""}
-      <div><div class="lbl">Fornecedor</div><div class="val">${fornecedorLinha}</div></div>
-      <div><div class="lbl">Gerado por</div><div class="val">${data.geradoPor || "—"}</div></div>
-    </div>
-  </div>
 
-  <div class="section">
-    ${blocoFaturarEntrega}
-  </div>
+<!-- Cabeçalho -->
+<table>
+  <tr>
+    <td style="width:56%">
+      <div style="display:flex;align-items:center;gap:8px">
+        ${logoHTML}
+        <div>
+          <div class="hd-emp">${esc(empresaNome)}</div>
+          <div class="hd-title">ORDEM DE COMPRA</div>
+        </div>
+      </div>
+    </td>
+    <td class="hd-cell">Núm.: <b>${esc(String(data.numero))}</b></td>
+    <td class="hd-cell">Nº Compra: 0</td>
+    <td class="hd-cell">Data: ${dataDia}</td>
+    <td class="hd-cell">Pág.: 1</td>
+  </tr>
+</table>
 
-  <div class="section">
-    <div class="section-title">Itens</div>
-    <table>
-      <thead><tr>
-        <th>Insumo / Descrição</th><th style="text-align:center">Un.</th>
-        <th style="text-align:right">Qtd.</th><th style="text-align:right">Valor Unit.</th><th style="text-align:right">Valor Total</th>
-      </tr></thead>
-      <tbody>${linhas || `<tr><td colspan="5" style="color:#666;font-style:italic;padding:10px">Nenhum item</td></tr>`}</tbody>
-    </table>
+<!-- Obra -->
+<table class="band">
+  <tr>
+    <td style="width:70%"><span class="lbl">Obra:</span> ${esc(data.obraCodigo ? `${data.obraCodigo} - ` : "")}${esc(data.obraNome)}</td>
+    <td><span class="lbl">CNO:</span> ${esc(data.obraCno || "")}</td>
+  </tr>
+  <tr>
+    <td><span class="lbl">Resp. Confirmação:</span> ${esc(data.geradoPor || "")}</td>
+    <td><span class="lbl">Gerou O.C.:</span> ${esc(data.geradoPor || "")}</td>
+  </tr>
+</table>
 
-    <div class="oc-resumo">
-      <div><span>Subtotal dos itens</span><span>${brl(totalItens)}</span></div>
-      <div><span>Frete</span><span>${brl(data.frete || 0)}</span></div>
-      <div class="total"><span>TOTAL GERAL</span><span>${brl(totalGeral)}</span></div>
-    </div>
+<!-- Faturar para -->
+<table class="band">
+  <tr>
+    <td rowspan="3" style="width:74%">
+      <span class="lbl">Faturar para:</span> ${esc(data.faturarPara?.nome || "")}<br>
+      ${esc(faturarEndereco)}<br>
+      <span class="lbl">CNPJ/CPF:</span> ${esc(data.faturarCnpj || "")} &nbsp; <span class="lbl">Insc. Munic.:</span> &nbsp; <span class="lbl">Insc. Est.:</span><br>
+      <span class="lbl">E-mail:</span>
+    </td>
+    <td class="hd-cell"><span class="lbl">Celular:</span></td>
+  </tr>
+  <tr><td class="hd-cell"><span class="lbl">Fone:</span></td></tr>
+  <tr><td class="hd-cell"><span class="lbl">Contato:</span></td></tr>
+</table>
 
-    ${data.observacao ? `<div class="oc-obs"><strong>Observações:</strong> ${data.observacao}</div>` : ""}
-  </div>
-  ${footer}
+<!-- Fornecedor -->
+<table class="band">
+  <tr>
+    <td rowspan="3" style="width:74%">
+      <span class="lbl">Fornecedor:</span> ${esc(data.fornecedorNome)}<br>
+      ${esc(fornEndereco)}<br>
+      <span class="lbl">CNPJ/CPF:</span> ${esc(f?.cpfCnpj || data.fornecedorId || "")} &nbsp;
+      <span class="lbl">Insc. Munic.:</span> ${esc(f?.inscMunicipal || "")} &nbsp;
+      <span class="lbl">Insc. Est.:</span> ${esc(f?.inscEstadual || "")}<br>
+      <span class="lbl">E-mail:</span> ${esc(f?.email || "")}
+    </td>
+    <td class="hd-cell"><span class="lbl">Celular:</span></td>
+  </tr>
+  <tr><td class="hd-cell"><span class="lbl">Fone:</span> ${esc(f?.telefone || "")}</td></tr>
+  <tr><td class="hd-cell"><span class="lbl">Contato:</span> ${esc(f?.contato || "")}</td></tr>
+</table>
+
+<!-- Pagamento -->
+<table class="band">
+  <tr>
+    <td style="width:50%"><span class="lbl">Condições de Pagamento:</span></td>
+    <td><span class="lbl">Endereço de Pagamento:</span></td>
+  </tr>
+</table>
+
+<!-- Entrega -->
+<table class="band">
+  <tr>
+    <td style="width:50%"><span class="lbl">Condições de Entrega:</span></td>
+    <td><span class="lbl">Endereço de Entrega:</span> ${esc(entregaEndereco)}</td>
+  </tr>
+</table>
+
+<!-- Itens -->
+<table class="itens band">
+  <thead><tr>
+    <th style="width:26px">Item</th>
+    <th>Descrição</th>
+    <th style="width:34px">Un.</th>
+    <th style="width:70px">Marca</th>
+    <th style="width:66px">Qtde</th>
+    <th style="width:74px">Preço Unit.</th>
+    <th style="width:78px">Total</th>
+  </tr></thead>
+  <tbody>${linhas || `<tr><td colspan="7" class="c" style="font-style:italic;padding:8px">Nenhum item</td></tr>`}</tbody>
+</table>
+
+<!-- Aprovação + Totais -->
+<table class="tot band">
+  <tr>
+    <td rowspan="6" class="aprov" style="width:56%">
+      <span class="lbl">Aprovação:</span>
+      <div class="aprov-b"><span>Dept. Compras</span><span>Diretoria</span></div>
+    </td>
+    <td class="lbl">Total Itens (c)</td><td class="v">${num(totalItens)}</td>
+  </tr>
+  <tr><td class="lbl">Frete</td><td class="v">${num(frete)}</td></tr>
+  <tr><td class="lbl">Total Geral</td><td class="v">${num(totalGeral)}</td></tr>
+  <tr><td class="lbl">Desconto</td><td class="v">${num(desconto)}</td></tr>
+  <tr class="liq"><td class="lbl">Total Líquido</td><td class="v">${num(totalLiquido)}</td></tr>
+  <tr><td></td><td></td></tr>
+</table>
+
+<!-- Observações -->
+<table class="obs band">
+  <tr><td><span class="lbl">Observações Gerais:</span><br>${esc(data.observacao || "")}</td></tr>
+  <tr><td><span class="lbl">Observações da Empresa:</span></td></tr>
+  <tr><td><span class="lbl">Observações do Fornecedor:</span><br>${obsFornecedor}</td></tr>
+</table>
+
+<div class="foot">
+  <span>${esc(empresaNome)} — gerado em ${dataHora}</span>
+  <span>Página 1</span>
 </div>
+
 <script>window.onload=()=>window.print();window.onafterprint=()=>window.close();</script>
 </body></html>`;
 

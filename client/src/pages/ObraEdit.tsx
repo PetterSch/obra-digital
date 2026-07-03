@@ -67,6 +67,7 @@ export default function ObraEdit() {
     // Responsável
     responsavelTecnico: "",
     crea:               "",
+    email:              "",
     // Datas e contrato
     dataInicio:         "",
     dataPrevistTermino: "",
@@ -96,6 +97,7 @@ export default function ObraEdit() {
       cepEntrega:         (obra as any).cepEntrega ?? "",
       responsavelTecnico: obra.responsavelTecnico  ?? "",
       crea:               obra.crea                ?? "",
+      email:              (obra as any).email      ?? "",
       dataInicio:         toDateInput(obra.dataInicio),
       dataPrevistTermino: toDateInput(obra.dataPrevistTermino),
       valorContrato:      obra.valorContrato        ?? "",
@@ -203,9 +205,15 @@ export default function ObraEdit() {
           <Card>
             <CardHeader><CardTitle className="text-base">Cliente e Responsável</CardTitle></CardHeader>
             <CardContent className="space-y-4">
-              <div className="space-y-1.5">
-                <Label>Cliente</Label>
-                <Input value={form.cliente} onChange={set("cliente")} placeholder="Nome do cliente ou empresa" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <Label>Cliente</Label>
+                  <Input value={form.cliente} onChange={set("cliente")} placeholder="Nome do cliente ou empresa" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label>E-mail</Label>
+                  <Input type="email" value={form.email} onChange={set("email")} placeholder="contato@cliente.com.br" />
+                </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">

@@ -1107,6 +1107,9 @@ export interface OrdemCompraPDFData {
   } | null;
   // Faturar para (cliente da obra)
   faturarCnpj?: string | null;
+  // Número(s) do(s) pedido(s) de origem e condição de pagamento (do mapa)
+  pedidoNumeros?: string | null;
+  condicaoPagamento?: string | null;
   itens: { descricao: string; unidade?: string | null; quantidade: number; valorUnitario: number }[];
   frete: number;
   observacao?: string | null;
@@ -1215,7 +1218,7 @@ export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
       </div>
     </td>
     <td class="hd-cell">Núm.: <b>${esc(String(data.numero))}</b></td>
-    <td class="hd-cell">Nº Compra: 0</td>
+    <td class="hd-cell">Nº Pedido: ${esc(data.pedidoNumeros || "—")}</td>
     <td class="hd-cell">Data: ${dataDia}</td>
     <td class="hd-cell">Pág.: 1</td>
   </tr>
@@ -1268,8 +1271,8 @@ export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
 <!-- Pagamento -->
 <table class="band">
   <tr>
-    <td style="width:50%"><span class="lbl">Condições de Pagamento:</span></td>
-    <td><span class="lbl">Endereço de Pagamento:</span></td>
+    <td style="width:50%"><span class="lbl">Condições de Pagamento:</span> ${esc(data.condicaoPagamento || "")}</td>
+    <td><span class="lbl">Endereço de Pagamento:</span> ${esc(fornEndereco)}</td>
   </tr>
 </table>
 

@@ -188,6 +188,18 @@ export async function runMigrations() {
     if (db) await db.execute(sql`ALTER TABLE obras ADD COLUMN cno VARCHAR(30)`);
   } catch { /* já existe */ }
 
+  // E-mail da obra (adiciona se ainda não existir)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE obras ADD COLUMN email VARCHAR(255)`);
+  } catch { /* já existe */ }
+
+  // Condição de pagamento capturada na geração da OC (adiciona se ainda não existir)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE ordens_compra ADD COLUMN condicaoPagamento VARCHAR(255)`);
+  } catch { /* já existe */ }
+
   // Endereço de entrega da obra (adiciona se ainda não existir)
   for (const col of [
     "enderecoEntrega TEXT", "cidadeEntrega VARCHAR(100)",
@@ -2022,7 +2034,15 @@ export async function getOrdemCompraById(id: number) {
     const fr: any = await db.execute(sql`SELECT * FROM fornecedores WHERE id = ${oc.faturamentoFornecedorId} LIMIT 1`);
     faturamento = ((fr[0] ?? fr) as any[])[0] ?? null;
   }
-  return { ...oc, frete: Number(oc.frete ?? 0), itens, fornecedor, faturamento };
+  // Número(s) do(s) pedido(s) de origem dos itens (via mapa → pedido).
+  const pr: any = await db.execute(sql`
+    SELECT DISTINCT pc.numero FROM ordem_compra_itens oci
+    JOIN mapa_itens mi ON oci.mapaItemId = mi.id
+    JOIN pedido_itens pit ON mi.pedidoItemId = pit.id
+    JOIN pedidos_compra pc ON pit.pedidoId = pc.id
+    WHERE oci.ordemId = ${id} AND pc.numero IS NOT NULL AND pc.numero != ''`);
+  const pedidoNumeros = ((pr[0] ?? pr) as any[]).map((r: any) => r.numero).filter(Boolean).join(", ");
+  return { ...oc, frete: Number(oc.frete ?? 0), itens, fornecedor, faturamento, pedidoNumeros };
 }
 
 /** Lista OCs da obra por status, com total calculado. */
@@ -2091,12 +2111,15 @@ export async function createOrdensCompra(
   const criadasIds: number[] = [];
   for (const g of grupos) {
     // Frete: soma do frete do fornecedor (por nome) em cada mapa distinto do grupo.
+    // Condição de pagamento: primeira encontrada (do mapa) para esse fornecedor.
     let frete = 0;
+    let condicaoPagamento: string | null = null;
     for (const mapaId of g.mapaIds) {
       const fr: any = await db.execute(sql`
-        SELECT frete FROM mapa_fornecedores WHERE mapaId = ${mapaId} AND nome = ${g.fornecedorNome} LIMIT 1`);
+        SELECT frete, condicaoPagamento FROM mapa_fornecedores WHERE mapaId = ${mapaId} AND nome = ${g.fornecedorNome} LIMIT 1`);
       const row = ((fr[0] ?? fr) as any[])[0];
       frete += row ? Number(row.frete ?? 0) : 0;
+      if (!condicaoPagamento && row?.condicaoPagamento) condicaoPagamento = row.condicaoPagamento;
     }
     // Próximo número global.
     const nr: any = await db.execute(sql`SELECT numero FROM ordens_compra`);
@@ -2104,8 +2127,8 @@ export async function createOrdensCompra(
     const numero = proximoNumeroOC(numeros);
 
     const res: any = await db.execute(sql`
-      INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, geradoPor, faturamentoFornecedorId)
-      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${geradoPor ?? null}, ${faturamentoFornecedorId ?? null})`);
+      INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, geradoPor, faturamentoFornecedorId, condicaoPagamento)
+      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${geradoPor ?? null}, ${faturamentoFornecedorId ?? null}, ${condicaoPagamento})`);
     const ordemId = (res[0]?.insertId ?? res.insertId) as number;
 
     for (const it of g.itens) {

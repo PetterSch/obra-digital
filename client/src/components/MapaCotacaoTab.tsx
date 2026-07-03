@@ -888,6 +888,14 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
       <td class="tf-ideal-empty" colspan="2"></td>
     </tr>
     <tr>
+      <td colspan="4" class="tf-label">Cond. Pagamento</td>
+      ${activeFornIdx.map(fIdx => {
+        const cp = fornecedores[fIdx]?.condicaoPagamento ?? "";
+        return `<td colspan="2" class="tf-val" style="text-align:center;font-weight:600;">${cp || "—"}</td>`;
+      }).join("")}
+      <td class="tf-ideal-empty" colspan="2"></td>
+    </tr>
+    <tr>
       <td colspan="4" class="tf-total-label">Total Geral</td>
       ${activeFornIdx.map(fIdx => {
         const tot = getTotal(fIdx);
@@ -1173,6 +1181,25 @@ ${observacao && observacao.trim() ? `<!-- OBSERVAÇÕES -->
                 ))}
                 <td className="border bg-green-50/60"></td>
                 <td className="border px-2 py-1.5 text-right text-sm text-muted-foreground bg-green-50/60">—</td>
+              </tr>
+              <tr>
+                <td colSpan={4} className="border px-2 py-1.5 text-right text-xs uppercase text-muted-foreground">Cond. Pagamento</td>
+                {fornecedores.map((f, fIdx) => (
+                  <td key={`cp${fIdx}`} colSpan={2} className="border px-1 py-0.5">
+                    <input
+                      type="text"
+                      disabled={isConcluido}
+                      className="w-full text-center text-sm outline-none bg-transparent border-b border-transparent focus:border-blue-400 transition-colors px-1 py-0.5 disabled:opacity-50"
+                      value={f.condicaoPagamento ?? ""}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setFornecedores(prev => prev.map((ff, i) => i === fIdx ? { ...ff, condicaoPagamento: val } : ff));
+                      }}
+                      placeholder="Ex: 28 dias"
+                    />
+                  </td>
+                ))}
+                <td className="border bg-green-50/60" colSpan={2}></td>
               </tr>
               <tr className="bg-slate-100 font-bold">
                 <td colSpan={4} className="border px-2 py-1.5 text-right text-xs uppercase">Total</td>

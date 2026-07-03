@@ -498,6 +498,8 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
       obraCodigo: oc.obraCodigo,
       obraEndereco: oc.obraEndereco ?? "",
       obraCno: oc.obraCno,
+      pedidoNumeros: (oc as any).pedidoNumeros,
+      condicaoPagamento: (oc as any).condicaoPagamento,
       fornecedorNome: oc.fornecedorNome,
       geradoPor: oc.geradoPor ?? "",
       fornecedor: (oc as any).fornecedor ? {

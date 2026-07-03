@@ -51,6 +51,7 @@ export const obras = mysqlTable("obras", {
   cepEntrega: varchar("cepEntrega", { length: 10 }),
   responsavelTecnico: varchar("responsavelTecnico", { length: 255 }).notNull(),
   crea: varchar("crea", { length: 50 }),
+  email: varchar("email", { length: 255 }),
   dataInicio: date("dataInicio").notNull(),
   dataPrevistTermino: date("dataPrevistTermino").notNull(),
   dataTermino: date("dataTermino"),

@@ -19,6 +19,7 @@ const createObraSchema = z.object({
   nome: z.string().min(1, "Nome é obrigatório"),
   cno: z.string().optional(),
   cliente: z.string().min(1, "Cliente é obrigatório"),
+  email: z.string().optional(),
   endereco: z.string().min(1, "Endereço é obrigatório"),
   cidade: z.string().min(1, "Cidade é obrigatória"),
   estado: z.string().length(2, "Estado deve ter 2 caracteres"),
@@ -42,6 +43,7 @@ export default function ObrasList() {
     nome: "",
     cno: "",
     cliente: "",
+    email: "",
     endereco: "",
     cidade: "",
     estado: "",
@@ -80,7 +82,9 @@ export default function ObrasList() {
       setFormData({
         codigo: "",
         nome: "",
+        cno: "",
         cliente: "",
+        email: "",
         endereco: "",
         cidade: "",
         estado: "",
@@ -168,14 +172,26 @@ export default function ObrasList() {
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="cliente">Cliente *</Label>
-                  <Input
-                    id="cliente"
-                    value={formData.cliente}
-                    onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
-                    placeholder="Nome do cliente"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cliente">Cliente *</Label>
+                    <Input
+                      id="cliente"
+                      value={formData.cliente}
+                      onChange={(e) => setFormData({ ...formData, cliente: e.target.value })}
+                      placeholder="Nome do cliente"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">E-mail</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      placeholder="contato@cliente.com.br"
+                    />
+                  </div>
                 </div>
 
                 <div className="space-y-2">

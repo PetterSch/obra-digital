@@ -1112,6 +1112,7 @@ export interface OrdemCompraPDFData {
   condicaoPagamento?: string | null;
   itens: { descricao: string; unidade?: string | null; quantidade: number; valorUnitario: number }[];
   frete: number;
+  desconto?: number;
   observacao?: string | null;
 }
 
@@ -1138,8 +1139,8 @@ export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
 
   const totalItens = data.itens.reduce((s, it) => s + it.quantidade * it.valorUnitario, 0);
   const frete = data.frete || 0;
+  const desconto = data.desconto || 0;
   const totalGeral = totalItens + frete;
-  const desconto = 0;
   const totalLiquido = totalGeral - desconto;
 
   // ── Empresa emissora ──

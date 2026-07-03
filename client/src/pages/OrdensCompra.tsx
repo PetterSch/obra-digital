@@ -237,9 +237,9 @@ function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; ob
   const [tratadas, setTratadas] = useState<Record<number, "confirmada" | "cancelada">>({});
   // Faturamento escolhido para todas as prévias ("" = usar o cadastro da obra).
   const [faturamentoId, setFaturamentoId] = useState<number | "">(() => (ocs[0]?.faturamentoFornecedorId ?? "") as number | "");
-  // Estado editável local de frete/obs por OC
-  const [edits, setEdits] = useState<Record<number, { frete: string; observacao: string }>>(() =>
-    Object.fromEntries(ocs.map(oc => [oc.id, { frete: String(oc.frete ?? 0), observacao: oc.observacao ?? "" }]))
+  // Estado editável local de frete/desconto/obs por OC
+  const [edits, setEdits] = useState<Record<number, { frete: string; desconto: string; observacao: string }>>(() =>
+    Object.fromEntries(ocs.map(oc => [oc.id, { frete: String(oc.frete ?? 0), desconto: String((oc as any).desconto ?? 0), observacao: oc.observacao ?? "" }]))
   );
 
   const invalidar = () => {
@@ -269,6 +269,7 @@ function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; ob
     await updateMut.mutateAsync({
       id: oc.id,
       frete: parseFloat(ed.frete) || 0,
+      desconto: parseFloat(ed.desconto) || 0,
       observacao: ed.observacao,
       faturamentoFornecedorId: faturamentoId === "" ? null : faturamentoId,
     });
@@ -345,7 +346,7 @@ function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; ob
             const estado = tratadas[oc.id];
             const ed = edits[oc.id];
             const totalItens = totalItensOC(oc.itens ?? []);
-            const total = totalItens + (parseFloat(ed?.frete) || 0);
+            const total = totalItens + (parseFloat(ed?.frete) || 0) - (parseFloat(ed?.desconto) || 0);
             return (
               <Card key={oc.id} className={estado ? "opacity-60" : ""}>
                 <CardHeader className="p-3 border-b bg-muted/20">
@@ -381,15 +382,25 @@ function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; ob
                   </table>
 
                   {!estado && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="space-y-1">
-                        <label className="text-xs font-medium flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> Frete (importado do mapa, editável)</label>
+                        <label className="text-xs font-medium flex items-center gap-1"><Truck className="w-3.5 h-3.5" /> Frete (do mapa, editável)</label>
                         <input
                           type="text"
                           inputMode="decimal"
                           className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
                           value={ed?.frete ?? ""}
                           onChange={e => setEdits(p => ({ ...p, [oc.id]: { ...p[oc.id], frete: e.target.value } }))}
+                        />
+                      </div>
+                      <div className="space-y-1">
+                        <label className="text-xs font-medium">Desconto (do mapa, editável)</label>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                          value={ed?.desconto ?? ""}
+                          onChange={e => setEdits(p => ({ ...p, [oc.id]: { ...p[oc.id], desconto: e.target.value } }))}
                         />
                       </div>
                       <div className="space-y-1">
@@ -542,12 +553,14 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
         descricao: it.descricao, unidade: it.unidade, quantidade: it.quantidade, valorUnitario: it.valorUnitario,
       })),
       frete: oc.frete ?? 0,
+      desconto: (oc as any).desconto ?? 0,
       observacao: oc.observacao,
     });
   };
 
   const totalItens = oc ? totalItensOC(oc.itens ?? []) : 0;
-  const total = totalItens + (oc?.frete ?? 0);
+  const descontoOC = (oc as any)?.desconto ?? 0;
+  const total = totalItens + (oc?.frete ?? 0) - descontoOC;
 
   return (
     <Dialog open onOpenChange={(o) => { if (!o) onFechar(); }}>
@@ -624,6 +637,7 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
             <div className="ml-auto w-full sm:w-1/2 text-sm space-y-1 mt-2">
               <div className="flex justify-between"><span>Subtotal dos itens</span><span className="tabular-nums">{brl(totalItens)}</span></div>
               <div className="flex justify-between"><span>Frete</span><span className="tabular-nums">{brl(oc.frete ?? 0)}</span></div>
+              {descontoOC > 0 && <div className="flex justify-between text-red-600"><span>Desconto</span><span className="tabular-nums">− {brl(descontoOC)}</span></div>}
               <div className="flex justify-between font-bold text-primary border-t pt-1"><span>Total geral</span><span className="tabular-nums">{brl(total)}</span></div>
             </div>
 

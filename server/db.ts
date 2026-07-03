@@ -200,6 +200,12 @@ export async function runMigrations() {
     if (db) await db.execute(sql`ALTER TABLE ordens_compra ADD COLUMN condicaoPagamento VARCHAR(255)`);
   } catch { /* já existe */ }
 
+  // Desconto capturado do mapa na geração da OC (adiciona se ainda não existir)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE ordens_compra ADD COLUMN desconto DECIMAL(15,2) DEFAULT 0`);
+  } catch { /* já existe */ }
+
   // Endereço de entrega da obra (adiciona se ainda não existir)
   for (const col of [
     "enderecoEntrega TEXT", "cidadeEntrega VARCHAR(100)",
@@ -2042,7 +2048,7 @@ export async function getOrdemCompraById(id: number) {
     JOIN pedidos_compra pc ON pit.pedidoId = pc.id
     WHERE oci.ordemId = ${id} AND pc.numero IS NOT NULL AND pc.numero != ''`);
   const pedidoNumeros = ((pr[0] ?? pr) as any[]).map((r: any) => r.numero).filter(Boolean).join(", ");
-  return { ...oc, frete: Number(oc.frete ?? 0), itens, fornecedor, faturamento, pedidoNumeros };
+  return { ...oc, frete: Number(oc.frete ?? 0), desconto: Number(oc.desconto ?? 0), itens, fornecedor, faturamento, pedidoNumeros };
 }
 
 /** Lista OCs da obra por status, com total calculado. */
@@ -2063,7 +2069,8 @@ export async function getOrdensCompra(obraId: number, status?: string) {
   return ((r[0] ?? r) as any[]).map((oc: any) => {
     const totalItens = Number(oc.totalItens ?? 0);
     const frete = Number(oc.frete ?? 0);
-    return { ...oc, totalItens, frete, valorTotal: totalItens + frete };
+    const desconto = Number(oc.desconto ?? 0);
+    return { ...oc, totalItens, frete, desconto, valorTotal: totalItens + frete - desconto };
   });
 }
 
@@ -2110,15 +2117,17 @@ export async function createOrdensCompra(
   const grupos = agruparItensPorFornecedor(enriched);
   const criadasIds: number[] = [];
   for (const g of grupos) {
-    // Frete: soma do frete do fornecedor (por nome) em cada mapa distinto do grupo.
+    // Frete e desconto: soma do valor do fornecedor (por nome) em cada mapa distinto.
     // Condição de pagamento: primeira encontrada (do mapa) para esse fornecedor.
     let frete = 0;
+    let desconto = 0;
     let condicaoPagamento: string | null = null;
     for (const mapaId of g.mapaIds) {
       const fr: any = await db.execute(sql`
-        SELECT frete, condicaoPagamento FROM mapa_fornecedores WHERE mapaId = ${mapaId} AND nome = ${g.fornecedorNome} LIMIT 1`);
+        SELECT frete, desconto, condicaoPagamento FROM mapa_fornecedores WHERE mapaId = ${mapaId} AND nome = ${g.fornecedorNome} LIMIT 1`);
       const row = ((fr[0] ?? fr) as any[])[0];
       frete += row ? Number(row.frete ?? 0) : 0;
+      desconto += row ? Number(row.desconto ?? 0) : 0;
       if (!condicaoPagamento && row?.condicaoPagamento) condicaoPagamento = row.condicaoPagamento;
     }
     // Próximo número global.
@@ -2127,8 +2136,8 @@ export async function createOrdensCompra(
     const numero = proximoNumeroOC(numeros);
 
     const res: any = await db.execute(sql`
-      INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, geradoPor, faturamentoFornecedorId, condicaoPagamento)
-      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${geradoPor ?? null}, ${faturamentoFornecedorId ?? null}, ${condicaoPagamento})`);
+      INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, desconto, geradoPor, faturamentoFornecedorId, condicaoPagamento)
+      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${desconto}, ${geradoPor ?? null}, ${faturamentoFornecedorId ?? null}, ${condicaoPagamento})`);
     const ordemId = (res[0]?.insertId ?? res.insertId) as number;
 
     for (const it of g.itens) {
@@ -2142,8 +2151,8 @@ export async function createOrdensCompra(
   return ocs.filter(Boolean);
 }
 
-/** Edita frete/observação/faturamento de uma OC ainda em prévia. */
-export async function updateOrdemCompra(id: number, data: { frete?: number; observacao?: string; faturamentoFornecedorId?: number | null }) {
+/** Edita frete/desconto/observação/faturamento de uma OC ainda em prévia. */
+export async function updateOrdemCompra(id: number, data: { frete?: number; desconto?: number; observacao?: string; faturamentoFornecedorId?: number | null }) {
   const db = await getDb();
   if (!db) return { success: false };
   const r: any = await db.execute(sql`SELECT status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
@@ -2151,6 +2160,7 @@ export async function updateOrdemCompra(id: number, data: { frete?: number; obse
   if (st !== "previa") return { success: false, message: "Só é possível editar OCs em prévia." };
   await db.execute(sql`UPDATE ordens_compra SET
     frete = COALESCE(${data.frete ?? null}, frete),
+    desconto = COALESCE(${data.desconto ?? null}, desconto),
     observacao = COALESCE(${data.observacao ?? null}, observacao)
     WHERE id = ${id}`);
   // Faturamento: só altera quando a propriedade foi enviada (permite definir e limpar)

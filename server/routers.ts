@@ -1676,6 +1676,7 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({
         id: z.number(),
         frete: z.number().optional(),
+        desconto: z.number().optional(),
         observacao: z.string().optional(),
         faturamentoFornecedorId: z.number().nullable().optional(),
       }))

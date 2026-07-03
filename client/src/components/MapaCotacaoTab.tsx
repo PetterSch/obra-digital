@@ -899,6 +899,12 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
   </tfoot>
 </table>
 
+${observacao && observacao.trim() ? `<!-- OBSERVAÇÕES -->
+<div style="margin-top:10px;border:1px solid #c5cdd8;border-radius:4px;padding:7px 10px;background:#f8f9fb;">
+  <div style="font-size:8px;font-weight:700;color:#555;text-transform:uppercase;letter-spacing:0.4px;margin-bottom:2px;">Observações</div>
+  <div style="font-size:9px;color:#333;line-height:1.5;white-space:pre-line;">${observacao}</div>
+</div>` : ""}
+
 <!-- RODAPÉ -->
 <div class="page-footer">
   <span>${cfg.empresaNome ? `${cfg.empresaNome} — ` : ""}Mapa de Cotação #${mapa?.numero} | ${obraNome}</span>

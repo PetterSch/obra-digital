@@ -401,7 +401,21 @@ export async function runMigrations() {
         quantidade DECIMAL(12,2),
         valorUnitario DECIMAL(15,4)
       )`);
+      // Entidades de faturamento habilitadas por obra (razão social/CNPJ em que a nota é emitida)
+      await db.execute(sql`CREATE TABLE IF NOT EXISTS obra_faturamento (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        obraId INT NOT NULL,
+        fornecedorId INT NOT NULL,
+        criadoEm TIMESTAMP DEFAULT NOW(),
+        UNIQUE KEY uq_obra_forn (obraId, fornecedorId)
+      )`);
     }
+  } catch { /* já existe */ }
+
+  // Fornecedor de faturamento escolhido na geração da OC (opcional)
+  try {
+    const db = await getDb();
+    if (db) await db.execute(sql`ALTER TABLE ordens_compra ADD COLUMN faturamentoFornecedorId INT`);
   } catch { /* já existe */ }
 }
 
@@ -1876,6 +1890,34 @@ export async function getItensAprovadosByObra(obraId: number) {
   return (r[0] ?? r) as any[];
 }
 
+// ============= FATURAMENTO DA OBRA =============
+
+/** Entidades de faturamento habilitadas para a obra (com dados do cadastro). */
+export async function getFaturamentoByObra(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT bf.id, bf.fornecedorId, f.nome, f.nomeFantasia, f.cpfCnpj, f.inscEstadual, f.inscMunicipal,
+           f.endereco, f.numero, f.bairro, f.cidade, f.uf, f.cep, f.telefone, f.email
+    FROM obra_faturamento bf JOIN fornecedores f ON bf.fornecedorId = f.id
+    WHERE bf.obraId = ${obraId} ORDER BY f.nome`);
+  return (r[0] ?? r) as any[];
+}
+
+export async function addFaturamento(obraId: number, fornecedorId: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.execute(sql`INSERT IGNORE INTO obra_faturamento (obraId, fornecedorId) VALUES (${obraId}, ${fornecedorId})`);
+  return { success: true };
+}
+
+export async function removeFaturamento(obraId: number, fornecedorId: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  await db.execute(sql`DELETE FROM obra_faturamento WHERE obraId = ${obraId} AND fornecedorId = ${fornecedorId}`);
+  return { success: true };
+}
+
 // ============= ORDENS DE COMPRA =============
 
 /** IDs de itens de mapa já consumidos por alguma OC ativa (prévia ou gerada). */
@@ -1974,7 +2016,13 @@ export async function getOrdemCompraById(id: number) {
     const fr: any = await db.execute(sql`SELECT * FROM fornecedores WHERE nome = ${oc.fornecedorNome} ORDER BY ativo DESC LIMIT 1`);
     fornecedor = ((fr[0] ?? fr) as any[])[0] ?? null;
   }
-  return { ...oc, frete: Number(oc.frete ?? 0), itens, fornecedor };
+  // Entidade de faturamento escolhida (razão social/CNPJ em que a nota é emitida)
+  let faturamento: any = null;
+  if (oc.faturamentoFornecedorId) {
+    const fr: any = await db.execute(sql`SELECT * FROM fornecedores WHERE id = ${oc.faturamentoFornecedorId} LIMIT 1`);
+    faturamento = ((fr[0] ?? fr) as any[])[0] ?? null;
+  }
+  return { ...oc, frete: Number(oc.frete ?? 0), itens, fornecedor, faturamento };
 }
 
 /** Lista OCs da obra por status, com total calculado. */
@@ -2009,6 +2057,7 @@ export async function createOrdensCompra(
   obraId: number,
   selecionados: { mapaItemId: number; mapaFornecedorId: number; quantidade?: number }[],
   geradoPor?: string,
+  faturamentoFornecedorId?: number,
 ) {
   const db = await getDb();
   if (!db) return [];
@@ -2055,8 +2104,8 @@ export async function createOrdensCompra(
     const numero = proximoNumeroOC(numeros);
 
     const res: any = await db.execute(sql`
-      INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, geradoPor)
-      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${geradoPor ?? null})`);
+      INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, geradoPor, faturamentoFornecedorId)
+      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${geradoPor ?? null}, ${faturamentoFornecedorId ?? null})`);
     const ordemId = (res[0]?.insertId ?? res.insertId) as number;
 
     for (const it of g.itens) {

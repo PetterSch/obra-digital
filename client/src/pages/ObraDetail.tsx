@@ -27,6 +27,7 @@ import EquipesColaboradores from "@/pages/Colaboradores";
 import { PendenciasForm } from "@/components/PendenciasForm";
 import { PedidosCompraTab } from "@/components/PedidosCompraTab";
 import { MapaCotacaoTab } from "@/components/MapaCotacaoTab";
+import { FaturamentoTab } from "@/components/FaturamentoTab";
 
 export default function ObraDetail() {
   const { user } = useAuth();
@@ -196,6 +197,7 @@ export default function ObraDetail() {
             <TabsTrigger value="colaboradores" className="flex-1">Equipes & Colaboradores</TabsTrigger>
             <TabsTrigger value="pendencias" className="flex-1">Pendências ({pendenciasAbertas.length})</TabsTrigger>
             <TabsTrigger value="materiais" className="flex-1">Pedido de Compra</TabsTrigger>
+            <TabsTrigger value="faturamento" className="flex-1">Faturamento</TabsTrigger>
             <TabsTrigger value="protocolos" className="flex-1">Protocolos de Envio</TabsTrigger>
           </TabsList>
 
@@ -305,6 +307,10 @@ export default function ObraDetail() {
 
           <TabsContent value="materiais" className="space-y-4">
             <PedidosCompraTab obraId={obra.id} obraNome={obra.nome} />
+          </TabsContent>
+
+          <TabsContent value="faturamento" className="space-y-4">
+            <FaturamentoTab obraId={obra.id} />
           </TabsContent>
 
           <TabsContent value="protocolos" className="space-y-4">

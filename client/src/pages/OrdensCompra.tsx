@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import {
   ShoppingBag, Building2, ChevronDown, ChevronRight, FileText, CheckCircle2,
-  Trophy, Truck, User, Calendar, X, FileDown, PackageCheck,
+  Trophy, Truck, User, Calendar, X, FileDown, PackageCheck, Receipt,
 } from "lucide-react";
 import { totalItensOC, formatNumeroOC } from "@shared/ordensCompra";
 import { exportOrdemCompraPDF } from "@/lib/pdfExport";
@@ -26,7 +26,9 @@ type Selecao = Record<number, { mapaFornecedorId: number }>; // mapaItemId -> fo
 
 function PedidosProntos({ obraId, onGerou }: { obraId: number; onGerou: (ocs: any[]) => void }) {
   const { data: mapas = [], isLoading } = trpc.ordensCompra.pedidosProntos.useQuery({ obraId });
+  const { data: faturamentos = [] } = trpc.obras.faturamentoList.useQuery({ obraId });
   const [selecao, setSelecao] = useState<Selecao>({});
+  const [faturamentoId, setFaturamentoId] = useState<number | null>(null);
   const utils = trpc.useUtils();
 
   const gerarMut = trpc.ordensCompra.gerar.useMutation({
@@ -78,7 +80,7 @@ function PedidosProntos({ obraId, onGerou }: { obraId: number; onGerou: (ocs: an
       mapaItemId: Number(mapaItemId),
       mapaFornecedorId: sel.mapaFornecedorId,
     }));
-    gerarMut.mutate({ obraId, itens });
+    gerarMut.mutate({ obraId, itens, faturamentoFornecedorId: faturamentoId ?? undefined });
   };
 
   if (isLoading) return <div className="flex justify-center py-14"><Spinner /></div>;
@@ -108,21 +110,43 @@ function PedidosProntos({ obraId, onGerou }: { obraId: number; onGerou: (ocs: an
 
       {/* Rodapé fixo com resumo */}
       <div className="fixed bottom-0 left-0 right-0 bg-background/95 backdrop-blur border-t shadow-lg z-20">
-        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4">
+        <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between gap-4 flex-wrap">
           <div className="text-sm">
             <span className="font-semibold">{itensSelecionados.length}</span> item(ns) selecionado(s)
             <span className="mx-2 text-muted-foreground">·</span>
             Total estimado: <span className="font-bold text-primary">{brl(totalEstimado)}</span>
           </div>
-          <Button
-            onClick={gerar}
-            disabled={itensSelecionados.length === 0 || gerarMut.isPending}
-            className="gap-2"
-          >
-            <ShoppingBag className="w-4 h-4" />
-            {gerarMut.isPending ? "Gerando..." : "Gerar Ordem de Compra"}
-          </Button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Faturar em nome de (entidades habilitadas na obra) */}
+            <div className="flex items-center gap-1.5">
+              <Receipt className="w-4 h-4 text-muted-foreground shrink-0" />
+              <select
+                className="h-9 px-2 border border-input rounded-md bg-background text-sm min-w-[200px] focus:outline-none focus:ring-2 focus:ring-ring"
+                value={faturamentoId ?? ""}
+                onChange={e => setFaturamentoId(e.target.value ? Number(e.target.value) : null)}
+                title="Escolha a entidade em nome de quem a nota será faturada"
+              >
+                <option value="">Faturar em nome de… (opcional)</option>
+                {(faturamentos as any[]).map((e: any) => (
+                  <option key={e.fornecedorId} value={e.fornecedorId}>{e.nome}{e.cpfCnpj ? ` — ${e.cpfCnpj}` : ""}</option>
+                ))}
+              </select>
+            </div>
+            <Button
+              onClick={gerar}
+              disabled={itensSelecionados.length === 0 || gerarMut.isPending}
+              className="gap-2"
+            >
+              <ShoppingBag className="w-4 h-4" />
+              {gerarMut.isPending ? "Gerando..." : "Gerar Ordem de Compra"}
+            </Button>
+          </div>
         </div>
+        {(faturamentos as any[]).length === 0 && (
+          <div className="max-w-5xl mx-auto px-6 pb-2 -mt-1 text-[11px] text-muted-foreground">
+            Dica: cadastre entidades de faturamento na aba <strong>Faturamento</strong> da obra para poder escolher em nome de quem faturar.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -476,13 +500,22 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
         contato: (oc as any).fornecedor.nomeContato,
         email: (oc as any).fornecedor.email,
       } : null,
-      faturarPara: {
+      // Se houver entidade de faturamento escolhida, ela é o destinatário da nota;
+      // senão, cai no cliente da obra.
+      faturarPara: (oc as any).faturamento ? {
+        nome: (oc as any).faturamento.nome,
+        endereco: [(oc as any).faturamento.endereco, (oc as any).faturamento.numero].filter(Boolean).join(", "),
+        cidade: (oc as any).faturamento.cidade,
+        estado: (oc as any).faturamento.uf,
+        cep: (oc as any).faturamento.cep,
+      } : {
         nome: oc.obraCliente,
         endereco: oc.obraEndereco,
         cidade: oc.obraCidade,
         estado: oc.obraEstado,
         cep: oc.obraCep,
       },
+      faturarCnpj: (oc as any).faturamento?.cpfCnpj ?? null,
       entrega: {
         endereco: oc.obraEnderecoEntrega,
         cidade: oc.obraCidadeEntrega,
@@ -525,10 +558,22 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-1">
               <div className="rounded-lg border p-3">
                 <div className="text-[11px] uppercase text-muted-foreground font-semibold">Faturar para</div>
-                <div className="text-sm font-semibold text-primary">{oc.obraCliente || "—"}</div>
-                <div className="text-xs text-muted-foreground mt-0.5">
-                  {[oc.obraEndereco, [oc.obraCidade, oc.obraEstado].filter(Boolean).join("/"), oc.obraCep].filter(Boolean).join(" – ") || "—"}
-                </div>
+                {(oc as any).faturamento ? (
+                  <>
+                    <div className="text-sm font-semibold text-primary">{(oc as any).faturamento.nome}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {(oc as any).faturamento.cpfCnpj ? `CNPJ/CPF: ${(oc as any).faturamento.cpfCnpj}` : ""}
+                      {[[(oc as any).faturamento.endereco, (oc as any).faturamento.numero].filter(Boolean).join(", "), [(oc as any).faturamento.cidade, (oc as any).faturamento.uf].filter(Boolean).join("/"), (oc as any).faturamento.cep].filter(Boolean).join(" – ")}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm font-semibold text-primary">{oc.obraCliente || "—"}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5">
+                      {[oc.obraEndereco, [oc.obraCidade, oc.obraEstado].filter(Boolean).join("/"), oc.obraCep].filter(Boolean).join(" – ") || "—"}
+                    </div>
+                  </>
+                )}
               </div>
               <div className="rounded-lg border p-3">
                 <div className="text-[11px] uppercase text-muted-foreground font-semibold">Endereço de entrega</div>

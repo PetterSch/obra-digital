@@ -268,6 +268,19 @@ export const appRouter = router({
       .mutation(async ({ input }) => {
         return db.deleteObra(input.id);
       }),
+
+    // Faturamento: entidades (razão social/CNPJ) habilitadas para faturar nesta obra
+    faturamentoList: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getFaturamentoByObra(input.obraId)),
+
+    faturamentoAdd: engineerProcedure
+      .input(z.object({ obraId: z.number(), fornecedorId: z.number() }))
+      .mutation(async ({ input }) => db.addFaturamento(input.obraId, input.fornecedorId)),
+
+    faturamentoRemove: engineerProcedure
+      .input(z.object({ obraId: z.number(), fornecedorId: z.number() }))
+      .mutation(async ({ input }) => db.removeFaturamento(input.obraId, input.fornecedorId)),
   }),
 
   // ============= DIÁRIOS ROUTER =============
@@ -1649,10 +1662,11 @@ Gere um resumo executivo profissional em português que:
           mapaFornecedorId: z.number(),
           quantidade: z.number().optional(),
         })).min(1),
+        faturamentoFornecedorId: z.number().optional(),
       }))
       .mutation(async ({ input, ctx }) => {
         const geradoPor = (ctx.user as any).name ?? (ctx.user as any).username;
-        return db.createOrdensCompra(input.obraId, input.itens, geradoPor);
+        return db.createOrdensCompra(input.obraId, input.itens, geradoPor, input.faturamentoFornecedorId);
       }),
 
     // Edita frete/observação de uma prévia.

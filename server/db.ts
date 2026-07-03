@@ -2119,8 +2119,8 @@ export async function createOrdensCompra(
   return ocs.filter(Boolean);
 }
 
-/** Edita frete/observação de uma OC ainda em prévia. */
-export async function updateOrdemCompra(id: number, data: { frete?: number; observacao?: string }) {
+/** Edita frete/observação/faturamento de uma OC ainda em prévia. */
+export async function updateOrdemCompra(id: number, data: { frete?: number; observacao?: string; faturamentoFornecedorId?: number | null }) {
   const db = await getDb();
   if (!db) return { success: false };
   const r: any = await db.execute(sql`SELECT status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
@@ -2130,6 +2130,10 @@ export async function updateOrdemCompra(id: number, data: { frete?: number; obse
     frete = COALESCE(${data.frete ?? null}, frete),
     observacao = COALESCE(${data.observacao ?? null}, observacao)
     WHERE id = ${id}`);
+  // Faturamento: só altera quando a propriedade foi enviada (permite definir e limpar)
+  if ("faturamentoFornecedorId" in data) {
+    await db.execute(sql`UPDATE ordens_compra SET faturamentoFornecedorId = ${data.faturamentoFornecedorId ?? null} WHERE id = ${id} AND status = 'previa'`);
+  }
   return { success: true };
 }
 

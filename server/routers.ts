@@ -1669,12 +1669,13 @@ Gere um resumo executivo profissional em português que:
         return db.createOrdensCompra(input.obraId, input.itens, geradoPor, input.faturamentoFornecedorId);
       }),
 
-    // Edita frete/observação de uma prévia.
+    // Edita frete/observação/faturamento de uma prévia.
     update: engineerProcedure
       .input(z.object({
         id: z.number(),
         frete: z.number().optional(),
         observacao: z.string().optional(),
+        faturamentoFornecedorId: z.number().nullable().optional(),
       }))
       .mutation(async ({ input }) => {
         const { id, ...d } = input;

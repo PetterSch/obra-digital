@@ -26,9 +26,7 @@ type Selecao = Record<number, { mapaFornecedorId: number }>; // mapaItemId -> fo
 
 function PedidosProntos({ obraId, onGerou }: { obraId: number; onGerou: (ocs: any[]) => void }) {
   const { data: mapas = [], isLoading } = trpc.ordensCompra.pedidosProntos.useQuery({ obraId });
-  const { data: faturamentos = [] } = trpc.obras.faturamentoList.useQuery({ obraId });
   const [selecao, setSelecao] = useState<Selecao>({});
-  const [faturamentoId, setFaturamentoId] = useState<number | null>(null);
   const utils = trpc.useUtils();
 
   const gerarMut = trpc.ordensCompra.gerar.useMutation({
@@ -80,7 +78,7 @@ function PedidosProntos({ obraId, onGerou }: { obraId: number; onGerou: (ocs: an
       mapaItemId: Number(mapaItemId),
       mapaFornecedorId: sel.mapaFornecedorId,
     }));
-    gerarMut.mutate({ obraId, itens, faturamentoFornecedorId: faturamentoId ?? undefined });
+    gerarMut.mutate({ obraId, itens });
   };
 
   if (isLoading) return <div className="flex justify-center py-14"><Spinner /></div>;
@@ -116,37 +114,15 @@ function PedidosProntos({ obraId, onGerou }: { obraId: number; onGerou: (ocs: an
             <span className="mx-2 text-muted-foreground">·</span>
             Total estimado: <span className="font-bold text-primary">{brl(totalEstimado)}</span>
           </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Faturar em nome de (entidades habilitadas na obra) */}
-            <div className="flex items-center gap-1.5">
-              <Receipt className="w-4 h-4 text-muted-foreground shrink-0" />
-              <select
-                className="h-9 px-2 border border-input rounded-md bg-background text-sm min-w-[200px] focus:outline-none focus:ring-2 focus:ring-ring"
-                value={faturamentoId ?? ""}
-                onChange={e => setFaturamentoId(e.target.value ? Number(e.target.value) : null)}
-                title="Escolha a entidade em nome de quem a nota será faturada"
-              >
-                <option value="">Faturar em nome de… (opcional)</option>
-                {(faturamentos as any[]).map((e: any) => (
-                  <option key={e.fornecedorId} value={e.fornecedorId}>{e.nome}{e.cpfCnpj ? ` — ${e.cpfCnpj}` : ""}</option>
-                ))}
-              </select>
-            </div>
-            <Button
-              onClick={gerar}
-              disabled={itensSelecionados.length === 0 || gerarMut.isPending}
-              className="gap-2"
-            >
-              <ShoppingBag className="w-4 h-4" />
-              {gerarMut.isPending ? "Gerando..." : "Gerar Ordem de Compra"}
-            </Button>
-          </div>
+          <Button
+            onClick={gerar}
+            disabled={itensSelecionados.length === 0 || gerarMut.isPending}
+            className="gap-2"
+          >
+            <ShoppingBag className="w-4 h-4" />
+            {gerarMut.isPending ? "Gerando..." : "Gerar Ordem de Compra"}
+          </Button>
         </div>
-        {(faturamentos as any[]).length === 0 && (
-          <div className="max-w-5xl mx-auto px-6 pb-2 -mt-1 text-[11px] text-muted-foreground">
-            Dica: cadastre entidades de faturamento na aba <strong>Faturamento</strong> da obra para poder escolher em nome de quem faturar.
-          </div>
-        )}
       </div>
     </div>
   );
@@ -255,9 +231,12 @@ function MapaCard({
 
 // ─── Revisão das prévias geradas ───────────────────────────────────────────
 
-function RevisaoPrevias({ ocs, onFechar }: { ocs: any[]; onFechar: () => void }) {
+function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; obraId: number; obraCliente?: string; onFechar: () => void }) {
   const utils = trpc.useUtils();
+  const { data: faturamentos = [] } = trpc.obras.faturamentoList.useQuery({ obraId });
   const [tratadas, setTratadas] = useState<Record<number, "confirmada" | "cancelada">>({});
+  // Faturamento escolhido para todas as prévias ("" = usar o cadastro da obra).
+  const [faturamentoId, setFaturamentoId] = useState<number | "">(() => (ocs[0]?.faturamentoFornecedorId ?? "") as number | "");
   // Estado editável local de frete/obs por OC
   const [edits, setEdits] = useState<Record<number, { frete: string; observacao: string }>>(() =>
     Object.fromEntries(ocs.map(oc => [oc.id, { frete: String(oc.frete ?? 0), observacao: oc.observacao ?? "" }]))
@@ -269,6 +248,15 @@ function RevisaoPrevias({ ocs, onFechar }: { ocs: any[]; onFechar: () => void })
   };
 
   const updateMut = trpc.ordensCompra.update.useMutation();
+
+  // Troca o faturamento de todas as prévias ainda não tratadas.
+  const trocarFaturamento = async (val: number | "") => {
+    setFaturamentoId(val);
+    const pendentes = ocs.filter(oc => !tratadas[oc.id]);
+    await Promise.all(pendentes.map(oc =>
+      updateMut.mutateAsync({ id: oc.id, faturamentoFornecedorId: val === "" ? null : val }).catch(() => {})
+    ));
+  };
   const confirmarMut = trpc.ordensCompra.confirmar.useMutation({
     onError: e => toast.error(e.message),
   });
@@ -278,7 +266,12 @@ function RevisaoPrevias({ ocs, onFechar }: { ocs: any[]; onFechar: () => void })
 
   const confirmar = async (oc: any) => {
     const ed = edits[oc.id];
-    await updateMut.mutateAsync({ id: oc.id, frete: parseFloat(ed.frete) || 0, observacao: ed.observacao });
+    await updateMut.mutateAsync({
+      id: oc.id,
+      frete: parseFloat(ed.frete) || 0,
+      observacao: ed.observacao,
+      faturamentoFornecedorId: faturamentoId === "" ? null : faturamentoId,
+    });
     await confirmarMut.mutateAsync({ id: oc.id });
     setTratadas(p => ({ ...p, [oc.id]: "confirmada" }));
     invalidar();
@@ -325,6 +318,27 @@ function RevisaoPrevias({ ocs, onFechar }: { ocs: any[]; onFechar: () => void })
             ? "Foram geradas OCs separadas por fornecedor. Revise e confirme cada uma."
             : "Revise o frete e as observações antes de confirmar."}
         </p>
+
+        {/* Faturar em nome de — pré-definido com o cadastro da obra */}
+        <div className="rounded-lg border bg-muted/20 p-3 mt-2">
+          <label className="text-xs font-medium flex items-center gap-1.5 mb-1.5">
+            <Receipt className="w-3.5 h-3.5" /> Faturar em nome de
+          </label>
+          <select
+            className="w-full h-9 px-2 border border-input rounded-md bg-background text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+            value={faturamentoId}
+            onChange={e => trocarFaturamento(e.target.value ? Number(e.target.value) : "")}
+            disabled={updateMut.isPending}
+          >
+            <option value="">Cadastro da obra — {obraCliente || "cliente da obra"}</option>
+            {(faturamentos as any[]).map((e: any) => (
+              <option key={e.fornecedorId} value={e.fornecedorId}>{e.nome}{e.cpfCnpj ? ` — ${e.cpfCnpj}` : ""}</option>
+            ))}
+          </select>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            Aplica-se a {ocs.length > 1 ? "todas as prévias" : "esta prévia"}. Habilite entidades na aba <strong>Faturamento</strong> da obra.
+          </p>
+        </div>
 
         <div className="space-y-4 mt-2">
           {ocs.map(oc => {
@@ -710,9 +724,11 @@ export default function OrdensCompra() {
       </div>
 
       {/* Revisão das prévias recém-geradas */}
-      {previas && previas.length > 0 && (
+      {previas && previas.length > 0 && obraId && (
         <RevisaoPrevias
           ocs={previas}
+          obraId={obraId}
+          obraCliente={(obras as any[]).find(o => o.id === obraId)?.cliente}
           onFechar={() => { setPrevias(null); setAba("geradas"); }}
         />
       )}

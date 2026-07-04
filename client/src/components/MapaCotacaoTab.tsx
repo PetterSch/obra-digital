@@ -423,6 +423,9 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
   const [titulo, setTitulo] = useState(mapa?.titulo ?? "");
   const [localAplicacao, setLocalAplicacao] = useState(mapa?.localAplicacao ?? "");
   const [observacao, setObservacao] = useState(mapa?.observacao ?? "");
+  // Popup de exportação: escolha do modo (não agrupado x diluído).
+  const [exportOpen, setExportOpen] = useState(false);
+  const [exportModo, setExportModo] = useState<"nao_agrupado" | "diluido">("nao_agrupado");
 
   // Fornecedores local state (dinâmico)
   const [fornecedores, setFornecedores] = useState<any[]>(() => {
@@ -626,6 +629,26 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     return getIdealSubtotal() - descIdeal + freteIdeal;
   }
 
+  /**
+   * Preço unitário DILUÍDO: distribui o frete e o desconto do fornecedor entre os
+   * itens cotados por ele, na proporção do peso (%) de cada item no subtotal.
+   * Item que representa 40% do subtotal recebe 40% do frete e 40% do desconto,
+   * embutidos no preço unitário. A soma dos totais diluídos = Total Geral do fornecedor.
+   */
+  function getPrecoDiluido(iIdx: number, fIdx: number): number {
+    const unit = getPreco(iIdx, fIdx);
+    if (unit <= 0) return 0;
+    const qty = itens[iIdx]?.quantidade ?? 0;
+    if (qty <= 0) return unit;
+    const subtotal = getSubtotal(fIdx);
+    if (subtotal <= 0) return unit;
+    const frete = fornecedores[fIdx]?.frete ?? 0;
+    const desconto = fornecedores[fIdx]?.desconto ?? 0;
+    const peso = (unit * qty) / subtotal;           // participação do item no subtotal
+    const ajusteLinha = (frete - desconto) * peso;  // parcela de frete (soma) e desconto (subtrai)
+    return unit + ajusteLinha / qty;
+  }
+
   function salvar(status?: string) {
     if (!mapa) return;
     const cotacoesArray: { itemIndex: number; fornecedorId: number; valorUnitario: number }[] = [];
@@ -666,12 +689,30 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     });
   }
 
-  function exportarExcel() {
+  function exportarExcel(modo: "nao_agrupado" | "diluido" = "nao_agrupado") {
     const cfg = getPDFConfig();
     const fornAtivos = fornecedores.filter(f => f.nome);
     const activeFornIdx = (fornAtivos.length > 0 ? fornAtivos : fornecedores.slice(0, 1))
       .map(f => fornecedores.findIndex(ff => ff.id === f.id));
     const dataHoje = new Date().toLocaleDateString("pt-BR");
+
+    // Modo diluído: frete/desconto embutidos no preço unitário (proporcional por item).
+    const diluido = modo === "diluido";
+    const precoFn = diluido ? getPrecoDiluido : getPreco;
+    // Melhor preço recalculado com base no preço efetivo (diluído ou não) da linha.
+    const idealUnitFn = (iIdx: number): number => {
+      const precos = activeFornIdx.map(fIdx => precoFn(iIdx, fIdx)).filter(p => p > 0);
+      return precos.length > 0 ? Math.min(...precos) : 0;
+    };
+    const idealFornFn = (iIdx: number): number => {
+      const iu = idealUnitFn(iIdx);
+      if (iu <= 0) return -1;
+      return activeFornIdx.find(fIdx => precoFn(iIdx, fIdx) === iu) ?? -1;
+    };
+    // No modo diluído o subtotal/total do fornecedor é a soma das linhas diluídas
+    // (que, por construção, equivale ao Total Geral: subtotal − desconto + frete).
+    const totalColFn = (fIdx: number): number => (diluido ? getTotal(fIdx) : getSubtotal(fIdx));
+    const idealSubtotalDil = itens.reduce((s, it, iIdx) => s + idealUnitFn(iIdx) * (it.quantidade ?? 0), 0);
 
     // Cores base
     const COR_HEADER = "#1a3a5c";
@@ -784,6 +825,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     <div>
       <div class="doc-title">Mapa de Cotação de Preços</div>
       <div class="empresa-info">${empresaInfo}</div>
+      ${diluido ? `<div style="margin-top:3px;"><span style="background:#7d3c98;color:#fff;padding:2px 8px;border-radius:3px;font-size:7.5px;font-weight:700;">PREÇOS COM FRETE E DESCONTO DILUÍDOS</span></div>` : ""}
     </div>
   </div>
   <div class="header-right">
@@ -838,8 +880,8 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
   <tbody>`;
 
     itens.forEach((item, iIdx) => {
-      const idealUnit = getIdealUnit(iIdx);
-      const idealFornIdx = getIdealFornIdx(iIdx);
+      const idealUnit = idealUnitFn(iIdx);
+      const idealFornIdx = idealFornFn(iIdx);
       const rowClass = iIdx % 2 === 0 ? "tr-even" : "tr-odd";
       const dataEntregaFmt = item.dataEntrega
         ? new Date(item.dataEntrega + "T00:00:00").toLocaleDateString("pt-BR")
@@ -850,7 +892,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
         <td class="td-center">${item.unidade || "—"}</td>
         <td class="td-center">${Number(item.quantidade).toLocaleString("pt-BR")}</td>`;
       activeFornIdx.forEach(fIdx => {
-        const unit = getPreco(iIdx, fIdx);
+        const unit = precoFn(iIdx, fIdx);
         const total = unit * item.quantidade;
         const isBest = fIdx === idealFornIdx && unit > 0;
         html += `<td class="td-price${isBest ? " best" : ""}">${unit > 0 ? fmtMoeda(unit) : "<span style='color:#ccc'>—</span>"}</td>
@@ -863,18 +905,19 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
 
     html += `</tbody><tfoot>
     <tr>
-      <td colspan="4" class="tf-label">Subtotal</td>
+      <td colspan="4" class="tf-label">Subtotal${diluido ? " (c/ frete e desc. diluídos)" : ""}</td>
       ${activeFornIdx.map(fIdx => {
-        const st = getSubtotal(fIdx);
+        const st = totalColFn(fIdx);
         return `<td class="tf-val"></td><td class="tf-val">${st > 0 ? fmtMoeda(st) : "—"}</td>`;
       }).join("")}
       <td class="tf-ideal-empty"></td>
-      <td class="td-ideal-t" style="background:#d5f5e3;">${getIdealSubtotal() > 0 ? fmtMoeda(getIdealSubtotal()) : "—"}</td>
+      <td class="td-ideal-t" style="background:#d5f5e3;">${(diluido ? idealSubtotalDil : getIdealSubtotal()) > 0 ? fmtMoeda(diluido ? idealSubtotalDil : getIdealSubtotal()) : "—"}</td>
     </tr>
     <tr>
       <td colspan="4" class="tf-label">Desconto (R$)</td>
       ${activeFornIdx.map(fIdx => {
         const d = fornecedores[fIdx]?.desconto ?? 0;
+        if (diluido) return `<td class="tf-val"></td><td class="tf-val" style="color:#888;font-style:italic;">${d > 0 ? "diluído" : "—"}</td>`;
         return `<td class="tf-val"></td><td class="tf-val" style="color:#c0392b;">${d > 0 ? `- ${fmtMoeda(d)}` : "—"}</td>`;
       }).join("")}
       <td class="tf-ideal-empty" colspan="2"></td>
@@ -883,6 +926,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
       <td colspan="4" class="tf-label">Frete (R$)</td>
       ${activeFornIdx.map(fIdx => {
         const fr = fornecedores[fIdx]?.frete ?? 0;
+        if (diluido) return `<td class="tf-val"></td><td class="tf-val" style="color:#888;font-style:italic;">${fr > 0 ? "diluído" : "—"}</td>`;
         return `<td class="tf-val"></td><td class="tf-val">${fr > 0 ? fmtMoeda(fr) : "—"}</td>`;
       }).join("")}
       <td class="tf-ideal-empty" colspan="2"></td>
@@ -902,7 +946,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
         return `<td class="tf-total-val"></td><td class="tf-total-val">${tot > 0 ? fmtMoeda(tot) : "—"}</td>`;
       }).join("")}
       <td class="tf-ideal-val"></td>
-      <td class="tf-ideal-val">${getIdealTotal() > 0 ? fmtMoeda(getIdealTotal()) : "—"}</td>
+      <td class="tf-ideal-val">${(diluido ? idealSubtotalDil : getIdealTotal()) > 0 ? fmtMoeda(diluido ? idealSubtotalDil : getIdealTotal()) : "—"}</td>
     </tr>
   </tfoot>
 </table>
@@ -946,7 +990,7 @@ ${observacao && observacao.trim() ? `<!-- OBSERVAÇÕES -->
           </span>
         </div>
         <div className="flex gap-2 flex-wrap">
-          <Button variant="outline" size="sm" onClick={exportarExcel}><FileDown className="w-4 h-4 mr-1" />Exportar</Button>
+          <Button variant="outline" size="sm" onClick={() => { setExportModo("nao_agrupado"); setExportOpen(true); }}><FileDown className="w-4 h-4 mr-1" />Exportar</Button>
           {!isConcluido && (
             <>
               <Button variant="outline" size="sm" onClick={atualizarQuantidades} title="Sincroniza as quantidades com o que está aprovado nos pedidos">
@@ -1228,6 +1272,49 @@ ${observacao && observacao.trim() ? `<!-- OBSERVAÇÕES -->
           <Input value={observacao} onChange={e => setObservacao(e.target.value)} placeholder="Observações gerais..." />
         </div>
       )}
+
+      {/* Dialog: escolher o modo de exportação (não agrupado x diluído) */}
+      <Dialog open={exportOpen} onOpenChange={setExportOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Exportar mapa de cotação</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-2 py-1">
+            <button
+              type="button"
+              onClick={() => setExportModo("nao_agrupado")}
+              className={`w-full text-left rounded-lg border p-3 transition-colors ${exportModo === "nao_agrupado" ? "border-primary ring-1 ring-primary bg-primary/5" : "hover:bg-muted"}`}
+            >
+              <div className="flex items-center gap-2 font-medium text-sm">
+                <span className={`w-3.5 h-3.5 rounded-full border-2 ${exportModo === "nao_agrupado" ? "border-primary bg-primary" : "border-muted-foreground"}`} />
+                Não agrupado
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 ml-5">
+                Padrão. Preços unitários como cotados; frete e desconto aparecem em linhas separadas no rodapé.
+              </p>
+            </button>
+            <button
+              type="button"
+              onClick={() => setExportModo("diluido")}
+              className={`w-full text-left rounded-lg border p-3 transition-colors ${exportModo === "diluido" ? "border-primary ring-1 ring-primary bg-primary/5" : "hover:bg-muted"}`}
+            >
+              <div className="flex items-center gap-2 font-medium text-sm">
+                <span className={`w-3.5 h-3.5 rounded-full border-2 ${exportModo === "diluido" ? "border-primary bg-primary" : "border-muted-foreground"}`} />
+                Diluído
+              </div>
+              <p className="text-xs text-muted-foreground mt-1 ml-5">
+                Frete e desconto de cada fornecedor são embutidos nos preços unitários, proporcional ao peso (%) de cada item.
+              </p>
+            </button>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setExportOpen(false)}>Cancelar</Button>
+            <Button onClick={() => { setExportOpen(false); exportarExcel(exportModo); }}>
+              <FileDown className="w-4 h-4 mr-1" />Exportar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog: adicionar itens aprovados que não estão no mapa */}
       <Dialog open={addItemOpen} onOpenChange={setAddItemOpen}>

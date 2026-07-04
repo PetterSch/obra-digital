@@ -1273,7 +1273,7 @@ export function exportOrdemCompraPDF(data: OrdemCompraPDFData): void {
 <table class="band">
   <tr>
     <td style="width:50%"><span class="lbl">Condições de Pagamento:</span> ${esc(data.condicaoPagamento || "")}</td>
-    <td><span class="lbl">Endereço de Pagamento:</span> ${esc(fornEndereco)}</td>
+    <td><span class="lbl">Endereço de Pagamento:</span> ${esc(faturarEndereco)}</td>
   </tr>
 </table>
 

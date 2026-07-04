@@ -8,7 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { toast } from "sonner";
 import {
   ShoppingBag, Building2, ChevronDown, ChevronRight, FileText, CheckCircle2,
-  Trophy, Truck, User, Calendar, X, FileDown, PackageCheck, Receipt,
+  Trophy, Truck, User, Calendar, X, FileDown, PackageCheck, Receipt, Ban, Trash2,
 } from "lucide-react";
 import { totalItensOC, formatNumeroOC } from "@shared/ordensCompra";
 import { exportOrdemCompraPDF } from "@/lib/pdfExport";
@@ -273,17 +273,19 @@ function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; ob
       observacao: ed.observacao,
       faturamentoFornecedorId: faturamentoId === "" ? null : faturamentoId,
     });
-    await confirmarMut.mutateAsync({ id: oc.id });
+    // O número sequencial só é atribuído agora, na confirmação (volta na resposta).
+    const res = await confirmarMut.mutateAsync({ id: oc.id });
     setTratadas(p => ({ ...p, [oc.id]: "confirmada" }));
     invalidar();
-    toast.success(`OC nº ${formatNumeroOC(oc.numero)} confirmada!`);
+    const numero = (res as any)?.numero ?? oc.numero;
+    toast.success(`OC nº ${formatNumeroOC(numero)} confirmada!`);
   };
 
   const cancelar = async (oc: any) => {
     await cancelarMut.mutateAsync({ id: oc.id });
     setTratadas(p => ({ ...p, [oc.id]: "cancelada" }));
     invalidar();
-    toast.info(`OC nº ${formatNumeroOC(oc.numero)} cancelada. Itens voltaram para Pedidos Prontos.`);
+    toast.info(`Prévia de ${oc.fornecedorNome} cancelada. Itens voltaram para Pedidos Prontos.`);
   };
 
   const todasTratadas = ocs.every(oc => tratadas[oc.id]);
@@ -353,7 +355,7 @@ function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; ob
                   <div className="flex items-center justify-between gap-2">
                     <div className="font-semibold text-sm flex items-center gap-2">
                       <ShoppingBag className="w-4 h-4 text-primary" />
-                      OC nº {formatNumeroOC(oc.numero)} — {oc.fornecedorNome}
+                      Prévia de OC — {oc.fornecedorNome}
                     </div>
                     {estado === "confirmada" && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle2 className="w-3.5 h-3.5" /> Confirmada</span>}
                     {estado === "cancelada" && <span className="text-xs text-red-600 font-medium flex items-center gap-1"><X className="w-3.5 h-3.5" /> Cancelada</span>}
@@ -450,6 +452,31 @@ function RevisaoPrevias({ ocs, obraId, obraCliente, onFechar }: { ocs: any[]; ob
 function OrdensGeradas({ obraId }: { obraId: number }) {
   const { data: ocs = [], isLoading } = trpc.ordensCompra.listGeradas.useQuery({ obraId });
   const [verId, setVerId] = useState<number | null>(null);
+  const utils = trpc.useUtils();
+
+  const invalidar = () => {
+    utils.ordensCompra.listGeradas.invalidate();
+    utils.ordensCompra.pedidosProntos.invalidate();
+  };
+
+  const cancelarGeradaMut = trpc.ordensCompra.cancelarGerada.useMutation({
+    onSuccess: () => { invalidar(); toast.info("OC cancelada. Os itens voltaram para Pedidos Prontos."); },
+    onError: e => toast.error(e.message || "Erro ao cancelar OC"),
+  });
+  const excluirMut = trpc.ordensCompra.excluir.useMutation({
+    onSuccess: () => { invalidar(); toast.success("OC excluída. Os itens voltaram para Pedidos Prontos."); },
+    onError: e => toast.error(e.message || "Erro ao excluir OC"),
+  });
+
+  const cancelar = (oc: any) => {
+    if (!window.confirm(`Cancelar a OC nº ${formatNumeroOC(oc.numero)} (${oc.fornecedorNome})?\n\nEla continuará na lista marcada como CANCELADA e os itens voltarão para Pedidos Prontos.`)) return;
+    cancelarGeradaMut.mutate({ id: oc.id });
+  };
+  const excluir = (oc: any) => {
+    const label = oc.status === "cancelada" ? "cancelada" : `nº ${formatNumeroOC(oc.numero)}`;
+    if (!window.confirm(`Excluir definitivamente a OC ${label} (${oc.fornecedorNome})?\n\nO registro será apagado e os itens voltarão para Pedidos Prontos.`)) return;
+    excluirMut.mutate({ id: oc.id });
+  };
 
   if (isLoading) return <div className="flex justify-center py-14"><Spinner /></div>;
 
@@ -464,31 +491,63 @@ function OrdensGeradas({ obraId }: { obraId: number }) {
     );
   }
 
+  const busy = cancelarGeradaMut.isPending || excluirMut.isPending;
+
   return (
     <div className="space-y-2">
-      {(ocs as any[]).map(oc => (
-        <div
-          key={oc.id}
-          className="flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 hover:shadow-sm transition-shadow cursor-pointer"
-          onClick={() => setVerId(oc.id)}
-        >
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-sm">OC nº {formatNumeroOC(oc.numero)}</span>
-              <span className="text-sm text-muted-foreground truncate">— {oc.fornecedorNome}</span>
+      {(ocs as any[]).map(oc => {
+        const cancelada = oc.status === "cancelada";
+        return (
+          <div
+            key={oc.id}
+            className={`flex items-center justify-between gap-3 rounded-xl border bg-card px-4 py-3 hover:shadow-sm transition-shadow cursor-pointer ${cancelada ? "opacity-70" : ""}`}
+            onClick={() => setVerId(oc.id)}
+          >
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className={`font-semibold text-sm ${cancelada ? "line-through text-muted-foreground" : ""}`}>
+                  OC nº {formatNumeroOC(oc.numero)}
+                </span>
+                <span className="text-sm text-muted-foreground truncate">— {oc.fornecedorNome}</span>
+              </div>
+              <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
+                <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(oc.criadoEm).toLocaleDateString("pt-BR")}</span>
+                {oc.geradoPor && <span className="flex items-center gap-1"><User className="w-3 h-3" /> {oc.geradoPor}</span>}
+                {cancelada ? (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-red-100 text-red-700 font-semibold">Cancelada</span>
+                ) : (
+                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Gerada</span>
+                )}
+              </div>
             </div>
-            <div className="flex items-center gap-3 mt-0.5 text-xs text-muted-foreground flex-wrap">
-              <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> {new Date(oc.criadoEm).toLocaleDateString("pt-BR")}</span>
-              {oc.geradoPor && <span className="flex items-center gap-1"><User className="w-3 h-3" /> {oc.geradoPor}</span>}
-              <span className="text-[11px] px-2 py-0.5 rounded-full bg-green-100 text-green-700 font-semibold">Gerada</span>
+            <div className="flex items-center gap-3 shrink-0">
+              <div className="text-right">
+                <div className={`font-bold tabular-nums ${cancelada ? "text-muted-foreground" : "text-primary"}`}>{brl(oc.valorTotal)}</div>
+                <div className="text-[11px] text-muted-foreground">{oc.qtdItens} item(ns)</div>
+              </div>
+              {/* Ações — não abrem a visualização (stopPropagation) */}
+              <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
+                {!cancelada && (
+                  <Button
+                    size="sm" variant="ghost" title="Cancelar (mantém na lista)"
+                    className="h-8 px-2 text-amber-600 hover:text-amber-700 hover:bg-amber-50"
+                    onClick={() => cancelar(oc)} disabled={busy}
+                  >
+                    <Ban className="w-4 h-4" />
+                  </Button>
+                )}
+                <Button
+                  size="sm" variant="ghost" title="Excluir (apaga o registro)"
+                  className="h-8 px-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                  onClick={() => excluir(oc)} disabled={busy}
+                >
+                  <Trash2 className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
-          <div className="text-right shrink-0">
-            <div className="font-bold text-primary tabular-nums">{brl(oc.valorTotal)}</div>
-            <div className="text-[11px] text-muted-foreground">{oc.qtdItens} item(ns)</div>
-          </div>
-        </div>
-      ))}
+        );
+      })}
 
       {verId != null && <VisualizarOC id={verId} onFechar={() => setVerId(null)} />}
     </div>

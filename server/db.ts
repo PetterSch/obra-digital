@@ -435,6 +435,16 @@ export async function runMigrations() {
     const db = await getDb();
     if (db) await db.execute(sql`ALTER TABLE ordens_compra ADD COLUMN faturamentoFornecedorId INT`);
   } catch { /* já existe */ }
+
+  // Backfill do desconto do mapa em OCs antigas (geradas antes do recurso) — não apaga nada,
+  // apenas preenche o desconto que estava zerado com o valor cotado no mapa.
+  try { await backfillDescontoOrdens(); } catch { /* best-effort, não bloqueia o boot */ }
+
+  // Libera prévias órfãs: uma prévia é um rascunho transitório que só existe durante a
+  // janela de revisão no cliente. Se sobreviveu a um restart do servidor, está órfã e
+  // seus itens ficaram "presos" (sumiram de Pedidos Prontos). Removê-la NÃO perde dado
+  // real (o item do mapa/pedido permanece) — é o mesmo efeito de "cancelar prévia".
+  try { await liberarPreviasOrfas(); } catch { /* best-effort, não bloqueia o boot */ }
 }
 
 export async function updateLastSignedIn(userId: number): Promise<void> {
@@ -2075,6 +2085,29 @@ export async function getOrdensCompra(obraId: number, status?: string) {
 }
 
 /**
+ * Aba "Ordens de Compras Geradas": inclui geradas E canceladas (as canceladas
+ * permanecem visíveis, marcadas como Cancelada). Ordenadas por número; canceladas
+ * sem número efetivo (0) vão ao final.
+ */
+export async function getOrdensGeradas(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT oc.*,
+      (SELECT COALESCE(SUM(quantidade * valorUnitario), 0) FROM ordem_compra_itens WHERE ordemId = oc.id) AS totalItens,
+      (SELECT COUNT(*) FROM ordem_compra_itens WHERE ordemId = oc.id) AS qtdItens
+    FROM ordens_compra oc
+    WHERE oc.obraId = ${obraId} AND oc.status IN ('gerada','cancelada')
+    ORDER BY (oc.numero = 0), oc.numero`);
+  return ((r[0] ?? r) as any[]).map((oc: any) => {
+    const totalItens = Number(oc.totalItens ?? 0);
+    const frete = Number(oc.frete ?? 0);
+    const desconto = Number(oc.desconto ?? 0);
+    return { ...oc, totalItens, frete, desconto, valorTotal: totalItens + frete - desconto };
+  });
+}
+
+/**
  * Gera 1+ OCs em status "prévia" a partir dos itens selecionados,
  * agrupando por fornecedor escolhido. Frete é importado do mapa por fornecedor
  * (somado entre mapas distintos quando o grupo abrange mais de um mapa).
@@ -2130,14 +2163,12 @@ export async function createOrdensCompra(
       desconto += row ? Number(row.desconto ?? 0) : 0;
       if (!condicaoPagamento && row?.condicaoPagamento) condicaoPagamento = row.condicaoPagamento;
     }
-    // Próximo número global.
-    const nr: any = await db.execute(sql`SELECT numero FROM ordens_compra`);
-    const numeros = ((nr[0] ?? nr) as any[]).map((r: any) => Number(r.numero));
-    const numero = proximoNumeroOC(numeros);
-
+    // Prévia NÃO reserva número (numero = 0). O número sequencial só é atribuído
+    // na confirmação (ver confirmarOrdemCompra), evitando "buracos" na sequência
+    // quando uma prévia é descartada/abandonada.
     const res: any = await db.execute(sql`
       INSERT INTO ordens_compra (numero, obraId, fornecedorNome, status, frete, desconto, geradoPor, faturamentoFornecedorId, condicaoPagamento)
-      VALUES (${numero}, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${desconto}, ${geradoPor ?? null}, ${faturamentoFornecedorId ?? null}, ${condicaoPagamento})`);
+      VALUES (0, ${obraId}, ${g.fornecedorNome}, 'previa', ${frete}, ${desconto}, ${geradoPor ?? null}, ${faturamentoFornecedorId ?? null}, ${condicaoPagamento})`);
     const ordemId = (res[0]?.insertId ?? res.insertId) as number;
 
     for (const it of g.itens) {
@@ -2170,12 +2201,25 @@ export async function updateOrdemCompra(id: number, data: { frete?: number; desc
   return { success: true };
 }
 
-/** Confirma a prévia: status passa para "gerada". */
+/**
+ * Confirma a prévia: atribui o próximo número SEQUENCIAL POR OBRA e passa a "gerada".
+ * O número só é reservado aqui (nunca na prévia), então a sequência 1,2,3… nunca
+ * ganha buracos por prévias descartadas. Números de OCs canceladas não são reusados.
+ */
 export async function confirmarOrdemCompra(id: number) {
   const db = await getDb();
   if (!db) return { success: false };
-  await db.execute(sql`UPDATE ordens_compra SET status = 'gerada' WHERE id = ${id} AND status = 'previa'`);
-  return { success: true };
+  const r: any = await db.execute(sql`SELECT obraId, status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
+  const oc = ((r[0] ?? r) as any[])[0];
+  if (!oc) return { success: false, message: "OC não encontrada." };
+  if (oc.status !== "previa") return { success: false, message: "OC já confirmada." };
+  // Próximo número entre as OCs já efetivadas desta obra (gerada/cancelada mantêm número).
+  const nr: any = await db.execute(sql`
+    SELECT numero FROM ordens_compra WHERE obraId = ${oc.obraId} AND status IN ('gerada','cancelada')`);
+  const numeros = ((nr[0] ?? nr) as any[]).map((r: any) => Number(r.numero));
+  const numero = proximoNumeroOC(numeros);
+  await db.execute(sql`UPDATE ordens_compra SET status = 'gerada', numero = ${numero} WHERE id = ${id} AND status = 'previa'`);
+  return { success: true, numero };
 }
 
 /** Cancela uma prévia (não confirmada) — os itens voltam para PEDIDOS PRONTOS. */
@@ -2188,6 +2232,89 @@ export async function cancelarOrdemCompra(id: number) {
   await db.execute(sql`DELETE FROM ordem_compra_itens WHERE ordemId = ${id}`);
   await db.execute(sql`DELETE FROM ordens_compra WHERE id = ${id}`);
   return { success: true };
+}
+
+/**
+ * Cancela uma OC JÁ GERADA: mantém o registro (status "cancelada", visível na lista
+ * marcado como Cancelada) e devolve os itens para PEDIDOS PRONTOS — pois itens
+ * consumidos só contam OCs em 'previa'/'gerada'. Nenhum dado é apagado.
+ */
+export async function cancelarOrdemCompraGerada(id: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  const r: any = await db.execute(sql`SELECT status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
+  const st = ((r[0] ?? r) as any[])[0]?.status;
+  if (st !== "gerada") return { success: false, message: "Só OCs geradas podem ser canceladas." };
+  await db.execute(sql`UPDATE ordens_compra SET status = 'cancelada' WHERE id = ${id}`);
+  return { success: true };
+}
+
+/**
+ * Exclui uma OC gerada ou cancelada: remove o registro e seus itens do banco.
+ * Os itens voltam automaticamente para PEDIDOS PRONTOS (deixam de ser consumidos).
+ */
+export async function excluirOrdemCompra(id: number) {
+  const db = await getDb();
+  if (!db) return { success: false };
+  const r: any = await db.execute(sql`SELECT status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
+  const st = ((r[0] ?? r) as any[])[0]?.status;
+  if (st !== "gerada" && st !== "cancelada") {
+    return { success: false, message: "Só OCs geradas ou canceladas podem ser excluídas." };
+  }
+  await db.execute(sql`DELETE FROM ordem_compra_itens WHERE ordemId = ${id}`);
+  await db.execute(sql`DELETE FROM ordens_compra WHERE id = ${id}`);
+  return { success: true };
+}
+
+/**
+ * Remove prévias órfãs (status 'previa') e seus itens. Uma prévia só é válida enquanto
+ * a janela de revisão está aberta no cliente; qualquer prévia persistida no boot está
+ * abandonada e apenas prende itens (que somem de Pedidos Prontos). Não perde dado real.
+ */
+export async function liberarPreviasOrfas() {
+  const db = await getDb();
+  if (!db) return { liberadas: 0 };
+  const r: any = await db.execute(sql`SELECT id FROM ordens_compra WHERE status = 'previa'`);
+  const ids = ((r[0] ?? r) as any[]).map((x: any) => Number(x.id));
+  for (const id of ids) {
+    await db.execute(sql`DELETE FROM ordem_compra_itens WHERE ordemId = ${id}`);
+    await db.execute(sql`DELETE FROM ordens_compra WHERE id = ${id}`);
+  }
+  return { liberadas: ids.length };
+}
+
+/**
+ * Preenche o desconto do mapa em OCs efetivadas cujo desconto está zerado.
+ * Recalcula somando o desconto cotado (mapa_fornecedores) do mesmo fornecedor,
+ * por mapa de origem dos itens da OC. Só ESCREVE onde há desconto a aplicar — nunca zera.
+ */
+export async function backfillDescontoOrdens() {
+  const db = await getDb();
+  if (!db) return { atualizadas: 0 };
+  const or: any = await db.execute(sql`
+    SELECT id, obraId, fornecedorNome FROM ordens_compra
+    WHERE status IN ('gerada','cancelada') AND (desconto IS NULL OR desconto = 0)`);
+  const ocs = (or[0] ?? or) as any[];
+  let atualizadas = 0;
+  for (const oc of ocs) {
+    if (!oc.fornecedorNome) continue;
+    // Mapas distintos de onde vieram os itens desta OC.
+    const mr: any = await db.execute(sql`
+      SELECT DISTINCT mapaId FROM ordem_compra_itens WHERE ordemId = ${oc.id} AND mapaId IS NOT NULL`);
+    const mapaIds = ((mr[0] ?? mr) as any[]).map((r: any) => Number(r.mapaId));
+    let desconto = 0;
+    for (const mapaId of mapaIds) {
+      const fr: any = await db.execute(sql`
+        SELECT desconto FROM mapa_fornecedores WHERE mapaId = ${mapaId} AND nome = ${oc.fornecedorNome} LIMIT 1`);
+      const row = ((fr[0] ?? fr) as any[])[0];
+      desconto += row ? Number(row.desconto ?? 0) : 0;
+    }
+    if (desconto > 0) {
+      await db.execute(sql`UPDATE ordens_compra SET desconto = ${desconto} WHERE id = ${oc.id}`);
+      atualizadas++;
+    }
+  }
+  return { atualizadas };
 }
 
 // ============= CADASTRO: FORNECEDORES =============

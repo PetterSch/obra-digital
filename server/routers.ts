@@ -1646,10 +1646,10 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({ obraId: z.number() }))
       .query(async ({ input }) => db.getPedidosProntos(input.obraId)),
 
-    // Aba "Ordens de Compras Geradas".
+    // Aba "Ordens de Compras Geradas" (inclui as canceladas, marcadas como tal).
     listGeradas: protectedProcedure
       .input(z.object({ obraId: z.number() }))
-      .query(async ({ input }) => db.getOrdensCompra(input.obraId, "gerada")),
+      .query(async ({ input }) => db.getOrdensGeradas(input.obraId)),
 
     getById: protectedProcedure
       .input(z.object({ id: z.number() }))
@@ -1693,6 +1693,16 @@ Gere um resumo executivo profissional em português que:
     cancelar: engineerProcedure
       .input(z.object({ id: z.number() }))
       .mutation(async ({ input }) => db.cancelarOrdemCompra(input.id)),
+
+    // Cancela uma OC JÁ GERADA: mantém na lista marcada como Cancelada e devolve os itens.
+    cancelarGerada: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => db.cancelarOrdemCompraGerada(input.id)),
+
+    // Exclui (deleta) uma OC gerada ou cancelada; os itens voltam para Pedidos Prontos.
+    excluir: engineerProcedure
+      .input(z.object({ id: z.number() }))
+      .mutation(async ({ input }) => db.excluirOrdemCompra(input.id)),
   }),
 });
 

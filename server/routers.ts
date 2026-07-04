@@ -1564,6 +1564,11 @@ Gere um resumo executivo profissional em português que:
       .input(z.object({ obraId: z.number() }))
       .query(async ({ input }) => db.getItensAprovadosByObra(input.obraId)),
 
+    // Só itens aprovados SEM vínculo (fora de qualquer mapa/OC) — disponíveis para um novo mapa.
+    getItensAprovadosLivres: protectedProcedure
+      .input(z.object({ obraId: z.number() }))
+      .query(async ({ input }) => db.getItensAprovadosLivresByObra(input.obraId)),
+
     create: engineerProcedure
       .input(z.object({
         obraId: z.number(),

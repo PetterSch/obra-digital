@@ -1918,6 +1918,31 @@ export async function getItensAprovadosByObra(obraId: number) {
   return (r[0] ?? r) as any[];
 }
 
+/**
+ * Itens aprovados da obra SEM nenhum vínculo: que ainda não entraram em nenhum
+ * mapa de cotação (e, portanto, também não estão em nenhuma OC — pois toda OC
+ * deriva de um item de mapa). É a lista de itens realmente disponíveis para
+ * iniciar/entrar num novo mapa.
+ */
+export async function getItensAprovadosLivresByObra(obraId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const r: any = await db.execute(sql`
+    SELECT i.id, i.descricao, i.unidade, i.quantidade, i.observacao,
+      p.id AS pedidoId, p.numero AS pedidoNumero,
+      p.localAplicacao AS pedidoLocalAplicacao,
+      p.dataEntrega AS pedidoDataEntrega
+    FROM pedido_itens i JOIN pedidos_compra p ON i.pedidoId = p.id
+    WHERE p.obraId = ${obraId} AND i.statusAprovacao = 'aprovado'
+      AND i.id NOT IN (
+        SELECT mi.pedidoItemId FROM mapa_itens mi
+        JOIN mapas_cotacao mc ON mi.mapaId = mc.id
+        WHERE mc.obraId = ${obraId} AND mi.pedidoItemId IS NOT NULL
+      )
+    ORDER BY p.numero, i.ordem`);
+  return (r[0] ?? r) as any[];
+}
+
 // ============= FATURAMENTO DA OBRA =============
 
 /** Entidades de faturamento habilitadas para a obra (com dados do cadastro). */

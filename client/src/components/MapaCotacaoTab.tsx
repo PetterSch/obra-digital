@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Plus, X, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil, RefreshCw, PackagePlus } from "lucide-react";
+import { Plus, X, ClipboardList, CheckCircle2, ChevronLeft, Trash2, FileDown, Pencil, RefreshCw, PackagePlus, PackageMinus } from "lucide-react";
 import { getPDFConfig } from "@/lib/pdfExport";
 
 interface Props { obraId: number; obraNome: string; openMapaId?: number; }
@@ -35,7 +35,7 @@ export function MapaCotacaoTab({ obraId, obraNome, openMapaId }: Props) {
   const [deleteId, setDeleteId] = useState<number | null>(null);
 
   const { data: mapas = [], refetch: refetchMapas } = trpc.mapaCotacao.listByObra.useQuery({ obraId });
-  const { data: itensAprovados = [] } = trpc.mapaCotacao.getItensAprovados.useQuery(
+  const { data: itensAprovados = [] } = trpc.mapaCotacao.getItensAprovadosLivres.useQuery(
     { obraId },
     { enabled: view === "selecionar" }
   );
@@ -525,7 +525,7 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
   }, [mapa?.id]);
 
   const updateMut = trpc.mapaCotacao.update.useMutation({
-    onSuccess: () => { onSaved(); toast.success("Mapa salvo!"); },
+    onSuccess: () => { onSaved(); refetchLivres(); toast.success("Mapa salvo!"); },
     onError: () => toast.error("Erro ao salvar mapa"),
   });
 
@@ -536,8 +536,13 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     onError: () => toast.error("Erro ao excluir mapa"),
   });
 
-  // Itens aprovados da obra (para sincronizar quantidades e adicionar novos itens)
+  // Itens aprovados da obra (lista completa) — usada só para sincronizar quantidades.
   const { data: itensAprovados = [] } = trpc.mapaCotacao.getItensAprovados.useQuery(
+    { obraId: Number(mapa?.obraId ?? 0) },
+    { enabled: mapa?.obraId != null }
+  );
+  // Itens aprovados SEM vínculo (fora de qualquer mapa/OC) — usados no "Adicionar item".
+  const { data: itensLivres = [], refetch: refetchLivres } = trpc.mapaCotacao.getItensAprovadosLivres.useQuery(
     { obraId: Number(mapa?.obraId ?? 0) },
     { enabled: mapa?.obraId != null }
   );
@@ -564,17 +569,47 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     else toast.info("As quantidades já estão iguais às aprovadas nos pedidos.");
   }
 
-  // Itens aprovados que ainda NÃO estão no mapa (por pedidoItemId)
+  // Itens disponíveis para adicionar: aprovados SEM vínculo em nenhum mapa/OC, menos os
+  // que já foram adicionados nesta sessão (ainda não salvos, então ainda vêm como livres).
   const itensDisponiveis = useMemo(() => {
     const jaNoMapa = new Set(itens.map(it => it.pedidoItemId != null ? Number(it.pedidoItemId) : null).filter(v => v != null));
-    return (itensAprovados as any[]).filter((i: any) => !jaNoMapa.has(Number(i.id)));
-  }, [itensAprovados, itens]);
+    return (itensLivres as any[]).filter((i: any) => !jaNoMapa.has(Number(i.id)));
+  }, [itensLivres, itens]);
 
   const [addItemOpen, setAddItemOpen] = useState(false);
   const [selecaoAdd, setSelecaoAdd] = useState<Set<number>>(new Set());
+  const [removeItemOpen, setRemoveItemOpen] = useState(false);
+  const [selecaoRemove, setSelecaoRemove] = useState<Set<number>>(new Set()); // índices dos itens do mapa
+
+  // Retira itens do mapa (por índice) e reindexa as cotações. Ao Salvar, os itens
+  // voltam a ficar disponíveis (sem vínculo) para entrar em outro mapa.
+  function retirarItensSelecionados() {
+    const remover = selecaoRemove;
+    if (remover.size === 0) { setRemoveItemOpen(false); return; }
+    // Mapeia índice antigo -> novo entre os itens que permanecem.
+    const oldToNew = new Map<number, number>();
+    let novoIdx = 0;
+    itens.forEach((_, idx) => { if (!remover.has(idx)) oldToNew.set(idx, novoIdx++); });
+    setCotacoes(prev => {
+      const next: Record<string, string> = {};
+      for (const [key, val] of Object.entries(prev)) {
+        const [iStr, fStr] = key.split("-");
+        const oldI = Number(iStr);
+        const newI = oldToNew.get(oldI);
+        if (newI == null) continue; // item removido
+        next[`${newI}-${fStr}`] = val;
+      }
+      return next;
+    });
+    const qtd = remover.size;
+    setItens(prev => prev.filter((_, idx) => !remover.has(idx)));
+    setSelecaoRemove(new Set());
+    setRemoveItemOpen(false);
+    toast.success(`${qtd} item(ns) retirado(s). Clique em Salvar para que voltem a ficar disponíveis.`);
+  }
 
   function adicionarItensSelecionados() {
-    const novos = (itensAprovados as any[])
+    const novos = (itensLivres as any[])
       .filter((i: any) => selecaoAdd.has(Number(i.id)))
       .map((i: any) => ({
         id: undefined,
@@ -1069,10 +1104,16 @@ ${observacao && observacao.trim() ? `<!-- OBSERVAÇÕES -->
       {!isConcluido && (
         <div className="flex items-center justify-between gap-2">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Itens do Mapa</p>
-          <Button variant="outline" size="sm" onClick={() => { setSelecaoAdd(new Set()); setAddItemOpen(true); }} disabled={itensDisponiveis.length === 0}
-            title={itensDisponiveis.length === 0 ? "Não há itens aprovados fora do mapa" : "Adicionar item aprovado que não está no mapa"}>
-            <PackagePlus className="w-4 h-4 mr-1" />Adicionar item{itensDisponiveis.length > 0 ? ` (${itensDisponiveis.length})` : ""}
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => { setSelecaoRemove(new Set()); setRemoveItemOpen(true); }} disabled={itens.length === 0}
+              title={itens.length === 0 ? "Não há itens no mapa" : "Retirar item do mapa (volta a ficar disponível)"}>
+              <PackageMinus className="w-4 h-4 mr-1" />Retirar item
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => { setSelecaoAdd(new Set()); setAddItemOpen(true); }} disabled={itensDisponiveis.length === 0}
+              title={itensDisponiveis.length === 0 ? "Não há itens aprovados fora do mapa" : "Adicionar item aprovado que não está no mapa"}>
+              <PackagePlus className="w-4 h-4 mr-1" />Adicionar item{itensDisponiveis.length > 0 ? ` (${itensDisponiveis.length})` : ""}
+            </Button>
+          </div>
         </div>
       )}
 
@@ -1357,6 +1398,51 @@ ${observacao && observacao.trim() ? `<!-- OBSERVAÇÕES -->
             <Button variant="outline" onClick={() => setAddItemOpen(false)}>Cancelar</Button>
             <Button disabled={selecaoAdd.size === 0} onClick={adicionarItensSelecionados}>
               Adicionar {selecaoAdd.size > 0 ? `(${selecaoAdd.size})` : ""}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog: retirar itens do mapa (voltam a ficar disponíveis) */}
+      <Dialog open={removeItemOpen} onOpenChange={setRemoveItemOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Retirar item do mapa</DialogTitle>
+          </DialogHeader>
+          <p className="text-xs text-muted-foreground -mt-2">
+            Os itens marcados saem deste mapa e, ao Salvar, voltam a ficar disponíveis para entrar em outro mapa de cotação.
+          </p>
+          {itens.length === 0 ? (
+            <p className="text-center text-muted-foreground py-8 text-sm">Este mapa não tem itens.</p>
+          ) : (
+            <div className="space-y-1 mt-1">
+              {itens.map((it, idx) => {
+                const marcado = selecaoRemove.has(idx);
+                return (
+                  <label key={idx} className="flex items-center gap-2 cursor-pointer hover:bg-muted/50 rounded px-2 py-1.5">
+                    <input
+                      type="checkbox"
+                      checked={marcado}
+                      onChange={() => setSelecaoRemove(prev => {
+                        const next = new Set(prev);
+                        if (next.has(idx)) next.delete(idx); else next.add(idx);
+                        return next;
+                      })}
+                      className="w-4 h-4 accent-red-600 cursor-pointer"
+                    />
+                    <span className="text-sm flex-1">{it.descricao}</span>
+                    <span className="text-xs text-muted-foreground">
+                      {Number(it.quantidade).toLocaleString("pt-BR")} {it.unidade ?? ""}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setRemoveItemOpen(false)}>Cancelar</Button>
+            <Button variant="destructive" disabled={selecaoRemove.size === 0} onClick={retirarItensSelecionados}>
+              Retirar {selecaoRemove.size > 0 ? `(${selecaoRemove.size})` : ""}
             </Button>
           </DialogFooter>
         </DialogContent>

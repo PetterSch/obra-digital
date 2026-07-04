@@ -558,6 +558,37 @@ function OrdensGeradas({ obraId }: { obraId: number }) {
 
 function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
   const { data: oc, isLoading } = trpc.ordensCompra.getById.useQuery({ id });
+  const utils = trpc.useUtils();
+
+  // Edição de frete/desconto/observação numa OC já gerada.
+  const [editando, setEditando] = useState(false);
+  const [edFrete, setEdFrete] = useState("");
+  const [edDesconto, setEdDesconto] = useState("");
+  const [edObs, setEdObs] = useState("");
+  const updateMut = trpc.ordensCompra.update.useMutation({
+    onSuccess: () => {
+      utils.ordensCompra.getById.invalidate({ id });
+      utils.ordensCompra.listGeradas.invalidate();
+      setEditando(false);
+      toast.success("OC atualizada!");
+    },
+    onError: e => toast.error(e.message || "Erro ao salvar"),
+  });
+  const iniciarEdicao = () => {
+    if (!oc) return;
+    setEdFrete(String(oc.frete ?? 0));
+    setEdDesconto(String((oc as any).desconto ?? 0));
+    setEdObs(oc.observacao ?? "");
+    setEditando(true);
+  };
+  const salvarEdicao = () => {
+    updateMut.mutate({
+      id,
+      frete: parseFloat(edFrete) || 0,
+      desconto: parseFloat(edDesconto) || 0,
+      observacao: edObs,
+    });
+  };
 
   const exportar = () => {
     if (!oc) return;
@@ -700,15 +731,55 @@ function VisualizarOC({ id, onFechar }: { id: number; onFechar: () => void }) {
               <div className="flex justify-between font-bold text-primary border-t pt-1"><span>Total geral</span><span className="tabular-nums">{brl(total)}</span></div>
             </div>
 
-            {oc.observacao && (
+            {!editando && oc.observacao && (
               <div className="mt-2 p-2 bg-muted/40 rounded text-sm border-l-2 border-primary">
                 <span className="font-medium">Observações:</span> {oc.observacao}
               </div>
             )}
 
+            {editando && (
+              <div className="mt-2 rounded-lg border p-3 space-y-3 bg-muted/20">
+                <p className="text-xs font-semibold uppercase text-muted-foreground">Editar OC</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">Frete</label>
+                    <input type="text" inputMode="decimal"
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                      value={edFrete} onChange={e => setEdFrete(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">Desconto</label>
+                    <input type="text" inputMode="decimal"
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                      value={edDesconto} onChange={e => setEdDesconto(e.target.value)} />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium">Observações</label>
+                    <input type="text"
+                      className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+                      value={edObs} onChange={e => setEdObs(e.target.value)} />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-end gap-2 pt-2">
-              <Button variant="outline" onClick={onFechar}>Fechar</Button>
-              <Button className="gap-2" onClick={exportar}><FileDown className="w-4 h-4" /> Exportar PDF</Button>
+              {editando ? (
+                <>
+                  <Button variant="outline" onClick={() => setEditando(false)} disabled={updateMut.isPending}>Cancelar edição</Button>
+                  <Button onClick={salvarEdicao} disabled={updateMut.isPending}>
+                    {updateMut.isPending ? "Salvando..." : "Salvar alterações"}
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="outline" onClick={onFechar}>Fechar</Button>
+                  {oc.status === "gerada" && (
+                    <Button variant="outline" onClick={iniciarEdicao}>Editar</Button>
+                  )}
+                  <Button className="gap-2" onClick={exportar}><FileDown className="w-4 h-4" /> Exportar PDF</Button>
+                </>
+              )}
             </div>
           </>
         )}

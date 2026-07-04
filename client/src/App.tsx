@@ -2,38 +2,41 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
+import { lazy, Suspense } from "react";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { ThemeProvider } from "./contexts/ThemeContext";
+// Login e Home ficam no bundle principal (primeira tela); o resto é carregado
+// sob demanda por rota (code-splitting) para reduzir o carregamento inicial.
 import Home from "./pages/Home";
 import Login from "./pages/Login";
-import Dashboard from "./pages/Dashboard";
-import ObrasList from "./pages/ObrasList";
-import ObraEdit from "./pages/ObraEdit";
-import EquipesManagement from "./pages/EquipesManagement";
-import Colaboradores from "./pages/Colaboradores";
-import ObraDetail from "./pages/ObraDetail";
-import DiarioObra from "./pages/DiarioObra";
-import DiarioView from "./pages/DiarioView";
-import ResumosPeriodicos from "./pages/ResumosPeriodicos";
-import ResumosHub from "./pages/ResumosHub";
-import Orcamentos from "./pages/Orcamentos";
-import Planejamento from "./pages/Planejamento";
-import DiarioEdit from "./pages/DiarioEdit";
-import ClientObras from "./pages/ClientObras";
-import ClientPanel from "./pages/ClientPanel";
-import Relatorios from "./pages/Relatorios";
-import AdminPanel from "./pages/AdminPanel";
-import Cronograma from "./pages/Cronograma";
-import Presenca from "./pages/Presenca";
-import ConfiguracaoEmpresa from "./pages/ConfiguracaoEmpresa";
-import CategoriasInsumo from "./pages/CategoriasInsumo";
-import Insumos from "./pages/Insumos";
-import Fornecedores from "./pages/Fornecedores";
-import AprovacaoPedidos from "./pages/AprovacaoPedidos";
-import MapaCotacaoGlobal from "./pages/MapaCotacaoGlobal";
-import OrdensCompra from "./pages/OrdensCompra";
 import { useAuth } from "./_core/hooks/useAuth";
 import { Spinner } from "./components/ui/spinner";
+
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ObrasList = lazy(() => import("./pages/ObrasList"));
+const ObraEdit = lazy(() => import("./pages/ObraEdit"));
+const EquipesManagement = lazy(() => import("./pages/EquipesManagement"));
+const Colaboradores = lazy(() => import("./pages/Colaboradores"));
+const ObraDetail = lazy(() => import("./pages/ObraDetail"));
+const DiarioView = lazy(() => import("./pages/DiarioView"));
+const ResumosPeriodicos = lazy(() => import("./pages/ResumosPeriodicos"));
+const ResumosHub = lazy(() => import("./pages/ResumosHub"));
+const Orcamentos = lazy(() => import("./pages/Orcamentos"));
+const Planejamento = lazy(() => import("./pages/Planejamento"));
+const DiarioEdit = lazy(() => import("./pages/DiarioEdit"));
+const ClientObras = lazy(() => import("./pages/ClientObras"));
+const ClientPanel = lazy(() => import("./pages/ClientPanel"));
+const Relatorios = lazy(() => import("./pages/Relatorios"));
+const AdminPanel = lazy(() => import("./pages/AdminPanel"));
+const Cronograma = lazy(() => import("./pages/Cronograma"));
+const Presenca = lazy(() => import("./pages/Presenca"));
+const ConfiguracaoEmpresa = lazy(() => import("./pages/ConfiguracaoEmpresa"));
+const CategoriasInsumo = lazy(() => import("./pages/CategoriasInsumo"));
+const Insumos = lazy(() => import("./pages/Insumos"));
+const Fornecedores = lazy(() => import("./pages/Fornecedores"));
+const AprovacaoPedidos = lazy(() => import("./pages/AprovacaoPedidos"));
+const MapaCotacaoGlobal = lazy(() => import("./pages/MapaCotacaoGlobal"));
+const OrdensCompra = lazy(() => import("./pages/OrdensCompra"));
 
 function Router() {
   const { isAuthenticated, loading } = useAuth();
@@ -56,6 +59,7 @@ function Router() {
   }
 
   return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen"><Spinner /></div>}>
     <Switch>
       <Route path={"/login"} component={Login} />
       <Route path={"/dashboard"} component={Dashboard} />
@@ -87,6 +91,7 @@ function Router() {
       <Route path={"/404"} component={NotFound} />
       <Route component={NotFound} />
     </Switch>
+    </Suspense>
   );
 }
 

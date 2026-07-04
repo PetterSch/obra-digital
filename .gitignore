@@ -29,3 +29,6 @@ client/.vite/
 
 # Temporários
 *.bak
+
+# Notas de sessão (podem conter credenciais — nunca versionar)
+session-handoff.md

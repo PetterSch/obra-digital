@@ -659,8 +659,11 @@ function MapaEditor({ mapa, obraNome, onBack, onSaved }: EditorProps) {
     return getSubtotal(fIdx) - (fornecedores[fIdx]?.desconto ?? 0) + (fornecedores[fIdx]?.frete ?? 0);
   }
   function getIdealTotal(): number {
-    const descIdeal = Math.min(...fornecedores.map(f => f.desconto ?? 0).filter(d => d > 0), 0);
-    const freteIdeal = Math.min(...fornecedores.map(f => f.frete ?? 0).filter(f => f > 0), 0);
+    // Cenário ideal (mais barato): maior desconto ofertado e menor frete ofertado.
+    const descontos = fornecedores.map(f => f.desconto ?? 0).filter(d => d > 0);
+    const fretes = fornecedores.map(f => f.frete ?? 0).filter(f => f > 0);
+    const descIdeal = descontos.length ? Math.max(...descontos) : 0;
+    const freteIdeal = fretes.length ? Math.min(...fretes) : 0;
     return getIdealSubtotal() - descIdeal + freteIdeal;
   }
 

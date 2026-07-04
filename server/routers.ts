@@ -1,4 +1,4 @@
-import { COOKIE_NAME, ONE_YEAR_MS } from "@shared/const";
+import { COOKIE_NAME, SESSION_MS, sessionCookieOptions } from "@shared/const";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
@@ -44,9 +44,11 @@ export const appRouter = router({
         const ok = await bcrypt.compare(input.password, user.passwordHash);
         if (!ok) throw new TRPCError({ code: "UNAUTHORIZED", message: "Usuário/e-mail ou senha inválidos" });
         const token = await createSessionToken(user.id, user.role, user.name ?? "");
-        ctx.res.cookie(COOKIE_NAME, token, { httpOnly: true, sameSite: "lax", secure: false, maxAge: ONE_YEAR_MS, path: "/" });
+        ctx.res.cookie(COOKIE_NAME, token, { ...sessionCookieOptions(process.env.NODE_ENV === "production"), maxAge: SESSION_MS });
         await db.updateLastSignedIn(user.id);
-        return { success: true, user };
+        // Nunca devolver o hash da senha (nem outros campos internos) ao cliente.
+        const { id, name, username, email, role } = user as any;
+        return { success: true, user: { id, name, username, email, role } };
       }),
 
     register: publicProcedure
@@ -66,7 +68,8 @@ export const appRouter = router({
       }),
 
     logout: publicProcedure.mutation(({ ctx }) => {
-      ctx.res.clearCookie(COOKIE_NAME, { path: "/" });
+      // Mesmas opções do login para o navegador casar e remover o cookie.
+      ctx.res.clearCookie(COOKIE_NAME, sessionCookieOptions(process.env.NODE_ENV === "production"));
       return { success: true };
     }),
   }),

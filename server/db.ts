@@ -23,7 +23,7 @@ import {
   orcamentoItens
 } from "../drizzle/schema";
 import * as demo from "./demo-store";
-import { agruparItensPorFornecedor, proximoNumeroOC, type ItemSelecionadoOC } from "@shared/ordensCompra";
+import { agruparItensPorFornecedor, type ItemSelecionadoOC } from "@shared/ordensCompra";
 
 let _db: ReturnType<typeof drizzle> | null = null;
 
@@ -2207,13 +2207,13 @@ export async function createOrdensCompra(
   return ocs.filter(Boolean);
 }
 
-/** Edita frete/desconto/observação/faturamento de uma OC ainda em prévia. */
+/** Edita frete/desconto/observação/faturamento de uma OC em prévia ou já gerada (canceladas não). */
 export async function updateOrdemCompra(id: number, data: { frete?: number; desconto?: number; observacao?: string; faturamentoFornecedorId?: number | null }) {
   const db = await getDb();
   if (!db) return { success: false };
   const r: any = await db.execute(sql`SELECT status FROM ordens_compra WHERE id = ${id} LIMIT 1`);
   const st = ((r[0] ?? r) as any[])[0]?.status;
-  if (st !== "previa") return { success: false, message: "Só é possível editar OCs em prévia." };
+  if (st !== "previa" && st !== "gerada") return { success: false, message: "OCs canceladas não podem ser editadas." };
   await db.execute(sql`UPDATE ordens_compra SET
     frete = COALESCE(${data.frete ?? null}, frete),
     desconto = COALESCE(${data.desconto ?? null}, desconto),
@@ -2221,7 +2221,7 @@ export async function updateOrdemCompra(id: number, data: { frete?: number; desc
     WHERE id = ${id}`);
   // Faturamento: só altera quando a propriedade foi enviada (permite definir e limpar)
   if ("faturamentoFornecedorId" in data) {
-    await db.execute(sql`UPDATE ordens_compra SET faturamentoFornecedorId = ${data.faturamentoFornecedorId ?? null} WHERE id = ${id} AND status = 'previa'`);
+    await db.execute(sql`UPDATE ordens_compra SET faturamentoFornecedorId = ${data.faturamentoFornecedorId ?? null} WHERE id = ${id} AND status IN ('previa','gerada')`);
   }
   return { success: true };
 }
@@ -2238,12 +2238,18 @@ export async function confirmarOrdemCompra(id: number) {
   const oc = ((r[0] ?? r) as any[])[0];
   if (!oc) return { success: false, message: "OC não encontrada." };
   if (oc.status !== "previa") return { success: false, message: "OC já confirmada." };
-  // Próximo número entre as OCs já efetivadas desta obra (gerada/cancelada mantêm número).
-  const nr: any = await db.execute(sql`
-    SELECT numero FROM ordens_compra WHERE obraId = ${oc.obraId} AND status IN ('gerada','cancelada')`);
-  const numeros = ((nr[0] ?? nr) as any[]).map((r: any) => Number(r.numero));
-  const numero = proximoNumeroOC(numeros);
-  await db.execute(sql`UPDATE ordens_compra SET status = 'gerada', numero = ${numero} WHERE id = ${id} AND status = 'previa'`);
+  // Número calculado DENTRO do UPDATE (derived table) — atômico: duas confirmações
+  // simultâneas na mesma obra nunca recebem o mesmo número.
+  await db.execute(sql`
+    UPDATE ordens_compra oc
+    JOIN (
+      SELECT COALESCE(MAX(numero), 0) + 1 AS prox FROM ordens_compra
+      WHERE obraId = ${oc.obraId} AND status IN ('gerada','cancelada')
+    ) t
+    SET oc.status = 'gerada', oc.numero = t.prox
+    WHERE oc.id = ${id} AND oc.status = 'previa'`);
+  const nr: any = await db.execute(sql`SELECT numero FROM ordens_compra WHERE id = ${id} LIMIT 1`);
+  const numero = Number(((nr[0] ?? nr) as any[])[0]?.numero ?? 0);
   return { success: true, numero };
 }
 
